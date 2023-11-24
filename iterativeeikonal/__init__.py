@@ -1,1 +1,3 @@
 import iterativeeikonal.derivativesR2
+import iterativeeikonal.derivativesSE2
+import iterativeeikonal.cleanarrays
