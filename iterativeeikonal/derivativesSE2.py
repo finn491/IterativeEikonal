@@ -2,18 +2,22 @@
 
 import taichi as ti
 
+# Helper Functions
+
+
 @ti.func
 def sanitize_index(
-    index: ti.types.vector(3, ti.i32), 
+    index: ti.types.vector(3, ti.i32),
     input: ti.template()
 ) -> ti.types.vector(3, ti.i32):
     """Make sure the `index` is inside the shape of `input`."""
     shape = ti.Vector(ti.static(input.shape), dt=ti.i32)
     return ti.Vector([
-        ti.math.clamp(index[0], 0, shape[0] - 1), 
-        ti.math.clamp(index[1], 0, shape[1] - 1), 
+        ti.math.clamp(index[0], 0, shape[0] - 1),
+        ti.math.clamp(index[1], 0, shape[1] - 1),
         ti.math.mod(index[2], shape[2])
-    ], dt = ti.i32)
+    ], dt=ti.i32)
+
 
 @ti.func
 def trilinear_interpolate(input: ti.template(), index: ti.types.vector(3, ti.f32)) -> ti.f32:
@@ -47,6 +51,9 @@ def trilinear_interpolate(input: ti.template(), index: ti.types.vector(3, ti.f32
 
     return v
 
+# Actual Derivatives
+
+
 @ti.func
 def derivatives(
     u: ti.template(),
@@ -68,8 +75,8 @@ def derivatives(
         θ = I[2] * dθ
         cos = ti.math.cos(θ)
         sin = ti.math.sin(θ)
-        I_A1 = ti.Vector([cos, sin, 0.0] , dt = ti.f32)
-        I_A2 = ti.Vector([-sin, cos, 0.0], dt = ti.f32)
+        I_A1 = ti.Vector([cos, sin, 0.0], dt=ti.f32)
+        I_A2 = ti.Vector([-sin, cos, 0.0], dt=ti.f32)
 
         A1_forward[I] = (trilinear_interpolate(u, I + I_A1) - u[I]) / dxy
         A2_forward[I] = (trilinear_interpolate(u, I + I_A2) - u[I]) / dxy
@@ -77,6 +84,7 @@ def derivatives(
         A1_backward[I] = (u[I] - trilinear_interpolate(u, I - I_A1)) / dxy
         A2_backward[I] = (u[I] - trilinear_interpolate(u, I - I_A2)) / dxy
         A3_backward[I] = (u[I] - trilinear_interpolate(u, I - I_A3)) / dθ
+
 
 @ti.func
 def abs_derivatives(
@@ -95,7 +103,8 @@ def abs_derivatives(
     """
     Compute an approximation of the absolute value of the left invariant derivatives of `u`.
     """
-    derivatives(u, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward)
+    derivatives(u, dxy, A1_forward, A1_backward, A2_forward,
+                A2_backward, A3_forward, A3_backward)
     for I in ti.grouped(u):
         abs_A1[I] = ti.math.max(-A1_forward[I], A1_backward[I], 0)
         abs_A2[I] = ti.math.max(-A2_forward[I], A2_backward[I], 0)

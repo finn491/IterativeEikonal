@@ -2,17 +2,23 @@
 
 import taichi as ti
 
+# Helper Functions
+
+
 @ti.func
 def sanitize_index(
-    index: ti.types.vector(2, ti.i32), 
+    index: ti.types.vector(2, ti.i32),
     input: ti.template()
 ) -> ti.types.vector(2, ti.i32):
     """Make sure the `index` is inside the shape of `input`."""
     shape = ti.Vector(ti.static(input.shape), dt=ti.i32)
     return ti.Vector([
-        ti.math.clamp(index[0], 0, shape[0] - 1), 
-        ti.math.clamp(index[1], 0, shape[1] - 1), 
+        ti.math.clamp(index[0], 0, shape[0] - 1),
+        ti.math.clamp(index[1], 0, shape[1] - 1),
     ], dt=ti.i32)
+
+# Actual Derivatives
+
 
 @ti.func
 def derivatives(
@@ -37,6 +43,7 @@ def derivatives(
         dx_backward[I] = (u[I] - u[I_dx_backward]) / dxy
         dy_forward[I] = (u[I_dy_forward] - u[I]) / dxy
         dy_backward[I] = (u[I] - u[I_dy_backward]) / dxy
+
 
 @ti.func
 def abs_derivatives(
