@@ -2,6 +2,7 @@
 
 import taichi as ti
 import numpy as np
+from PIL import Image
 
 # NumPy Arrays
 
@@ -32,6 +33,10 @@ def unpad_array(u, pad_shape=1):
     """
     centre_slice = extract_centre_slice(u, pad_shape=pad_shape)
     return u[centre_slice]
+
+def view_image_array(image_array):
+    """View numpy array `image_array` as a grayscale image."""
+    return Image.fromarray((image_array * 255).astype("uint8"), mode="L")
 
 # TaiChi Fields
 
