@@ -20,8 +20,13 @@ def sanitize_index(
 
 
 @ti.func
-def trilinear_interpolate(input: ti.template(), index: ti.types.vector(3, ti.f32)) -> ti.f32:
-    """Interpolate value of `input` at continuous `index`, copy-pasted from Gijs."""
+def trilinear_interpolate(
+    input: ti.template(), 
+    index: ti.types.vector(3, ti.f32)
+) -> ti.f32:
+    """
+    Interpolate value of `input` at continuous `index`. Copied from Gijs.
+    """
     r = ti.math.fract(index)
 
     f = ti.math.floor(index, ti.i32)
@@ -66,8 +71,8 @@ def derivatives(
     A3_backward: ti.template()
 ):
     """
-    Compute the forward and backward finite differences of `u` with spatial step size `dxy` 
-    and orientational step size `2π / u.shape[2]`, copy pasted from Gijs.
+    Compute the forward and backward finite differences of `u` with spatial step 
+    size `dxy` and orientational step size `2π / u.shape[2]`. Copied from Gijs.
     """
     dθ = 2.0 * ti.math.pi / ti.static(u.shape[2])
     I_A3 = ti.Vector([0.0,  0.0, 1.0], dt=ti.f32)
@@ -101,7 +106,8 @@ def abs_derivatives(
     abs_A3: ti.template()
 ):
     """
-    Compute an approximation of the absolute value of the left invariant derivatives of `u`.
+    Compute an approximation of the absolute value of the left invariant 
+    derivatives of `u`.
     """
     derivatives(u, dxy, A1_forward, A1_backward, A2_forward,
                 A2_backward, A3_forward, A3_backward)

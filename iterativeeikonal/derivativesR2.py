@@ -30,7 +30,8 @@ def derivatives(
     dy_backward: ti.template()
 ):
     """
-    Compute the forward and backward finite differences of `u` with step size `dxy`.
+    Compute the forward and backward finite differences of `u` with step size 
+    `dxy`.
     """
     I_dx = ti.Vector([1, 0], dt=ti.i32)
     I_dy = ti.Vector([0, 1], dt=ti.i32)
@@ -57,7 +58,8 @@ def abs_derivatives(
     abs_dy: ti.template()
 ):
     """
-    Compute an approximation of the absolute value of the derivative of `u` in the `x` and `y` directions.
+    Compute an approximation of the absolute value of the derivative of `u` in 
+    the `x` and `y` directions.
     """
     derivatives(u, dxy, dx_forward, dx_backward, dy_forward, dy_backward)
     for I in ti.grouped(u):
