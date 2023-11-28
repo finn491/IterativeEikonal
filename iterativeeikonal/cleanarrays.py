@@ -47,7 +47,7 @@ def view_image_array(image_array):
     """View numpy array `image_array` as a grayscale image."""
     image = convert_array_to_image(image_array)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 5))
-    ax.imshow(image, cmap="gray")
+    ax.imshow(image, cmap="gray", origin="lower")
     ax.set_axis_off()
     return image, fig
 
@@ -62,7 +62,7 @@ def view_image_arrays_side_by_side(image_array_list):
     for i, image_array in enumerate(image_array_list):
         image = convert_array_to_image(image_array)
         image_list.append(image)
-        ax[i].imshow(image_array, cmap="gray")
+        ax[i].imshow(image_array, cmap="gray", origin="lower")
         ax[i].set_axis_off()
     return image_list, fig
 
