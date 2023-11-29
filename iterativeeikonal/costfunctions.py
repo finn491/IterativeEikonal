@@ -1,9 +1,9 @@
 # costfunctions.py
 
-import taichi as ti
+# import taichi as ti
 import numpy as np
-import scipy as sp
-import skimage
+# import scipy as sp
+# import skimage
 import diplib as dip
 
 
