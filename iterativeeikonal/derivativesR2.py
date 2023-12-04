@@ -11,6 +11,8 @@ def sanitize_index(
     input: ti.template()
 ) -> ti.types.vector(2, ti.i32):
     """
+    @taichi.func
+    
     Make sure the `index` is inside the shape of `input`.
 
     Args:
@@ -32,6 +34,8 @@ def bilinear_interpolate(
     index: ti.template()
 ) -> ti.f32:
     """
+    @taichi.func
+
     Interpolate value of `input` at continuous `index` bilinearly, via repeated
     linear interpolation (x, y). Adapted from Gijs.
 
@@ -76,6 +80,8 @@ def derivatives(
     dy_backward: ti.template()
 ):
     """
+    @taichi.func
+
     Compute the forward and backward finite differences of `u` with step size 
     `dxy`.
 
@@ -114,6 +120,8 @@ def abs_derivatives(
     abs_dy: ti.template()
 ):
     """
+    @taichi.func
+
     Compute an approximation of the absolute value of the derivative of `u` in 
     the `x` and `y` directions.
 
