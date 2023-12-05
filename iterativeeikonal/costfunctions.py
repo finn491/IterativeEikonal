@@ -1,9 +1,6 @@
 # costfunctions.py
 
-# import taichi as ti
 import numpy as np
-# import scipy as sp
-# import skimage
 import diplib as dip
 
 
@@ -25,8 +22,8 @@ def rc_vessel_enhancement_R2(image, σ, α=0.3, γ=0.75, ε=0.3):
     Returns:
         np.ndarray of the vesselness of `image`, taking values between 0 and 1.
     """
-    # Calculate Hessian derivatives. 
-    # Apparently, higher order Gaussian derivatives in Scipy are not very 
+    # Calculate Hessian derivatives.
+    # Apparently, higher order Gaussian derivatives in Scipy are not very
     # accurate.
     # if σ > 2:
     #     Lxx = sp.ndimage.gaussian_filter(image, sigma=(σ, σ), order=(0, 2))
@@ -36,13 +33,13 @@ def rc_vessel_enhancement_R2(image, σ, α=0.3, γ=0.75, ε=0.3):
     #     Lxx = sp.ndimage.gaussian_filter(image, sigma=σ, order=(0, 2))
     #     Lxy = sp.ndimage.gaussian_filter(image, sigma=σ, order=(1, 1))
     #     Lyy = sp.ndimage.gaussian_filter(image, sigma=σ, order=(2, 0))
-    # DIPlib provides more accurate Gaussian derivatives, but maybe we want our 
+    # DIPlib provides more accurate Gaussian derivatives, but maybe we want our
     # own implementation. Note that DIPlib flips the order of dimensions.
     if σ > 2:
         Lxx = np.array(dip.Gauss(image, (σ, σ), (2, 0)))
         Lxy = np.array(dip.Gauss(image, (σ, σ), (1, 1)))
         Lyy = np.array(dip.Gauss(image, (σ, σ), (0, 2)))
-    else: # Is this equivalent to what goes on in RcVesselEnhancement?
+    else:  # Is this equivalent to what goes on in RcVesselEnhancement?
         Lxx = np.array(dip.Gauss(image, (σ, σ), (2, 0)))
         Lxy = np.array(dip.Gauss(image, (σ, σ), (1, 1)))
         Lyy = np.array(dip.Gauss(image, (σ, σ), (0, 2)))
@@ -57,10 +54,11 @@ def rc_vessel_enhancement_R2(image, σ, α=0.3, γ=0.75, ε=0.3):
     nR2 = -1 / (2 * α**2)
     S2 = λ1**2 + λ2**2
     nS2 = -1 / (2 * ε**2 * np.max(S2))
-    vesselness = (np.exp(nR2 * R2**2) 
-                  * (1 - np.exp(nS2 * S2)) 
+    vesselness = (np.exp(nR2 * R2**2)
+                  * (1 - np.exp(nS2 * S2))
                   * np.heaviside(-λ1, 1.))
     return vesselness
+
 
 def multiscale_frangi_filter_R2(image, σs, α=0.3, γ=0.75, ε=0.3):
     """
@@ -78,7 +76,7 @@ def multiscale_frangi_filter_R2(image, σs, α=0.3, γ=0.75, ε=0.3):
     Returns:
         np.ndarray of the vesselness of `image`, taking values between 0 and 1.
     """
-    # Compute vesselness at each scale σ in σs, and select the maximum at 
+    # Compute vesselness at each scale σ in σs, and select the maximum at
     # each point.
     vesselnesses = []
     for σ in σs:
@@ -89,12 +87,13 @@ def multiscale_frangi_filter_R2(image, σs, α=0.3, γ=0.75, ε=0.3):
 # Does not work as well as the one based on the Mathematica implementation.
 # def multiscale_frangi_filter_R2(image, α, ε, σs):
 #     """
-#     Compute Frangi filter of vessels in `image` at scales in `σs`. Wrapper for 
+#     Compute Frangi filter of vessels in `image` at scales in `σs`. Wrapper for
 #     scikit-image function `skimage.filters.frangi()`.
 #     """
-#     # Compute vesselness at each scale σ in σs, and select the maximum at 
+#     # Compute vesselness at each scale σ in σs, and select the maximum at
 #     # each point.
 #     return skimage.filters.frangi(image, sigmas=σs, alpha=α, beta=ε, gamma=3/4)
+
 
 def cost_function(vesselness, λ, p):
     """
