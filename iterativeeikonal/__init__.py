@@ -7,3 +7,4 @@ import iterativeeikonal.solvers as solvers
 
 # Most important functions are available at top level
 from iterativeeikonal.solvers import eikonal_solver_R2, geodesic_back_tracking_R2, convert_continuous_indices_to_real_space_R2
+from iterativeeikonal.costfunctions import multiscale_frangi_filter_R2, cost_function
