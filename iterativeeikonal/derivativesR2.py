@@ -13,14 +13,14 @@ def sanitize_index(
     """
     @taichi.func
     
-    Make sure the `index` is inside the shape of `input`.
+    Make sure the `index` is inside the shape of `input`. Adapted from Gijs.
 
     Args:
         `index`: ti.types.vector(n=2, dtype=ti.i32) index.
         `input`: ti.field in which we want to index.
 
     Returns:
-        ti.types.vector(n=2, dtype=int) of index that is within `input`.
+        ti.types.vector(n=2, dtype=ti.i32) of index that is within `input`.
     """
     shape = ti.Vector(ti.static(input.shape), dt=ti.i32)
     return ti.Vector([
@@ -123,7 +123,7 @@ def abs_derivatives(
     @taichi.func
 
     Compute an approximation of the absolute value of the derivative of `u` in 
-    the `x` and `y` directions.
+    the `x` and `y` directions. Adapted from Gijs.
 
     Args:
       Static:

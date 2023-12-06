@@ -10,7 +10,18 @@ def sanitize_index(
     index: ti.types.vector(3, ti.i32),
     input: ti.template()
 ) -> ti.types.vector(3, ti.i32):
-    """Make sure the `index` is inside the shape of `input`."""
+    """
+    @taichi.func
+    
+    Make sure the `index` is inside the shape of `input`. Copied from Gijs.
+
+    Args:
+        `index`: ti.types.vector(n=3, dtype=ti.i32) index.
+        `input`: ti.field in which we want to index.
+
+    Returns:
+        ti.types.vector(n=3, dtype=ti.i32) of index that is within `input`.
+    """
     shape = ti.Vector(ti.static(input.shape), dt=ti.i32)
     return ti.Vector([
         ti.math.clamp(index[0], 0, shape[0] - 1),
@@ -25,7 +36,18 @@ def trilinear_interpolate(
     index: ti.types.vector(3, ti.f32)
 ) -> ti.f32:
     """
-    Interpolate value of `input` at continuous `index`. Copied from Gijs.
+    @taichi.func
+
+    Interpolate value of `input` at continuous `index` trilinearly, via repeated
+    linear interpolation (x, y, θ). Copied from Gijs.
+
+    Args:
+        `input`: ti.field(dtype=[float]) in which we want to interpolate.
+        `index`: ti.types.vector(n=3, dtype=ti.f32) continuous index at which we 
+          want to interpolate.
+
+    Returns:
+        Value interpolation of `input` at `index`.
     """
     r = ti.math.fract(index)
 
@@ -34,7 +56,7 @@ def trilinear_interpolate(
 
     c = ti.math.ceil(index, ti.i32)
     c = sanitize_index(c, input)
-
+    
     v000 = input[f[0], f[1], f[2]]
     v001 = input[f[0], f[1], c[2]]
     v010 = input[f[0], c[1], f[2]]
@@ -56,11 +78,11 @@ def trilinear_interpolate(
 
     return v
 
-# Actual Derivatives
+# Left Invariant Derivatives
 
 
 @ti.func
-def derivatives(
+def derivatives_LI(
     u: ti.template(),
     dxy: ti.f32,
     A1_forward: ti.template(),
@@ -71,8 +93,20 @@ def derivatives(
     A3_backward: ti.template()
 ):
     """
-    Compute the forward and backward finite differences of `u` with spatial step 
-    size `dxy` and orientational step size `2π / u.shape[2]`. Copied from Gijs.
+    @taichi.func
+
+    Compute the forward and backward finite difference approximations of the 
+    left invariant derivatives of `u` with spatial step size `dxy` and 
+    orientational step size `2π / u.shape[2]`. Copied from Gijs.
+
+    Args:
+      Static:
+        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+          differentiate.
+        `dxy`: step size in x and y direction, taking values greater than 0.
+      Mutated:
+        `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
+          updated in place.
     """
     dθ = 2.0 * ti.math.pi / ti.static(u.shape[2])
     I_A3 = ti.Vector([0.0,  0.0, 1.0], dt=ti.f32)
@@ -92,7 +126,7 @@ def derivatives(
 
 
 @ti.func
-def abs_derivatives(
+def abs_derivatives_LI(
     u: ti.template(),
     dxy: ti.f32,
     A1_forward: ti.template(),
@@ -106,12 +140,27 @@ def abs_derivatives(
     abs_A3: ti.template()
 ):
     """
+    @taichi.func
+
     Compute an approximation of the absolute value of the left invariant 
-    derivatives of `u`.
+    derivatives of `u`. Adapted from Gijs.
+
+    Args:
+      Static:
+        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+          differentiate.
+        `dxy`: step size in x and y direction, taking values greater than 0.
+      Mutated:
+        `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
+          updated in place.
+        `abs_A*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
+          which are updated in place.
     """
-    derivatives(u, dxy, A1_forward, A1_backward, A2_forward,
-                A2_backward, A3_forward, A3_backward)
+    derivatives_LI(u, dxy, A1_forward, A1_backward, A2_forward, A2_backward, 
+                   A3_forward, A3_backward)
     for I in ti.grouped(u):
         abs_A1[I] = ti.math.max(-A1_forward[I], A1_backward[I], 0)
         abs_A2[I] = ti.math.max(-A2_forward[I], A2_backward[I], 0)
         abs_A3[I] = ti.math.max(-A3_forward[I], A3_backward[I], 0)
+
+# Gauge Frame ???
