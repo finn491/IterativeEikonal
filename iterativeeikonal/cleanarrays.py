@@ -37,7 +37,11 @@ def extract_centre_slice(u, pad_shape=1):
     Returns:
         np.ndarray of the unpadded array.
     """
-    return tuple(slice(pad_shape, dim_len - pad_shape, 1) for dim_len in u.shape)
+    if type(pad_shape) == int:
+        centre_slice = tuple(slice(pad_shape, dim_len - pad_shape, 1) for dim_len in u.shape)
+    else: 
+        centre_slice = tuple(slice(pad_shape[i], dim_len - pad_shape[i], 1) for i, dim_len in enumerate(u.shape))
+    return centre_slice
 
 
 def unpad_array(u, pad_shape=1):
