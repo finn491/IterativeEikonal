@@ -6,7 +6,7 @@ import diplib as dip
 
 # R2
 
-def rc_vessel_enhancement_R2(image, σ, α=0.3, γ=0.75, ε=0.3):
+def rc_vessel_enhancement_R2(image, σ, α=0.2, γ=0.75, ε=0.2):
     """
     Compute Frangi filter of vessels in `image` at a single scale `σ`. Copied 
     from "Code A - Vesselness in SE(2)".
