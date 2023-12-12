@@ -94,23 +94,68 @@ def vectorfield_bilinear_interpolate(
     c = ti.math.ceil(index, ti.i32)
     c = sanitize_index(c, vectorfield)
 
-    v00 = vectorfield[f[0], f[1]]
-    v01 = vectorfield[f[0], c[1]]
-    v10 = vectorfield[c[0], f[1]]
-    v11 = vectorfield[c[0], c[1]]
+    v00, w00 = vectorfield[f[0], f[1]]
+    v01, w01 = vectorfield[f[0], c[1]]
+    v10, w10 = vectorfield[c[0], f[1]]
+    v11, w11 = vectorfield[c[0], c[1]]
 
-    # Interpolate angles bilinearly
-    arg00 = ti.math.atan2(v00[1], v00[0])
-    arg01 = ti.math.atan2(v01[1], v01[0])
-    arg10 = ti.math.atan2(v10[1], v10[0])
-    arg11 = ti.math.atan2(v11[1], v11[0])
+    v0 = v00 * (1.0 - r[0]) + v10 * r[0]
+    v1 = v01 * (1.0 - r[0]) + v11 * r[0]
 
-    arg0 = arg00 * (1.0 - r[0]) + arg10 * r[0]
-    arg1 = arg01 * (1.0 - r[0]) + arg11 * r[0]
+    v = v0 * (1.0 - r[1]) + v1 * r[1]
 
-    arg = arg0 * (1.0 - r[1]) + arg1 * r[1]
+    w0 = w00 * (1.0 - r[0]) + w10 * r[0]
+    w1 = w01 * (1.0 - r[0]) + w11 * r[0]
 
-    return ti.Vector([ti.math.cos(arg), ti.math.sin(arg)])
+    w = w0 * (1.0 - r[1]) + w1 * r[1]
+
+    return ti.math.normalize(ti.Vector([v, w]))
+
+# Apparently, interpolating angles does not work well (or I implemented something incorrectly)...
+# @ti.func
+# def vectorfield_bilinear_interpolate(
+#     vectorfield: ti.template(),
+#     index: ti.template()
+# ) -> ti.types.vector(2, ti.f32):
+#     """
+#     @taichi.func
+
+#     Interpolate vector field, normalised to 1, `vectorfield` at continuous 
+#     `index` bilinearly, via repeated linear interpolation (x, y).
+
+#     Args:
+#         `vectorfield`: ti.Vector.field(n=2, dtype=[float]) in which we want to 
+#           interpolate.
+#         `index`: ti.types.vector(n=2, dtype=ti.f32) continuous index at which we 
+#           want to interpolate.
+
+#     Returns:
+#         ti.types.vector(n=2, dtype=ti.f32) of value interpolation of 
+#         `vectorfield` at `index`.
+#     """
+#     r = ti.math.fract(index)
+#     f = ti.math.floor(index, ti.i32)
+#     f = sanitize_index(f, vectorfield)
+#     c = ti.math.ceil(index, ti.i32)
+#     c = sanitize_index(c, vectorfield)
+
+#     v00 = vectorfield[f[0], f[1]]
+#     v01 = vectorfield[f[0], c[1]]
+#     v10 = vectorfield[c[0], f[1]]
+#     v11 = vectorfield[c[0], c[1]]
+
+#     # Interpolate angles bilinearly
+#     arg00 = ti.math.atan2(v00[1], v00[0])
+#     arg01 = ti.math.atan2(v01[1], v01[0])
+#     arg10 = ti.math.atan2(v10[1], v10[0])
+#     arg11 = ti.math.atan2(v11[1], v11[0])
+
+#     arg0 = arg00 * (1.0 - r[0]) + arg10 * r[0]
+#     arg1 = arg01 * (1.0 - r[0]) + arg11 * r[0]
+
+#     arg = arg0 * (1.0 - r[1]) + arg1 * r[1]
+
+#     return ti.Vector([ti.math.cos(arg), ti.math.sin(arg)])
 
 # Actual Derivatives
 
