@@ -341,7 +341,7 @@ def step_W_SE2(
 # R2
 
 
-def geodesic_back_tracking_R2(W_np, cost_np, source_point, target_point, dt=1., β=0., n_max=10000):
+def geodesic_back_tracking_R2(grad_W_np, source_point, target_point, dt=1., β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -361,21 +361,10 @@ def geodesic_back_tracking_R2(W_np, cost_np, source_point, target_point, dt=1., 
     Returns:
         np.ndarray of geodesic connecting `target_point` to `source_point`.
     """
-    # dt = dt_multiplier * W_np[target_point] # * cost_np.min() ** 2  # What is a good step size?
-    cost = get_padded_cost(cost_np)
-    W_padded = eik.cleanarrays.pad_array(W_np, pad_value=100.)
-    W = ti.field(dtype=ti.f32, shape=W_padded.shape)
-    W.from_numpy(W_padded)
-
-    # Compute gradient field: note that ||grad_cost W|| = 1.
-    dx_forward = ti.field(dtype=ti.f32, shape=W.shape)
-    dx_backward = ti.field(dtype=ti.f32, shape=W.shape)
-    dy_forward = ti.field(dtype=ti.f32, shape=W.shape)
-    dy_backward = ti.field(dtype=ti.f32, shape=W.shape)
-    dx_W = ti.field(dtype=ti.f32, shape=W.shape)
-    dy_W = ti.field(dtype=ti.f32, shape=W.shape)
-    grad_W = ti.field(dtype=ti.f32, shape=W.shape)    
-    distance_gradient_field_R2(W, cost, dx_forward, dx_backward,dy_forward, dy_backward, dx_W, dy_W, grad_W)
+    # grad_W_padded = eik.cleanarrays.pad_array(grad_W_np, pad_shape=(1, 1, 0))
+    shape = grad_W_np.shape[0:2]
+    grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=shape)
+    grad_W.from_numpy(grad_W_np)
 
     # Perform backtracking
     γ_list = ti.root.dynamic(ti.i, n_max)
@@ -432,10 +421,11 @@ def geodesic_back_tracking_R2_backend(
     """
     point = target_point
     γ.append(point)
-    tol = 1e-10
+    tol = 2.
     n = 0
-    while (ti.math.length(gradient_at_point) >= tol) and (n < n_max - 2):
-        gradient_at_point = eik.derivativesR2.vectorfield_bilinear_interpolate(grad_W, target_point)
+    gradient_at_point = eik.derivativesR2.vectorfield_bilinear_interpolate(grad_W, target_point)
+    while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
+        gradient_at_point = eik.derivativesR2.vectorfield_bilinear_interpolate(grad_W, point)
         new_point = get_next_point_R2(point, gradient_at_point, dt)
         γ.append(new_point)
         point = new_point
