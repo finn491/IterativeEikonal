@@ -2,6 +2,7 @@
 
 import taichi as ti
 import numpy as np
+import diplib as dip
 from PIL import Image
 import matplotlib.pyplot as plt
 
@@ -69,6 +70,13 @@ def convert_array_to_image(image_array):
     else:
         image = Image.fromarray((image_array * 255).astype("uint8"), mode="L")
     return image
+
+def high_pass_filter(image_array, σs):
+    low_frequencies = dip.Gauss(image_array, σs)
+    image_array_unshifted = image_array - low_frequencies
+    image_array_unnormalised = image_array_unshifted - image_array_unshifted.min()
+    image_array_filtered = image_array_unnormalised / image_array_unnormalised.max()
+    return image_array_filtered
 
 def view_image_array(image_array):
     """View numpy array `image_array` as a grayscale image."""
