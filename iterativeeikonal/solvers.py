@@ -53,7 +53,7 @@ def get_initial_W(shape, initial_condition=100.):
 
 # R2
 
-def eikonal_solver_R2(cost_np, source_point, target_point, n_max=1e5):
+def eikonal_solver_R2(cost_np, source_point, n_max=1e5):
     """
     Solve the Eikonal PDE on R2, with source at `source_point` and metric 
     defined by `cost_np`, using the iterative method described in Bekkers et al.
@@ -63,8 +63,6 @@ def eikonal_solver_R2(cost_np, source_point, target_point, n_max=1e5):
         `cost_np`: np.ndarray of cost function.
         `source_point`: Tuple[int] describing index of source point in 
           `cost_np`.
-        `target_point`: Tuple[int] describing index of target point in 
-          `cost_np`.
       Optional:
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
@@ -73,7 +71,7 @@ def eikonal_solver_R2(cost_np, source_point, target_point, n_max=1e5):
         np.ndarray of (approximate) distance map with respect to the cost 
           function described by `cost_np`.
         np.ndarray of upwind gradient field of (approximate) distance map with
-          respect to cost function described by `cost_np`
+          respect to cost function described by `cost_np`.
     """
     shape = cost_np.shape
     ε = cost_np.min()
@@ -162,7 +160,7 @@ def step_W_R2(
     eik.derivativesR2.abs_derivatives(W, 1., dx_forward, dx_backward, dy_forward, dy_backward, abs_dx, abs_dy)
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
-        dW_dt[I] = 1 - (ti.math.sqrt((abs_dx[I] ** 2 + abs_dy[I] ** 2)) / cost[I])
+        dW_dt[I] = 1 - (ti.math.sqrt((abs_dx[I]**2 + abs_dy[I]**2)) / cost[I])
         W[I] += dW_dt[I] * ε
 
 
@@ -209,18 +207,17 @@ def distance_gradient_field_R2(
 # SE(2)
 
 
-def eikonal_solver_SE2_LI(metric_tensor, cost_np, source_point, target_point,
-                          n_max=1e5):
+def eikonal_solver_SE2_LI(G_np, cost_np, source_point, n_max=1e5):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
-    metric tensor field defined by `metric_tensor` and `cost_np`, with source at 
-    `source_point` and metric, using the iterative method described in Bekkers 
-    et al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" 
-    (2015).
+    metric tensor field defined by `metric_tensor_diagonal` and `cost_np`, with 
+    source at `source_point` and metric, using the iterative method described in 
+    Bekkers et al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in 
+    SE(2)" (2015).
 
     Args:
-        `metric_tensor`: np.ndarray(shape=(3, 3), dtype=[float]) of metric 
-          tensor constants.
+        `G_np`: np.ndarray(shape=(3,), dtype=[float]) of constants of diagonal 
+          metric tensor with respect to left invariant basis.
         `cost_np`: np.ndarray of cost function.
         `source_point`: Tuple[int] describing index of source point in 
           `cost_np`.
@@ -233,30 +230,49 @@ def eikonal_solver_SE2_LI(metric_tensor, cost_np, source_point, target_point,
     Returns:
         np.ndarray of (approximate) distance map with respect to the cost 
           function described by `metric_tensor` and `cost_np`.
+        np.ndarray of upwind gradient field of (approximate) distance map with
+          respect to cost function described by `cost_np`.
     """
-    N = cost_np.shape[0]
+    shape = cost_np.shape
     ε = cost_np.min()
     cost = get_padded_cost(cost_np)
-    W = get_initial_W(N)
-    boundarypoints, boundaryvalues = get_boundary_conditions_SE2(source_point)
+    W = get_initial_W(shape)
+    G = ti.Vector(G_np, ti.f32)
+
+    # Create empty Taichi objects
+    A1_forward = ti.field(dtype=ti.f32, shape=W.shape)
+    A1_backward = ti.field(dtype=ti.f32, shape=W.shape)
+    A2_forward = ti.field(dtype=ti.f32, shape=W.shape)
+    A2_backward = ti.field(dtype=ti.f32, shape=W.shape)
+    A3_forward = ti.field(dtype=ti.f32, shape=W.shape)
+    A3_backward = ti.field(dtype=ti.f32, shape=W.shape)
+    abs_A1 = ti.field(dtype=ti.f32, shape=W.shape)
+    abs_A2 = ti.field(dtype=ti.f32, shape=W.shape)
+    abs_A3 = ti.field(dtype=ti.f32, shape=W.shape)
+    dW_dt = ti.field(dtype=ti.f32, shape=W.shape)
+    A1_W = ti.field(dtype=ti.f32, shape=W.shape)
+    A2_W = ti.field(dtype=ti.f32, shape=W.shape)
+    A3_W = ti.field(dtype=ti.f32, shape=W.shape)
+    grad_W = ti.Vector.field(n=3, dtype=ti.f32, shape=W.shape)
+    
+    boundarypoints, boundaryvalues = get_boundary_conditions_R2(source_point)
     eik.cleanarrays.apply_boundary_conditions(W, boundarypoints, boundaryvalues)
-    dx_forward, dx_backward, dy_forward, dy_backward, abs_dx, abs_dy, dW_dt = get_initial_derivatives_SE2(W)
 
-    # Maybe extract this loop into its own TaiChi kernel?
-    step_size_target = 100.
-    tol = 1e-8  # What is a good stopping criterion?
-    n = 0
-    while (np.abs(step_size_target) > tol) and (n <= n_max):
-        step_size_target = step_W_SE2(W, cost, dx_forward, dx_backward, dy_forward, dy_backward,
-                                  abs_dx, abs_dy, ε, dW_dt, target_point[0] + 1, target_point[1] + 1)
-        eik.cleanarrays.apply_boundary_conditions(
-            W, boundarypoints, boundaryvalues)
-        n += 1
-    print(f"Converged after {n - 1} steps!")
-    print(step_size_target)
+    # Compute approximate distance map
+    for _ in tqdm(range(int(n_max))):
+        step_W_SE2(W, cost, G, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, abs_A1, abs_A2, 
+                   abs_A3, ε, dW_dt)
+        eik.cleanarrays.apply_boundary_conditions(W, boundarypoints, boundaryvalues)
+    # print(f"Converged after {n - 1} steps!")
 
+    # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
+    distance_gradient_field_SE2(W, cost, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, 
+                                A1_W, A2_W, A3_W, grad_W)
+
+    # Cleanup
     W_np = W.to_numpy()
-    return eik.cleanarrays.unpad_array(W_np)
+    grad_W_np = grad_W.to_numpy()
+    return eik.cleanarrays.unpad_array(W_np), eik.cleanarrays.unpad_array(grad_W_np, pad_shape=(1, 1, 0))
 
 
 def get_boundary_conditions_SE2(source_point):
@@ -264,46 +280,33 @@ def get_boundary_conditions_SE2(source_point):
     Determine the boundary conditions from `source_point`, giving the boundary
     points and boundary values as TaiChi objects.
     """
-    i_0, j_0 = source_point
-    boundarypoints_np = np.array([[i_0, j_0]], dtype=int)
+    i_0, j_0, θ_0 = source_point
+    boundarypoints_np = np.array([[i_0, j_0, θ_0]], dtype=int)
     boundaryvalues_np = np.array([0.], dtype=float)
-    boundarypoints = ti.Vector.field(n=2, dtype=ti.i32, shape=1)
+    boundarypoints = ti.Vector.field(n=3, dtype=ti.i32, shape=1)
     boundarypoints.from_numpy(boundarypoints_np)
     boundaryvalues = ti.field(shape=1, dtype=ti.f32)
     boundaryvalues.from_numpy(boundaryvalues_np)
     return boundarypoints, boundaryvalues
 
 
-def get_initial_derivatives_SE2(W):
-    """
-    Initialise empty TaiChi objects for the various derivatives of the 
-    (approximate) distance map.
-    """
-    dx_forward = ti.field(dtype=ti.f32, shape=W.shape)
-    dx_backward = ti.field(dtype=ti.f32, shape=W.shape)
-    dy_forward = ti.field(dtype=ti.f32, shape=W.shape)
-    dy_backward = ti.field(dtype=ti.f32, shape=W.shape)
-    abs_dx = ti.field(dtype=ti.f32, shape=W.shape)
-    abs_dy = ti.field(dtype=ti.f32, shape=W.shape)
-    dW_dt = ti.field(dtype=ti.f32, shape=W.shape)
-    return dx_forward, dx_backward, dy_forward, dy_backward, abs_dx, abs_dy, dW_dt
-
-
 @ti.kernel
 def step_W_SE2(
     W: ti.template(),
     cost: ti.template(),
-    dx_forward: ti.template(),
-    dx_backward: ti.template(),
-    dy_forward: ti.template(),
-    dy_backward: ti.template(),
-    abs_dx: ti.template(),
-    abs_dy: ti.template(),
+    G: ti.types.vector(3, ti.f32),
+    A1_forward: ti.template(),
+    A1_backward: ti.template(),
+    A2_forward: ti.template(),
+    A2_backward: ti.template(),
+    A3_forward: ti.template(),
+    A3_backward: ti.template(),
+    abs_A1: ti.template(),
+    abs_A2: ti.template(),
+    abs_A3: ti.template(),
     ε: ti.f32,
-    dW_dt: ti.template(),
-    i_target: ti.i32,
-    j_target: ti.i32
-) -> ti.f32:
+    dW_dt: ti.template()
+):
     """
     @taichi.kernel
 
@@ -314,7 +317,9 @@ def step_W_SE2(
     Args:
       Static:
         `cost`: ti.field(dtype=[float], shape=shape) of cost function.
-        `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives.
+        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal 
+          metric tensor with respect to left invariant basis. 
+        `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives.
         `ε`: "Time" step size, taking values greater than 0.
         `*_target`: Indices of the target point.
       Mutated:
@@ -322,19 +327,66 @@ def step_W_SE2(
           which is updated in place.
         `dW_dt`: ti.field(dtype=[float], shape=shape) of error of the distance 
           map with respect to the Eikonal PDE, which is updated in place.
-        `abs_d*`: ti.field(dtype=[float], shape=shape) of absolute values of
+        `abs_A*`: ti.field(dtype=[float], shape=shape) of absolute values of
           derivatives, which are updated in place.
-
-    Returns:
-        Change in (approximate) distance map at target point.
     """
-    eik.derivativesR2.abs_derivatives(W, 1., dx_forward, dx_backward, dy_forward, dy_backward, abs_dx, abs_dy)
+    eik.derivativesSe2.abs_derivatives(W, 1., A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward,
+                                       abs_A1, abs_A2, abs_A3)
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
-        dW_dt[I] = 1 - (ti.math.sqrt((abs_dx[I] ** 2 + abs_dy[I] ** 2)) / cost[I])
+        dW_dt[I] = 1 - (ti.math.sqrt((abs_A1[I]**2 / G[0] + abs_A2[I]**2 / G[1] + abs_A3[I]**2 / G[2])) / cost[I])
         W[I] += dW_dt[I] * ε
-    # adding this makes it a bit slower, but allows us to terminate when converged.
-    return dW_dt[i_target, j_target] * ε
+
+@ti.kernel
+def distance_gradient_field_SE2(
+    W: ti.template(),
+    cost: ti.template(),
+    G: ti.types.vector(3, ti.f32),
+    A1_forward: ti.template(),
+    A1_backward: ti.template(),
+    A2_forward: ti.template(),
+    A2_backward: ti.template(),
+    A3_forward: ti.template(),
+    A3_backward: ti.template(),
+    A1_W: ti.template(),
+    A2_W: ti.template(),
+    A3_W: ti.template(),
+    grad_W: ti.template()
+):
+    """
+    @taichi.kernel
+
+    Compute the gradient with respect to `cost` of the (approximate) distance
+    map `W`.
+
+    Args:
+      Static:
+        `W`: ti.field(dtype=[float], shape=shape) of approximate distance map.
+        `cost`: ti.field(dtype=[float], shape=shape) of cost function.
+        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal 
+          metric tensor with respect to left invariant basis. 
+      Mutated:
+        `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
+          updated in place.
+        `A1_W`: ti.field(dtype=[float], shape=shape) of upwind derivative of the 
+          approximate distance map in the A1 direction, which is updated in 
+          place.
+        `A2_W`: ti.field(dtype=[float], shape=shape) of upwind derivative of the 
+          approximate distance map in the A2 direction, which is updated in 
+          place.
+        `A3_W`: ti.field(dtype=[float], shape=shape) of upwind derivative of the 
+          approximate distance map in the A3 direction, which is updated in 
+          place.
+        `grad_W`: ti.field(dtype=[float], shape=shape) of upwind derivatives of 
+          approximate distance map, which is updated inplace.
+    """
+    dxy = 1.
+    eik.derivativesSE2.derivatives_LI(W, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward)
+    eik.derivativesSE2.upwind_derivatives_LI(W, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward,
+                                             A3_backward, A1_W, A2_W, A3_W)
+    for I in ti.grouped(A1_W):
+        grad_W[I] = ti.Vector([A1_W[I] / G[0], A2_W[I] / G[1], A3_W[I] / G[2]]) / cost[I]
+
 
 # Gradient Back Tracking
 
@@ -348,11 +400,12 @@ def geodesic_back_tracking_R2(grad_W_np, source_point, target_point, dt=1., β=0
     approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
-        `W_np`: np.ndarray of (approximate) distance map
-        `cost_np`: np.ndarray of cost function.
+        `grad_W_np`: np.ndarray of upwind gradient with respect to some cost of 
+          the approximate distance map.
         `source_point`: Tuple[int] describing index of source point in `W_np`.
         `target_point`: Tuple[int] describing index of target point in `W_np`.
       Optional:
+        `dt`: Step size, taking values greater than 0. Defaults to 1.
         `β`: Momentum parameter in gradient descent, taking values between 0 and 
           1. Defaults to 0.
         `n_max`: Maximum number of points in geodesic, taking positive integral
@@ -361,7 +414,6 @@ def geodesic_back_tracking_R2(grad_W_np, source_point, target_point, dt=1., β=0
     Returns:
         np.ndarray of geodesic connecting `target_point` to `source_point`.
     """
-    # grad_W_padded = eik.cleanarrays.pad_array(grad_W_np, pad_shape=(1, 1, 0))
     shape = grad_W_np.shape[0:2]
     grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=shape)
     grad_W.from_numpy(grad_W_np)
@@ -409,8 +461,8 @@ def geodesic_back_tracking_R2_backend(
           target point in `W_np`.
         `n_max`: Maximum number of points in geodesic, taking positive integral
           values. Defaults to 10000.
-        `β`: Momentum parameter in gradient descent, taking values between 0 and 
-          1. Defaults to 0.
+        `β`: *Currently not used* Momentum parameter in gradient descent, taking 
+          values between 0 and 1. Defaults to 0. 
         `*_target`: Indices of the target point.
       Mutated:
         `γ`: ti.Vector.field(n=2, dtype=[float]) of coordinates of points on the
@@ -459,149 +511,6 @@ def get_next_point_R2(
     new_point[1] = point[1] - dt * gradient_at_point[1]
     return new_point
 
-
-# @ti.kernel
-# def geodesic_back_tracking_R2_backend(
-#     W: ti.template(),
-#     cost: ti.template(),
-#     source_point: ti.types.vector(2, ti.f32),
-#     target_point: ti.types.vector(2, ti.f32),
-#     dt: ti.f32,
-#     n_max: ti.i32,
-#     β: ti.f32,
-#     γ: ti.template()
-# ) -> ti.i32:
-#     """
-#     @taichi.kernel
-
-#     Find the geodesic connecting `target_point` to `source_point`, using
-#     gradient descent backtracking, as described in Bekkers et al. "A PDE 
-#     approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
-
-#     Args:
-#       Static:
-#         `W`: ti.field(dtype=[float], shape=shape) of (approximate) distance map.
-#         `cost`: ti.field(dtype=[float], shape=shape) of cost function.
-#         `dt`: Gradient descent step size, taking values greater than 0.
-#         `source_point`: ti.types.vector(n=2, dtype=[float]) describing index of 
-#           source point in `W_np`.
-#         `target_point`: ti.types.vector(n=2, dtype=[float]) describing index of 
-#           target point in `W_np`.
-#         `n_max`: Maximum number of points in geodesic, taking positive integral
-#           values. Defaults to 10000.
-#         `β`: Momentum parameter in gradient descent, taking values between 0 and 
-#           1. Defaults to 0.
-#         `*_target`: Indices of the target point.
-#       Mutated:
-#         `γ`: ti.Vector.field(n=2, dtype=[float]) of coordinates of points on the
-#           geodesic. #SNode stuff#
-
-#     Returns:
-#         Number of points in the geodesic.
-#     """
-#     point = target_point
-#     γ.append(point)
-#     tol = 1e-10
-#     n = 0
-#     gradient_at_point = compute_gradient_R2(W, point, ti.Vector([0., 0.], dt=ti.f32), 0.)
-#     while (ti.math.length(gradient_at_point) >= tol) and (n < n_max - 2):
-#         cost_at_point = eik.derivativesR2.bilinear_interpolate(cost, point)
-#         gradient_at_point = compute_gradient_R2(W, point, gradient_at_point, β)
-#         new_point = get_next_point_R2(point, gradient_at_point, cost_at_point, dt)
-#         γ.append(new_point)
-#         point = new_point
-#         n += 1
-#     γ.append(source_point)
-#     return γ.length()
-
-
-# @ti.func
-# def compute_gradient_R2(
-#     W: ti.template(),
-#     point: ti.types.vector(n=2, dtype=ti.f32),
-#     old_gradient: ti.types.vector(n=2, dtype=ti.f32),
-#     β: ti.f32
-# ) -> ti.types.vector(n=2, dtype=ti.f32):
-#     """
-#     @taichi.func
-
-#     Compute the gradient of the (approximate) distance map `W` with respect to
-#     x-y coordinates at `point`.
-
-#     Args:
-#         `W`: ti.field(dtype=[float], shape=shape) of (approximate) distance map.
-#         `point`: ti.types.vector(n=2, dtype=[float]) coordinates of current
-#           point.
-#         `old_gradient`: Gradient at previous point, for use with momentum.
-#         `β`: Momentum parameter in gradient descent, taking values between 0 and 
-#           1.
-
-#     Returns:
-#         Gradient of the (approximate) distance map `W` with respect to x-y 
-#         coordinates at `point`.
-#     """
-#     # Central Difference Derivatives
-#     # dx = 1.
-#     # dy = 1.
-#     # x_shift = ti.Vector([dx / 2., 0.], dt=ti.f32)
-#     # y_shift = ti.Vector([0., dy / 2.], dt=ti.f32)
-#     # W_x_forward = eik.derivativesR2.bilinear_interpolate(W, point + x_shift)
-#     # W_x_backward = eik.derivativesR2.bilinear_interpolate(W, point - x_shift)
-#     # W_y_forward = eik.derivativesR2.bilinear_interpolate(W, point + y_shift)
-#     # W_y_backward = eik.derivativesR2.bilinear_interpolate(W, point - y_shift)
-#     # gradient_x = (W_x_forward - W_x_backward) / dx
-#     # gradient_y = (W_y_forward - W_y_backward) / dy
-
-#     # Upwind Derivatives
-#     x_shift = ti.Vector([1., 0.], dt=ti.f32)
-#     y_shift = ti.Vector([0., 1.], dt=ti.f32)
-#     W_point = eik.derivativesR2.bilinear_interpolate(W, point)
-#     W_x_forward = eik.derivativesR2.bilinear_interpolate(W, point + x_shift)
-#     W_x_backward = eik.derivativesR2.bilinear_interpolate(W, point - x_shift)
-#     W_y_forward = eik.derivativesR2.bilinear_interpolate(W, point + y_shift)
-#     W_y_backward = eik.derivativesR2.bilinear_interpolate(W, point - y_shift)
-#     dx_forward = W_x_forward - W_point
-#     dx_backward = W_point - W_x_backward
-#     gradient_x = ti.math.max(-dx_forward, dx_backward, 0.) * (-1.)**(dx_forward >= dx_backward)
-#     dy_forward = W_y_forward - W_point
-#     dy_backward = W_point - W_y_backward
-#     gradient_y = ti.math.max(-dy_forward, dy_backward, 0.) * (-1.)**(dy_forward >= dy_backward)
-
-#     new_gradient_x = β * old_gradient[0] + (1 - β) * gradient_x
-#     new_gradient_y = β * old_gradient[1] + (1 - β) * gradient_y
-#     return ti.Vector([new_gradient_x, new_gradient_y], ti.f32)
-
-
-# @ti.func
-# def get_next_point_R2(
-#     point: ti.types.vector(n=2, dtype=ti.f32),
-#     gradient_at_point: ti.types.vector(n=2, dtype=ti.f32),
-#     cost_at_point: ti.f32,
-#     dt: ti.f32
-# ) -> ti.types.vector(n=2, dtype=ti.f32):
-#     """
-#     @taichi.func
-
-#     Compute the next point in the gradient descent.
-
-#     Args:
-#         `point`: ti.types.vector(n=2, dtype=[float]) coordinates of current 
-#           point.
-#         `gradient_at_point`: ti.types.vector(n=2, dtype=[float]) value of 
-#           gradient at current point.
-#         `cost_at_point`: Value of the cost function at current point, taking
-#           values greater than 0.
-#         `dt`: Gradient descent step size, taking values greater than 0.
-
-#     Returns:
-#         Next point in the gradient descent.
-#     """
-#     new_point = ti.Vector([0., 0.], dt=ti.f32)
-#     new_point[0] = point[0] - dt * gradient_at_point[0] / cost_at_point
-#     new_point[1] = point[1] - dt * gradient_at_point[1] / cost_at_point
-#     return new_point
-
-
 def convert_continuous_indices_to_real_space_R2(γ_ci_np, xs_np, ys_np):
     """
     Convert the continuous indices in the geodesic `γ_ci_np` to the 
@@ -635,8 +544,127 @@ def continuous_indices_to_real_R2(
     continuous indices in `γ_ci`.
     """
     for I in ti.grouped(γ_ci):
-        γ[I][0] = eik.derivativesR2.bilinear_interpolate(xs, γ_ci[I])
-        γ[I][1] = eik.derivativesR2.bilinear_interpolate(ys, γ_ci[I])
+        γ[I][0] = eik.derivativesR2.scalar_bilinear_interpolate(xs, γ_ci[I])
+        γ[I][1] = eik.derivativesR2.scalar_bilinear_interpolate(ys, γ_ci[I])
 
 
 # SE(2)
+
+def geodesic_back_tracking_SE2(grad_W_np, source_point, target_point, dt=1., β=0., n_max=10000):
+    """
+    Find the geodesic connecting `target_point` to `source_point`, using 
+    gradient descent back tracking, as described in Bekkers et al. "A PDE 
+    approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+
+    Args:
+        `grad_W_np`: np.ndarray of upwind gradient with respect to some cost of 
+          the approximate distance map.
+        `source_point`: Tuple[int] describing index of source point in `W_np`.
+        `target_point`: Tuple[int] describing index of target point in `W_np`.
+      Optional:
+        `dt`: Step size, taking values greater than 0. Defaults to 1.
+        `β`: Momentum parameter in gradient descent, taking values between 0 and 
+          1. Defaults to 0.
+        `n_max`: Maximum number of points in geodesic, taking positive integral
+          values. Defaults to 10000.
+
+    Returns:
+        np.ndarray of geodesic connecting `target_point` to `source_point`.
+    """
+    shape = grad_W_np.shape[0:3]
+    grad_W = ti.Vector.field(n=3, dtype=ti.f32, shape=shape)
+    grad_W.from_numpy(grad_W_np)
+
+    # Perform backtracking
+    γ_list = ti.root.dynamic(ti.i, n_max)
+    γ = ti.Vector.field(n=3, dtype=ti.f32)
+    γ_list.place(γ)
+
+    source_point = ti.Vector(source_point, dt=ti.f32)
+    target_point = ti.Vector(target_point, dt=ti.f32)
+
+    γ_len = geodesic_back_tracking_SE2_backend(grad_W, source_point, target_point, dt, n_max, β, γ)
+    γ_dense = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_len)
+    print(f"Geodesic consists of {γ_len} points.")
+    sparse_to_dense(γ, γ_dense)
+
+    return γ_dense.to_numpy()
+
+@ti.kernel
+def geodesic_back_tracking_SE2_backend(
+    grad_W: ti.template(),
+    source_point: ti.types.vector(3, ti.f32),
+    target_point: ti.types.vector(3, ti.f32),
+    dt: ti.f32,
+    n_max: ti.i32,
+    β: ti.f32,
+    γ: ti.template()
+) -> ti.i32:
+    """
+    @taichi.kernel
+
+    Find the geodesic connecting `target_point` to `source_point`, using
+    gradient descent backtracking, as described in Bekkers et al. "A PDE 
+    approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+
+    Args:
+      Static:
+        `grad_W`: ti.field(dtype=[float], shape=shape) of upwind gradient with
+          respect to some cost of the approximate distance map.
+        `dt`: Gradient descent step size, taking values greater than 0.
+        `source_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
+          source point in `W_np`.
+        `target_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
+          target point in `W_np`.
+        `n_max`: Maximum number of points in geodesic, taking positive integral
+          values. Defaults to 10000.
+        `β`: *Currently not used* Momentum parameter in gradient descent, taking 
+          values between 0 and 1. Defaults to 0. 
+        `*_target`: Indices of the target point.
+      Mutated:
+        `γ`: ti.Vector.field(n=2, dtype=[float]) of coordinates of points on the
+          geodesic. #SNode stuff#
+
+    Returns:
+        Number of points in the geodesic.
+    """
+    point = target_point
+    γ.append(point)
+    tol = 2.
+    n = 0
+    gradient_at_point = eik.derivativesR2.vectorfield_trilinear_interpolate(grad_W, target_point)
+    while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
+        gradient_at_point = eik.derivativesR2.vectorfield_trilinear_interpolate(grad_W, point)
+        new_point = get_next_point_SE2(point, gradient_at_point, dt)
+        γ.append(new_point)
+        point = new_point
+        n += 1
+    γ.append(source_point)
+    return γ.length()
+
+@ti.func
+def get_next_point_SE2(
+    point: ti.types.vector(n=3, dtype=ti.f32),
+    gradient_at_point: ti.types.vector(n=3, dtype=ti.f32),
+    dt: ti.f32
+) -> ti.types.vector(n=3, dtype=ti.f32):
+    """
+    @taichi.func
+
+    Compute the next point in the gradient descent.
+
+    Args:
+        `point`: ti.types.vector(n=2, dtype=[float]) coordinates of current 
+          point.
+        `gradient_at_point`: ti.types.vector(n=2, dtype=[float]) value of 
+          gradient at current point.
+        `dt`: Gradient descent step size, taking values greater than 0.
+
+    Returns:
+        Next point in the gradient descent.
+    """
+    new_point = ti.Vector([0., 0., 0.], dt=ti.f32)
+    new_point[0] = point[0] - dt * gradient_at_point[0]
+    new_point[1] = point[1] - dt * gradient_at_point[1]
+    new_point[2] = point[2] - dt * gradient_at_point[2]
+    return new_point
