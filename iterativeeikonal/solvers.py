@@ -206,7 +206,6 @@ def distance_gradient_field_R2(
 
 # SE(2)
 
-
 def eikonal_solver_SE2_LI(G_np, cost_np, source_point, n_max=1e5):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
@@ -260,38 +259,22 @@ def eikonal_solver_SE2_LI(G_np, cost_np, source_point, n_max=1e5):
 
     # Compute approximate distance map
     for _ in tqdm(range(int(n_max))):
-        step_W_SE2(W, cost, G, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, abs_A1, abs_A2, 
-                   abs_A3, ε, dW_dt)
+        step_W_SE2_LI(W, cost, G, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, abs_A1, 
+                      abs_A2, abs_A3, ε, dW_dt)
         eik.cleanarrays.apply_boundary_conditions(W, boundarypoints, boundaryvalues)
     # print(f"Converged after {n - 1} steps!")
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    distance_gradient_field_SE2(W, cost, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, 
-                                A1_W, A2_W, A3_W, grad_W)
+    distance_gradient_field_SE2_LI(W, cost, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward,
+                                   A1_W, A2_W, A3_W, grad_W)
 
     # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
     return eik.cleanarrays.unpad_array(W_np), eik.cleanarrays.unpad_array(grad_W_np, pad_shape=(1, 1, 0))
 
-
-def get_boundary_conditions_SE2(source_point):
-    """
-    Determine the boundary conditions from `source_point`, giving the boundary
-    points and boundary values as TaiChi objects.
-    """
-    i_0, j_0, θ_0 = source_point
-    boundarypoints_np = np.array([[i_0, j_0, θ_0]], dtype=int)
-    boundaryvalues_np = np.array([0.], dtype=float)
-    boundarypoints = ti.Vector.field(n=3, dtype=ti.i32, shape=1)
-    boundarypoints.from_numpy(boundarypoints_np)
-    boundaryvalues = ti.field(shape=1, dtype=ti.f32)
-    boundaryvalues.from_numpy(boundaryvalues_np)
-    return boundarypoints, boundaryvalues
-
-
 @ti.kernel
-def step_W_SE2(
+def step_W_SE2_LI(
     W: ti.template(),
     cost: ti.template(),
     G: ti.types.vector(3, ti.f32),
@@ -338,7 +321,7 @@ def step_W_SE2(
         W[I] += dW_dt[I] * ε
 
 @ti.kernel
-def distance_gradient_field_SE2(
+def distance_gradient_field_SE2_LI(
     W: ti.template(),
     cost: ti.template(),
     G: ti.types.vector(3, ti.f32),
@@ -386,6 +369,20 @@ def distance_gradient_field_SE2(
                                              A3_backward, A1_W, A2_W, A3_W)
     for I in ti.grouped(A1_W):
         grad_W[I] = ti.Vector([A1_W[I] / G[0], A2_W[I] / G[1], A3_W[I] / G[2]]) / cost[I]
+
+def get_boundary_conditions_SE2(source_point):
+    """
+    Determine the boundary conditions from `source_point`, giving the boundary
+    points and boundary values as TaiChi objects.
+    """
+    i_0, j_0, θ_0 = source_point
+    boundarypoints_np = np.array([[i_0, j_0, θ_0]], dtype=int)
+    boundaryvalues_np = np.array([0.], dtype=float)
+    boundarypoints = ti.Vector.field(n=3, dtype=ti.i32, shape=1)
+    boundarypoints.from_numpy(boundarypoints_np)
+    boundaryvalues = ti.field(shape=1, dtype=ti.f32)
+    boundaryvalues.from_numpy(boundaryvalues_np)
+    return boundarypoints, boundaryvalues
 
 
 # Gradient Back Tracking
