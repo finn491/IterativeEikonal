@@ -234,7 +234,7 @@ def eikonal_solver_SE2_LI(G_inv_np, cost_np, source_point, dxy, n_max=1e5):
     shape = cost_np.shape
     ε = cost_np.min() * dxy
     cost = get_padded_cost(cost_np)
-    W = get_initial_W(shape)
+    W = get_initial_W(shape, initial_condition=100.)
     G_inv = ti.Matrix(G_inv_np, ti.f32)
 
     # Create empty Taichi objects
@@ -266,7 +266,8 @@ def eikonal_solver_SE2_LI(G_inv_np, cost_np, source_point, dxy, n_max=1e5):
     # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
-    return eik.cleanarrays.unpad_array(W_np), eik.cleanarrays.unpad_array(grad_W_np) # , pad_shape=(1, 1, 0))
+
+    return eik.cleanarrays.unpad_array(W_np), eik.cleanarrays.unpad_array(grad_W_np)
 
 @ti.kernel
 def step_W_SE2_LI(
@@ -317,12 +318,12 @@ def step_W_SE2_LI(
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
         dW_dt[I] = 1 - (ti.math.sqrt(
-            G_inv[0, 0] * A1_W[I]**2 +
+            1 * G_inv[0, 0] * A1_W[I] * A1_W[I] +
             2 * G_inv[0, 1] * A1_W[I] * A2_W[I] + # Metric tensor is symmetric.
             2 * G_inv[0, 2] * A1_W[I] * A3_W[I] +
-            G_inv[1, 1] * A2_W[I]**2 +
+            1 * G_inv[1, 1] * A2_W[I] * A2_W[I] +
             2 * G_inv[1, 2] * A2_W[I] * A3_W[I] +
-            G_inv[2, 2] * A3_W[I]**2
+            1 * G_inv[2, 2] * A3_W[I] * A3_W[I]
         ) / cost[I])
         # dW_dt[I] = 1 - (ti.math.sqrt((abs_A1[I]**2 / G[0] + abs_A2[I]**2 / G[1] + abs_A3[I]**2 / G[2])) / cost[I])
         W[I] += dW_dt[I] * ε

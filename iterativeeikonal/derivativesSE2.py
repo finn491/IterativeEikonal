@@ -14,7 +14,7 @@ def sanitize_index(
     """
     @taichi.func
     
-    Make sure the `index` is inside the shape of `input`. Copied from Gijs.
+    Make sure the `index` is inside the shape of `input`. Copied from Gijs Bellaard.
 
     Args:
         `index`: ti.types.vector(n=3, dtype=ti.i32) index.
@@ -47,7 +47,7 @@ def trilinear_interpolate(
     @taichi.func
 
     Interpolate value of the points `v***` depending on the distance `r`, via 
-    repeated linear interpolation (x, y, θ). Adapted from Gijs.
+    repeated linear interpolation (x, y, θ). Adapted from Gijs Bellaard.
 
     Args:
         `v***`: values at points between which we want to interpolate, taking 
@@ -80,7 +80,7 @@ def scalar_trilinear_interpolate(
     @taichi.func
 
     Interpolate value of `input` at continuous `index` trilinearly, via repeated
-    linear interpolation (x, y, θ). Copied from Gijs.
+    linear interpolation (x, y, θ). Copied from Gijs Bellaard.
 
     Args:
         `input`: ti.field(dtype=[float]) in which we want to interpolate.
@@ -173,7 +173,7 @@ def derivatives_LI(
 
     Compute the forward and backward finite difference approximations of the 
     left invariant derivatives of `u` with spatial step size `dxy` and 
-    orientational step size `2π / u.shape[2]`. Copied from Gijs.
+    orientational step size `2π / u.shape[2]`. Copied from Gijs Bellaard.
 
     Args:
       Static:
@@ -218,8 +218,8 @@ def abs_derivatives_LI(
     """
     @taichi.func
 
-    Compute an approximation of the absolute value of the left invariant 
-    derivatives of `u`. Adapted from Gijs.
+    Compute an approximation of the absolute value of the upwind left invariant 
+    derivatives of `u`. Adapted from Gijs Bellaard.
 
     Args:
       Static:
