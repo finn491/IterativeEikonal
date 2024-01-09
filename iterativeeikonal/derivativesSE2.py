@@ -138,20 +138,72 @@ def vectorfield_trilinear_interpolate(
     c = ti.math.ceil(index, ti.i32)
     c = sanitize_index(c, vectorfield)
 
-    u000, v000, w000 = input[f[0], f[1], f[2]]
-    u001, v001, w001 = input[f[0], f[1], c[2]]
-    u010, v010, w010 = input[f[0], c[1], f[2]]
-    u011, v011, w011 = input[f[0], c[1], c[2]]
-    u100, v100, w100 = input[c[0], f[1], f[2]]
-    u101, v101, w101 = input[c[0], f[1], c[2]]
-    u110, v110, w110 = input[c[0], c[1], f[2]]
-    u111, v111, w111 = input[c[0], c[1], c[2]]
+    u000, v000, w000 = vectorfield[f[0], f[1], f[2]]
+    u001, v001, w001 = vectorfield[f[0], f[1], c[2]]
+    u010, v010, w010 = vectorfield[f[0], c[1], f[2]]
+    u011, v011, w011 = vectorfield[f[0], c[1], c[2]]
+    u100, v100, w100 = vectorfield[c[0], f[1], f[2]]
+    u101, v101, w101 = vectorfield[c[0], f[1], c[2]]
+    u110, v110, w110 = vectorfield[c[0], c[1], f[2]]
+    u111, v111, w111 = vectorfield[c[0], c[1], c[2]]
 
     u = trilinear_interpolate(u000, u001, u010, u011, u100, u101, u110, u111, r)
     v = trilinear_interpolate(v000, v001, v010, v011, v100, v101, v110, v111, r)
     w = trilinear_interpolate(w000, w001, w010, w011, w100, w101, w110, w111, r)
 
     return ti.math.normalize(ti.Vector([u, v, w]))
+
+
+@ti.func
+def vectorfield_LI_to_static(
+    vectorfield_LI: ti.template(),
+    θs: ti.template(),
+    vectorfield_static: ti.template()
+):
+    """
+    @taichi.func
+
+    Change the coordinates of the vectorfield represented by `vectorfield_LI`
+    from the left invariant to the static frame.
+
+    Args:
+      Static:
+        `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in LI
+          coordinates.
+        `θs`: angle coordinate at each grid point.
+      Mutated:
+        vectorfield_static`: ti.Vector.field(n=3, dtype=[float]) represented in
+          static coordinates.
+    """
+    for I in ti.grouped(vectorfield_LI):
+        vectorfield_static[I] = vector_LI_to_static(vectorfield_LI[I], θs[I])
+
+@ti.func
+def vector_LI_to_static(
+    vector_LI: ti.types.vector(3, ti.f32),
+    θ: ti.f32
+) -> ti.types.vector(3, ti.f32):
+    """
+    @taichi.func
+
+    Change the coordinates of the vector represented by `vector_LI` from the 
+    left invariant to the static frame, given that the angle coordinate of the 
+    point on the manifold corresponding to this vector is θ.
+
+    Args:
+      Static:
+        `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in LI
+          coordinates.
+        `θ`: angle coordinate of corresponding point on the manifold.
+      Mutated:
+        vectorfield_static`: ti.Vector.field(n=3, dtype=[float]) represented in
+          static coordinates.
+    """
+    return ti.Vector([
+        ti.math.cos(θ) * vector_LI[0] + ti.math.sin(θ) * vector_LI[1],
+        -ti.math.sin(θ) * vector_LI[0] + ti.math.cos(θ) * vector_LI[1],
+        vector_LI[2]
+    ], dt=ti.f32)
 
 
 # Left Invariant Derivatives
