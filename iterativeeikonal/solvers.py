@@ -232,9 +232,9 @@ def eikonal_solver_SE2_LI(G_inv_np, cost_np, source_point, dxy, n_max=1e5):
           respect to cost function described by `cost_np`.
     """
     shape = cost_np.shape
-    ε = cost_np.min() * dxy
+    ε = cost_np.min() * dxy / G_inv_np.max()
     cost = get_padded_cost(cost_np)
-    W = get_initial_W(shape, initial_condition=100.)
+    W = get_initial_W(shape, initial_condition=25.)
     G_inv = ti.Matrix(G_inv_np, ti.f32)
 
     # Create empty Taichi objects
@@ -267,7 +267,7 @@ def eikonal_solver_SE2_LI(G_inv_np, cost_np, source_point, dxy, n_max=1e5):
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
 
-    return eik.cleanarrays.unpad_array(W_np), eik.cleanarrays.unpad_array(grad_W_np)
+    return eik.cleanarrays.unpad_array(W_np), eik.cleanarrays.unpad_array(grad_W_np, pad_shape=(1, 1, 1, 0))
 
 @ti.kernel
 def step_W_SE2_LI(
@@ -636,9 +636,9 @@ def geodesic_back_tracking_SE2_backend(
     γ.append(point)
     tol = 2.
     n = 0
-    gradient_at_point = eik.derivativesR2.vectorfield_trilinear_interpolate(grad_W, target_point)
+    gradient_at_point = eik.derivativesSE2.vectorfield_trilinear_interpolate(grad_W, target_point)
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
-        gradient_at_point = eik.derivativesR2.vectorfield_trilinear_interpolate(grad_W, point)
+        gradient_at_point = eik.derivativesSE2.vectorfield_trilinear_interpolate(grad_W, point)
         new_point = get_next_point_SE2(point, gradient_at_point, dt)
         γ.append(new_point)
         point = new_point
@@ -672,3 +672,43 @@ def get_next_point_SE2(
     new_point[1] = point[1] - dt * gradient_at_point[1]
     new_point[2] = point[2] - dt * gradient_at_point[2]
     return new_point
+
+def convert_continuous_indices_to_real_space_SE2(γ_ci_np, xs_np, ys_np, θs_np):
+    """
+    Convert the continuous indices in the geodesic `γ_ci_np` to the 
+    corresponding real space coordinates described by `xs_np`, `ys_np`, and
+    `θs_np`.
+    """
+    γ_ci = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_ci_np.shape[0])
+    γ_ci.from_numpy(γ_ci_np)
+    γ = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_ci.shape)
+
+    xs = ti.field(dtype=ti.f32, shape=xs_np.shape)
+    xs.from_numpy(xs_np)
+    ys = ti.field(dtype=ti.f32, shape=ys_np.shape)
+    ys.from_numpy(ys_np)
+    θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
+    θs.from_numpy(θs_np)
+
+    continuous_indices_to_real_SE2(γ_ci, xs, ys, θs, γ)
+
+    return γ.to_numpy()
+
+@ti.kernel
+def continuous_indices_to_real_SE2(
+    γ_ci: ti.template(),
+    xs: ti.template(),
+    ys: ti.template(),
+    θs: ti.template(),
+    γ: ti.template()
+):
+    """
+    @taichi.kernel
+
+    Interpolate the real space coordinates described by `xs`, `ys`, and `θs` at 
+    the continuous indices in `γ_ci`.
+    """
+    for I in ti.grouped(γ_ci):
+        γ[I][0] = eik.derivativesSE2.scalar_trilinear_interpolate(xs, γ_ci[I])
+        γ[I][1] = eik.derivativesSE2.scalar_trilinear_interpolate(ys, γ_ci[I])
+        γ[I][2] = eik.derivativesSE2.scalar_trilinear_interpolate(θs, γ_ci[I])
