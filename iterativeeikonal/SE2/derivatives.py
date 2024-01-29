@@ -111,8 +111,9 @@ def scalar_trilinear_interpolate(
 
     return v
 
+# I don't think this works properly, we should actually also interpolate the frame...
 @ti.func
-def vectorfield_trilinear_interpolate(
+def vectorfield_trilinear_interpolate_LI(
     vectorfield: ti.template(),
     index: ti.template(),
     G_inv: ti.types.matrix(3, 3, ti.f32)
@@ -120,8 +121,11 @@ def vectorfield_trilinear_interpolate(
     """
     @taichi.func
 
-    Interpolate vector field, normalised to 1, `vectorfield` at continuous 
-    `index` trilinearly, via repeated linear interpolation (x, y, θ).
+    ---------------------------PROBABLY DOESN'T WORK---------------------------
+
+    Interpolate vector field, normalised to 1 and given in left invariant
+    coordinates, `vectorfield` at continuous `index` trilinearly, via repeated 
+    linear interpolation (x, y, θ).
 
     Args:
         `vectorfield`: ti.Vector.field(n=3, dtype=[float]) in which we want to 
@@ -154,8 +158,57 @@ def vectorfield_trilinear_interpolate(
     v = trilinear_interpolate(v000, v001, v010, v011, v100, v101, v110, v111, r)
     w = trilinear_interpolate(w000, w001, w010, w011, w100, w101, w110, w111, r)
 
-    # Normalise in SE(2)!!!!!!
     return normalise_LI(ti.Vector([u, v, w]), G_inv)
+
+@ti.func
+def vectorfield_trilinear_interpolate_static(
+    vectorfield: ti.template(),
+    index: ti.template(),
+    θs: ti.template(),
+    G_inv: ti.types.matrix(3, 3, ti.f32)
+) -> ti.types.vector(3, ti.f32):
+    """
+    @taichi.func
+
+    Interpolate vector field, normalised to 1 and given in static
+    coordinates, `vectorfield` at continuous `index` trilinearly, via repeated 
+    linear interpolation (x, y, θ).
+
+    Args:
+        `vectorfield`: ti.Vector.field(n=3, dtype=[float]) in which we want to 
+          interpolate.
+        `index`: ti.types.vector(n=3, dtype=[float]) continuous index at which 
+          we want to interpolate.
+        `θs`: angle coordinate at each grid point.
+        `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
+          inverse of metric tensor with respect to left invariant basis.
+
+    Returns:
+        ti.types.vector(n=3, dtype=[float]) of value `vectorfield` interpolated 
+          at `index`.
+    """
+    r = ti.math.fract(index)
+    f = ti.math.floor(index, ti.i32)
+    f = sanitize_index(f, vectorfield)
+    c = ti.math.ceil(index, ti.i32)
+    c = sanitize_index(c, vectorfield)
+
+    u000, v000, w000 = vectorfield[f[0], f[1], f[2]]
+    u001, v001, w001 = vectorfield[f[0], f[1], c[2]]
+    u010, v010, w010 = vectorfield[f[0], c[1], f[2]]
+    u011, v011, w011 = vectorfield[f[0], c[1], c[2]]
+    u100, v100, w100 = vectorfield[c[0], f[1], f[2]]
+    u101, v101, w101 = vectorfield[c[0], f[1], c[2]]
+    u110, v110, w110 = vectorfield[c[0], c[1], f[2]]
+    u111, v111, w111 = vectorfield[c[0], c[1], c[2]]
+
+    u = trilinear_interpolate(u000, u001, u010, u011, u100, u101, u110, u111, r)
+    v = trilinear_interpolate(v000, v001, v010, v011, v100, v101, v110, v111, r)
+    w = trilinear_interpolate(w000, w001, w010, w011, w100, w101, w110, w111, r)
+
+    θ = scalar_trilinear_interpolate(θs, index)
+
+    return normalise_static(ti.Vector([u, v, w]), G_inv, θ)
 
 @ti.func
 def normalise_LI(
@@ -198,19 +251,21 @@ def norm_LI(
     Returns:
         Norm of `vec`.
     """
+    c_1, c_2, c_3 = vec[0], vec[1], vec[2]
     return ti.math.sqrt(
-            1 * G_inv[0, 0] * vec[0] * vec[0] +
-            2 * G_inv[0, 1] * vec[0] * vec[1] + # Metric tensor is symmetric.
-            2 * G_inv[0, 2] * vec[0] * vec[2] +
-            1 * G_inv[1, 1] * vec[1] * vec[1] +
-            2 * G_inv[1, 2] * vec[1] * vec[2] +
-            1 * G_inv[2, 2] * vec[2] * vec[2]
+            1 * G_inv[0, 0] * c_1 * c_1 +
+            2 * G_inv[0, 1] * c_1 * c_2 + # Metric tensor is symmetric.
+            2 * G_inv[0, 2] * c_1 * c_3 +
+            1 * G_inv[1, 1] * c_2 * c_2 +
+            2 * G_inv[1, 2] * c_2 * c_3 +
+            1 * G_inv[2, 2] * c_3 * c_3
     )
 
 @ti.func
 def normalise_static(
     vec: ti.types.vector(3, ti.f32),
-    G_inv: ti.types.matrix(3, 3, ti.f32)
+    G_inv: ti.types.matrix(3, 3, ti.f32),
+    θ: ti.f32
 ) -> ti.types.vector(3, ti.f32):
     """
     @taichi.func
@@ -222,17 +277,24 @@ def normalise_static(
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
         `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
           inverse of metric tensor with respect to left invariant basis.
+        `θ`: angle coordinate of corresponding point on the manifold.
 
     Returns:
         ti.types.vector(n=3, dtype=[float]) of normalisation of `vec`.
     """
-    norm = norm_static(vec, G_inv)
+    # Can do this but it's not necessary
+    # vec_LI = vector_LI_to_static(vec, θ)
+    # vec_normalised_LI = normalise_LI(vec_LI, G_inv)
+    # vec_normalised = vector_static_to_LI(vec_normalised_LI, θ)
+    # return vec_normalised
+    norm = norm_static(vec, G_inv, θ)
     return vec / norm
 
 @ti.func
 def norm_static(
     vec: ti.types.vector(3, ti.f32),
-    G_inv: ti.types.matrix(3, 3, ti.f32)
+    G_inv: ti.types.matrix(3, 3, ti.f32),
+    θ: ti.f32
 ) -> ti.f32:
     """
     @taichi.func
@@ -244,17 +306,22 @@ def norm_static(
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
         `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
           inverse of metric tensor with respect to left invariant basis.
+        `θ`: angle coordinate of corresponding point on the manifold.
 
     Returns:
         Norm of `vec`.
     """
+    a_1, a_2, a_3 = vec[0], vec[1], vec[2]
+    c_1 = a_1 * ti.math.cos(θ) + a_2 * ti.math.sin(θ)
+    c_2 = -a_1 * ti.math.sin(θ) + a_2 * ti.math.cos(θ)
+    c_3 = a_3
     return ti.math.sqrt(
-            1 * G_inv[0, 0] * vec[0] * vec[0] +
-            2 * G_inv[0, 1] * vec[0] * vec[1] + # Metric tensor is symmetric.
-            2 * G_inv[0, 2] * vec[0] * vec[2] +
-            1 * G_inv[1, 1] * vec[1] * vec[1] +
-            2 * G_inv[1, 2] * vec[1] * vec[2] +
-            1 * G_inv[2, 2] * vec[2] * vec[2]
+            1 * G_inv[0, 0] * c_1 * c_1 +
+            2 * G_inv[0, 1] * c_1 * c_2 + # Metric tensor is symmetric.
+            2 * G_inv[0, 2] * c_1 * c_3 +
+            1 * G_inv[1, 1] * c_2 * c_2 +
+            2 * G_inv[1, 2] * c_2 * c_3 +
+            1 * G_inv[2, 2] * c_3 * c_3
     )
 
 @ti.func
@@ -299,6 +366,11 @@ def vector_LI_to_static(
           coordinates.
         `θ`: angle coordinate of corresponding point on the manifold.
     """
+
+    # A1 = [cos(θ),sin(θ),0]
+    # A2 = [-sin(θ),cos(θ),0]
+    # A3 = [0,0,1]
+
     return ti.Vector([
         ti.math.cos(θ) * vector_LI[0] - ti.math.sin(θ) * vector_LI[1],
         ti.math.sin(θ) * vector_LI[0] + ti.math.cos(θ) * vector_LI[1],
