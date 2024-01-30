@@ -2,38 +2,11 @@
 
 import taichi as ti
 from eikivp.utils import (
-    linear_interpolate, 
+    linear_interpolate,
     sanitize_index_R2
 )
 from eikivp.R2.metric import normalise
 
-# Helper Functions
-
-
-
-
-@ti.func
-def linear_interpolate(
-    v0: ti.f32,
-    v1: ti.f32,
-    r: ti.i32
-) -> ti.f32:
-    """
-    @taichi.func
-
-    Interpolate value of the points `v*` depending on the distance `r`, via 
-    linear interpolation. Adapted from Gijs.
-
-    Args:
-        `v*`: values at points between which we want to interpolate, taking real 
-          values.
-        `r`: distance to the points between which we to interpolate, taking real
-          values.
-
-    Returns:
-        Interpolated value.
-    """
-    return v0 * (1.0 - r) + v1 * r
 
 @ti.func
 def bilinear_interpolate(
