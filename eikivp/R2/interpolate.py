@@ -1,32 +1,12 @@
-# derivativesR2.py
+# interpolate.py
 
 import taichi as ti
+from eikivp.utils import linear_interpolate, sanitize_index_R2
 
 # Helper Functions
 
 
-@ti.func
-def sanitize_index(
-    index: ti.types.vector(2, ti.i32),
-    input: ti.template()
-) -> ti.types.vector(2, ti.i32):
-    """
-    @taichi.func
-    
-    Make sure the `index` is inside the shape of `input`. Adapted from Gijs.
 
-    Args:
-        `index`: ti.types.vector(n=2, dtype=ti.i32) index.
-        `input`: ti.field in which we want to index.
-
-    Returns:
-        ti.types.vector(n=2, dtype=ti.i32) of index that is within `input`.
-    """
-    shape = ti.Vector(ti.static(input.shape), dt=ti.i32)
-    return ti.Vector([
-        ti.math.clamp(index[0], 0, shape[0] - 1),
-        ti.math.clamp(index[1], 0, shape[1] - 1),
-    ], dt=ti.i32)
 
 @ti.func
 def linear_interpolate(
@@ -104,10 +84,10 @@ def scalar_bilinear_interpolate(
     r = ti.math.fract(index)
 
     f = ti.math.floor(index, ti.i32)
-    f = sanitize_index(f, input)
+    f = sanitize_index_R2(f, input)
 
     c = ti.math.ceil(index, ti.i32)
-    c = sanitize_index(c, input)
+    c = sanitize_index_R2(c, input)
 
     v00 = input[f[0], f[1]]
     v01 = input[f[0], c[1]]
@@ -141,9 +121,9 @@ def vectorfield_bilinear_interpolate(
     """
     r = ti.math.fract(index)
     f = ti.math.floor(index, ti.i32)
-    f = sanitize_index(f, vectorfield)
+    f = sanitize_index_R2(f, vectorfield)
     c = ti.math.ceil(index, ti.i32)
-    c = sanitize_index(c, vectorfield)
+    c = sanitize_index_R2(c, vectorfield)
 
     v00, w00 = vectorfield[f[0], f[1]]
     v01, w01 = vectorfield[f[0], c[1]]
@@ -179,9 +159,9 @@ def vectorfield_bilinear_interpolate(
 #     """
 #     r = ti.math.fract(index)
 #     f = ti.math.floor(index, ti.i32)
-#     f = sanitize_index(f, vectorfield)
+#     f = sanitize_index_R2(f, vectorfield)
 #     c = ti.math.ceil(index, ti.i32)
-#     c = sanitize_index(c, vectorfield)
+#     c = sanitize_index_R2(c, vectorfield)
 
 #     v00 = vectorfield[f[0], f[1]]
 #     v01 = vectorfield[f[0], c[1]]

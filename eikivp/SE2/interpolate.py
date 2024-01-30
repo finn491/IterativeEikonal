@@ -1,33 +1,9 @@
-# derivativesSE2.py
+# interpolate.py
 
 import taichi as ti
+from eikivp.utils import linear_interpolate, sanitize_index_SE2
 
 # Helper Functions
-
-
-@ti.func
-def sanitize_index(
-    index: ti.types.vector(3, ti.i32),
-    input: ti.template()
-) -> ti.types.vector(3, ti.i32):
-    """
-    @taichi.func
-    
-    Make sure the `index` is inside the shape of `input`. Copied from Gijs Bellaard.
-
-    Args:
-        `index`: ti.types.vector(n=3, dtype=ti.i32) index.
-        `input`: ti.field in which we want to index.
-
-    Returns:
-        ti.types.vector(n=3, dtype=ti.i32) of index that is within `input`.
-    """
-    shape = ti.Vector(ti.static(input.shape), dt=ti.i32)
-    return ti.Vector([
-        ti.math.clamp(index[0], 0, shape[0] - 1),
-        ti.math.clamp(index[1], 0, shape[1] - 1),
-        ti.math.mod(index[2], shape[2])
-    ], dt=ti.i32)
 
 
 @ti.func
@@ -92,10 +68,10 @@ def scalar_trilinear_interpolate(
     r = ti.math.fract(index)
 
     f = ti.math.floor(index, ti.i32)
-    f = sanitize_index(f, input)
+    f = sanitize_index_SE2(f, input)
 
     c = ti.math.ceil(index, ti.i32)
-    c = sanitize_index(c, input)
+    c = sanitize_index_SE2(c, input)
     
     v000 = input[f[0], f[1], f[2]]
     v001 = input[f[0], f[1], c[2]]
@@ -140,9 +116,9 @@ def vectorfield_trilinear_interpolate_LI(
     """
     r = ti.math.fract(index)
     f = ti.math.floor(index, ti.i32)
-    f = sanitize_index(f, vectorfield)
+    f = sanitize_index_SE2(f, vectorfield)
     c = ti.math.ceil(index, ti.i32)
-    c = sanitize_index(c, vectorfield)
+    c = sanitize_index_SE2(c, vectorfield)
 
     u000, v000, w000 = vectorfield[f[0], f[1], f[2]]
     u001, v001, w001 = vectorfield[f[0], f[1], c[2]]
@@ -188,9 +164,9 @@ def vectorfield_trilinear_interpolate_static(
     """
     r = ti.math.fract(index)
     f = ti.math.floor(index, ti.i32)
-    f = sanitize_index(f, vectorfield)
+    f = sanitize_index_SE2(f, vectorfield)
     c = ti.math.ceil(index, ti.i32)
-    c = sanitize_index(c, vectorfield)
+    c = sanitize_index_SE2(c, vectorfield)
 
     u000, v000, w000 = vectorfield[f[0], f[1], f[2]]
     u001, v001, w001 = vectorfield[f[0], f[1], c[2]]
