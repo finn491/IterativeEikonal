@@ -1,7 +1,10 @@
 # derivatives.py
 
 import taichi as ti
-import eikivp
+from eikivp.utils import (
+    sanitize_index_R2,
+    select_upwind_derivative
+)
 
 
 @ti.func
@@ -32,10 +35,10 @@ def derivatives(
     I_dy = ti.Vector([0, 1], dt=ti.i32)
     for I in ti.grouped(u):
         # We do not need to interpolate because we always end up on the grid.
-        I_dx_forward = sanitize_index(I + I_dx, u)
-        I_dx_backward = sanitize_index(I - I_dx, u)
-        I_dy_forward = sanitize_index(I + I_dy, u)
-        I_dy_backward = sanitize_index(I - I_dy, u)
+        I_dx_forward = sanitize_index_R2(I + I_dx, u)
+        I_dx_backward = sanitize_index_R2(I - I_dx, u)
+        I_dy_forward = sanitize_index_R2(I + I_dy, u)
+        I_dy_backward = sanitize_index_R2(I - I_dy, u)
         dx_forward[I] = (u[I_dx_forward] - u[I]) / dxy
         dx_backward[I] = (u[I] - u[I_dx_backward]) / dxy
         dy_forward[I] = (u[I_dy_forward] - u[I]) / dxy
@@ -108,21 +111,4 @@ def upwind_derivatives(
         upwind_dx[I] = select_upwind_derivative(dx_forward[I], dx_backward[I])
         upwind_dy[I] = select_upwind_derivative(dy_forward[I], dy_backward[I])
 
-@ti.func
-def select_upwind_derivative(
-    d_forward: ti.f32,
-    d_backward: ti.f32
-) -> ti.f32:
-    """
-    @taichi.func
 
-    Select the correct derivative for the upwind derivative.
-
-    Args:
-        `d_forward`: derivative in the forward direction.
-        `d_backward`: derivative in the backward direction.
-          
-    Returns:
-        derivative in the correct direction.
-    """
-    return ti.math.max(-d_forward, d_backward, 0) * (-1.)**(-d_forward >= d_backward)

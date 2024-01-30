@@ -1,6 +1,10 @@
 # derivatives.py
 
 import taichi as ti
+from eikivp.SE2.interpolate import (
+    scalar_trilinear_interpolate, 
+    select_upwind_derivative
+)
 
 
 @ti.func

@@ -71,3 +71,22 @@ def sanitize_index_SE2(
         ti.math.clamp(index[1], 0, shape[1] - 1),
         ti.math.mod(index[2], shape[2])
     ], dt=ti.i32)
+
+@ti.func
+def select_upwind_derivative(
+    d_forward: ti.f32,
+    d_backward: ti.f32
+) -> ti.f32:
+    """
+    @taichi.func
+
+    Select the correct derivative for the upwind derivative.
+
+    Args:
+        `d_forward`: derivative in the forward direction.
+        `d_backward`: derivative in the backward direction.
+          
+    Returns:
+        derivative in the correct direction.
+    """
+    return ti.math.max(-d_forward, d_backward, 0) * (-1.)**(-d_forward >= d_backward)
