@@ -1,121 +1,28 @@
 # interpolate.py
 
 import taichi as ti
-from eikivp.utils import linear_interpolate, sanitize_index_SE2
+import numpy as np
 
-@ti.func
-def normalise_LI(
-    vec: ti.types.vector(3, ti.f32),
-    G_inv: ti.types.matrix(3, 3, ti.f32)
-) -> ti.types.vector(3, ti.f32):
+# Metric Inversion
+
+def invert_metric(G):
     """
-    @taichi.func
-
-    Normalise `vec`, represented in left invariant coordinates, to 1 with 
-    respect to the left invariant metric tensor defined by `G_inv`.
+    Invert the metric tensor defined by the matrix `G`. If `G` is semidefinite,
+    e.g. when we are dealing with a sub-Riemannian metric, the metric is first
+    made definite by adding `1e-8` to the diagonal.
 
     Args:
-        `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
-          inverse of metric tensor with respect to left invariant basis.
-
-    Returns:
-        ti.types.vector(n=3, dtype=[float]) of normalisation of `vec`.
+        `G`: np.ndarray(shape=(3, 3), dtype=[float]) of matrix of left invariant
+          metric tensor field with respect to left invariant basis.
     """
-    norm = norm_LI(vec, G_inv)
-    return vec / norm
+    try:
+        G_inv = np.linalg.inv(G)
+    except np.linalg.LinAlgError:
+        G_inv = np.linalg.inv(G + np.identity(3) * 1e-8)
+    return G_inv
 
-@ti.func
-def norm_LI(
-    vec: ti.types.vector(3, ti.f32),
-    G_inv: ti.types.matrix(3, 3, ti.f32)
-) -> ti.f32:
-    """
-    @taichi.func
 
-    Compute the norm of `vec` represented in static coordinates with respect to 
-    the left invariant metric tensor defined by `G_inv`.
-
-    Args:
-        `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
-          inverse of metric tensor with respect to left invariant basis.
-
-    Returns:
-        Norm of `vec`.
-    """
-    c_1, c_2, c_3 = vec[0], vec[1], vec[2]
-    return ti.math.sqrt(
-            1 * G_inv[0, 0] * c_1 * c_1 +
-            2 * G_inv[0, 1] * c_1 * c_2 + # Metric tensor is symmetric.
-            2 * G_inv[0, 2] * c_1 * c_3 +
-            1 * G_inv[1, 1] * c_2 * c_2 +
-            2 * G_inv[1, 2] * c_2 * c_3 +
-            1 * G_inv[2, 2] * c_3 * c_3
-    )
-
-@ti.func
-def normalise_static(
-    vec: ti.types.vector(3, ti.f32),
-    G_inv: ti.types.matrix(3, 3, ti.f32),
-    θ: ti.f32
-) -> ti.types.vector(3, ti.f32):
-    """
-    @taichi.func
-
-    Normalise `vec`, represented in static coordinates, to 1 with respect to the 
-    left invariant metric tensor defined by `G_inv`.
-
-    Args:
-        `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
-          inverse of metric tensor with respect to left invariant basis.
-        `θ`: angle coordinate of corresponding point on the manifold.
-
-    Returns:
-        ti.types.vector(n=3, dtype=[float]) of normalisation of `vec`.
-    """
-    # Can do this but it's not necessary
-    # vec_LI = vector_LI_to_static(vec, θ)
-    # vec_normalised_LI = normalise_LI(vec_LI, G_inv)
-    # vec_normalised = vector_static_to_LI(vec_normalised_LI, θ)
-    # return vec_normalised
-    norm = norm_static(vec, G_inv, θ)
-    return vec / norm
-
-@ti.func
-def norm_static(
-    vec: ti.types.vector(3, ti.f32),
-    G_inv: ti.types.matrix(3, 3, ti.f32),
-    θ: ti.f32
-) -> ti.f32:
-    """
-    @taichi.func
-
-    Compute the norm of `vec` represented in static coordinates with respect to 
-    the left invariant metric tensor defined by `G_inv`.
-
-    Args:
-        `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
-          inverse of metric tensor with respect to left invariant basis.
-        `θ`: angle coordinate of corresponding point on the manifold.
-
-    Returns:
-        Norm of `vec`.
-    """
-    a_1, a_2, a_3 = vec[0], vec[1], vec[2]
-    c_1 = a_1 * ti.math.cos(θ) + a_2 * ti.math.sin(θ)
-    c_2 = -a_1 * ti.math.sin(θ) + a_2 * ti.math.cos(θ)
-    c_3 = a_3
-    return ti.math.sqrt(
-            1 * G_inv[0, 0] * c_1 * c_1 +
-            2 * G_inv[0, 1] * c_1 * c_2 + # Metric tensor is symmetric.
-            2 * G_inv[0, 2] * c_1 * c_3 +
-            1 * G_inv[1, 1] * c_2 * c_2 +
-            2 * G_inv[1, 2] * c_2 * c_3 +
-            1 * G_inv[2, 2] * c_3 * c_3
-    )
+# Coordinate Transforms
 
 @ti.func
 def vectorfield_LI_to_static(
@@ -217,3 +124,120 @@ def vector_static_to_LI(
         -ti.math.sin(θ) * vector_static[0] + ti.math.cos(θ) * vector_static[1],
         vector_static[2]
     ], dt=ti.f32)
+
+
+# Normalisation
+
+@ti.func
+def normalise_LI(
+    vec: ti.types.vector(3, ti.f32),
+    G: ti.types.matrix(3, 3, ti.f32)
+) -> ti.types.vector(3, ti.f32):
+    """
+    @taichi.func
+
+    Normalise `vec`, represented in left invariant coordinates, to 1 with 
+    respect to the left invariant metric tensor defined by `G`.
+
+    Args:
+        `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
+        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of  metric 
+          tensor with respect to left invariant basis.
+
+    Returns:
+        ti.types.vector(n=3, dtype=[float]) of normalisation of `vec`.
+    """
+    norm = norm_LI(vec, G)
+    return vec / norm
+
+@ti.func
+def norm_LI(
+    vec: ti.types.vector(3, ti.f32),
+    G: ti.types.matrix(3, 3, ti.f32)
+) -> ti.f32:
+    """
+    @taichi.func
+
+    Compute the norm of `vec` represented in static coordinates with respect to 
+    the left invariant metric tensor defined by `G`.
+
+    Args:
+        `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
+        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+          tensor with respect to left invariant basis.
+
+    Returns:
+        Norm of `vec`.
+    """
+    c_1, c_2, c_3 = vec[0], vec[1], vec[2]
+    return ti.math.sqrt(
+            1 * G[0, 0] * c_1 * c_1 +
+            2 * G[0, 1] * c_1 * c_2 + # Metric tensor is symmetric.
+            2 * G[0, 2] * c_1 * c_3 +
+            1 * G[1, 1] * c_2 * c_2 +
+            2 * G[1, 2] * c_2 * c_3 +
+            1 * G[2, 2] * c_3 * c_3
+    )
+
+@ti.func
+def normalise_static(
+    vec: ti.types.vector(3, ti.f32),
+    G: ti.types.matrix(3, 3, ti.f32),
+    θ: ti.f32
+) -> ti.types.vector(3, ti.f32):
+    """
+    @taichi.func
+
+    Normalise `vec`, represented in static coordinates, to 1 with respect to the 
+    left invariant metric tensor defined by `G`.
+
+    Args:
+        `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
+        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+          tensor with respect to left invariant basis.
+        `θ`: angle coordinate of corresponding point on the manifold.
+
+    Returns:
+        ti.types.vector(n=3, dtype=[float]) of normalisation of `vec`.
+    """
+    # Can do this but it's not necessary
+    # vec_LI = vector_LI_to_static(vec, θ)
+    # vec_normalised_LI = normalise_LI(vec_LI, G_inv)
+    # vec_normalised = vector_static_to_LI(vec_normalised_LI, θ)
+    # return vec_normalised
+    norm = norm_static(vec, G, θ)
+    return vec / norm
+
+@ti.func
+def norm_static(
+    vec: ti.types.vector(3, ti.f32),
+    G: ti.types.matrix(3, 3, ti.f32),
+    θ: ti.f32
+) -> ti.f32:
+    """
+    @taichi.func
+
+    Compute the norm of `vec` represented in static coordinates with respect to 
+    the left invariant metric tensor defined by `G`.
+
+    Args:
+        `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
+        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+          tensor with respect to left invariant basis.
+        `θ`: angle coordinate of corresponding point on the manifold.
+
+    Returns:
+        Norm of `vec`.
+    """
+    a_1, a_2, a_3 = vec[0], vec[1], vec[2]
+    c_1 = a_1 * ti.math.cos(θ) + a_2 * ti.math.sin(θ)
+    c_2 = -a_1 * ti.math.sin(θ) + a_2 * ti.math.cos(θ)
+    c_3 = a_3
+    return ti.math.sqrt(
+            1 * G[0, 0] * c_1 * c_1 +
+            2 * G[0, 1] * c_1 * c_2 + # Metric tensor is symmetric.
+            2 * G[0, 2] * c_1 * c_3 +
+            1 * G[1, 1] * c_2 * c_2 +
+            2 * G[1, 2] * c_2 * c_3 +
+            1 * G[2, 2] * c_3 * c_3
+    )
