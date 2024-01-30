@@ -1,10 +1,8 @@
 # derivatives.py
 
 import taichi as ti
-from eikivp.SE2.interpolate import (
-    scalar_trilinear_interpolate, 
-    select_upwind_derivative
-)
+from eikivp.utils import select_upwind_derivative
+from eikivp.SE2.interpolate import scalar_trilinear_interpolate
 
 
 @ti.func
@@ -82,8 +80,7 @@ def abs_derivatives(
         `abs_A*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
-    derivatives(u, dxy, A1_forward, A1_backward, A2_forward, A2_backward, 
-                   A3_forward, A3_backward)
+    derivatives(u, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward)
     for I in ti.grouped(u):
         abs_A1[I] = ti.math.max(-A1_forward[I], A1_backward[I], 0)
         abs_A2[I] = ti.math.max(-A2_forward[I], A2_backward[I], 0)
