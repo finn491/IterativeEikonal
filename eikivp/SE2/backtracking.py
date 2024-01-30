@@ -1,37 +1,16 @@
-# distancemap.py
+# backtracking.py
 
 import numpy as np
 import taichi as ti
-import eikivp as eik
-from tqdm import tqdm
+from eikivp.SE2.interpolate import (
+    vectorfield_trilinear_interpolate_LI,
+    scalar_trilinear_interpolate
+)
+from eikivp.SE2.metric import vector_LI_to_static
+from eikivp.utils import sparse_to_dense
 
-# Helper Functions
 
-# Maybe does not belong here...
-
-
-@ti.kernel
-def sparse_to_dense(
-    sparse_thing: ti.template(),
-    dense_thing: ti.template()
-):
-    """
-    @taichi.func
-
-    Convert a sparse TaiChi object on an SNode into a dense object.
-
-    Args:
-      Static:
-        `sparse_thing`: Sparse TaiChi object.
-      Mutated:
-        `dense_thing`: Preinitialised dense TaiChi object of correct size, which
-          is updated in place.
-    """
-    for I in ti.grouped(sparse_thing):
-        dense_thing[I] = sparse_thing[I]
-    sparse_thing.deactivate()
-
-def geodesic_back_tracking_SE2(grad_W_np, source_point, target_point, dt=1., β=0., n_max=10000):
+def geodesic_back_tracking_SE2(grad_W_np, source_point, target_point, G_np, dt=1., β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -42,6 +21,8 @@ def geodesic_back_tracking_SE2(grad_W_np, source_point, target_point, dt=1., β=
           the approximate distance map.
         `source_point`: Tuple[int] describing index of source point in `W_np`.
         `target_point`: Tuple[int] describing index of target point in `W_np`.
+        `G_np`: np.ndarray(shape=(3, 3), dtype=[float]) of matrix of left 
+          invariant metric tensor field with respect to left invariant basis.
       Optional:
         `dt`: Step size, taking values greater than 0. Defaults to 1.
         `β`: Momentum parameter in gradient descent, taking values between 0 and 
@@ -55,6 +36,7 @@ def geodesic_back_tracking_SE2(grad_W_np, source_point, target_point, dt=1., β=
     shape = grad_W_np.shape[0:3]
     grad_W = ti.Vector.field(n=3, dtype=ti.f32, shape=shape)
     grad_W.from_numpy(grad_W_np)
+    G = ti.Matrix(G_np, ti.f32)
 
     # Perform backtracking
     γ_list = ti.root.dynamic(ti.i, n_max)
@@ -64,7 +46,7 @@ def geodesic_back_tracking_SE2(grad_W_np, source_point, target_point, dt=1., β=
     source_point = ti.Vector(source_point, dt=ti.f32)
     target_point = ti.Vector(target_point, dt=ti.f32)
 
-    γ_len = geodesic_back_tracking_SE2_backend(grad_W, source_point, target_point, dt, n_max, β, γ)
+    γ_len = geodesic_back_tracking_SE2_backend(grad_W, source_point, target_point, G, dt, n_max, β, γ)
     γ_dense = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_len)
     print(f"Geodesic consists of {γ_len} points.")
     sparse_to_dense(γ, γ_dense)
@@ -76,6 +58,7 @@ def geodesic_back_tracking_SE2_backend(
     grad_W: ti.template(),
     source_point: ti.types.vector(3, ti.f32),
     target_point: ti.types.vector(3, ti.f32),
+    G: ti.types.matrix(3, 3, ti.f32),
     dt: ti.f32,
     n_max: ti.i32,
     β: ti.f32,
@@ -97,6 +80,8 @@ def geodesic_back_tracking_SE2_backend(
           source point in `W_np`.
         `target_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
           target point in `W_np`.
+        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+          tensor with respect to left invariant basis.
         `n_max`: Maximum number of points in geodesic, taking positive integral
           values. Defaults to 10000.
         `β`: *Currently not used* Momentum parameter in gradient descent, taking 
@@ -113,10 +98,12 @@ def geodesic_back_tracking_SE2_backend(
     γ.append(point)
     tol = 2.
     n = 0
-    gradient_at_point = eik.derivativesSE2.vectorfield_trilinear_interpolate(grad_W, target_point)
+    # gradient_at_point = vectorfield_trilinear_interpolate_LI(grad_W, target_point)
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
-        gradient_at_point = eik.derivativesSE2.vectorfield_trilinear_interpolate(grad_W, point)
-        new_point = get_next_point_SE2(point, gradient_at_point, dt)
+        gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, G)
+        θ = point[2]
+        gradient_at_point_static = vector_LI_to_static(gradient_at_point_LI, θ)
+        new_point = get_next_point_SE2(point, gradient_at_point_static, dt)
         γ.append(new_point)
         point = new_point
         n += 1
@@ -186,6 +173,6 @@ def continuous_indices_to_real_SE2(
     the continuous indices in `γ_ci`.
     """
     for I in ti.grouped(γ_ci):
-        γ[I][0] = eik.derivativesSE2.scalar_trilinear_interpolate(xs, γ_ci[I])
-        γ[I][1] = eik.derivativesSE2.scalar_trilinear_interpolate(ys, γ_ci[I])
-        γ[I][2] = eik.derivativesSE2.scalar_trilinear_interpolate(θs, γ_ci[I])
+        γ[I][0] = scalar_trilinear_interpolate(xs, γ_ci[I])
+        γ[I][1] = scalar_trilinear_interpolate(ys, γ_ci[I])
+        γ[I][2] = scalar_trilinear_interpolate(θs, γ_ci[I])
