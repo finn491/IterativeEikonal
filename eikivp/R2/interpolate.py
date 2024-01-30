@@ -1,7 +1,11 @@
 # interpolate.py
 
 import taichi as ti
-from eikivp.utils import linear_interpolate, sanitize_index_R2
+from eikivp.utils import (
+    linear_interpolate, 
+    sanitize_index_R2
+)
+from eikivp.R2.metric import normalise
 
 # Helper Functions
 
@@ -101,7 +105,8 @@ def scalar_bilinear_interpolate(
 @ti.func
 def vectorfield_bilinear_interpolate(
     vectorfield: ti.template(),
-    index: ti.template()
+    index: ti.template(),
+    G: ti.types.matrix(2, 2, ti.f32)
 ) -> ti.types.vector(2, ti.f32):
     """
     @taichi.func
@@ -114,6 +119,8 @@ def vectorfield_bilinear_interpolate(
           interpolate.
         `index`: ti.types.vector(n=2, dtype=ti.f32) continuous index at which we 
           want to interpolate.
+        `G`: ti.types.matrix(n=2, m=2, dtype=[float]) of constants of metric 
+          tensor with respect to standard basis.
 
     Returns:
         ti.types.vector(n=2, dtype=ti.f32) of value `vectorfield` interpolated 
@@ -133,7 +140,7 @@ def vectorfield_bilinear_interpolate(
     v = bilinear_interpolate(v00, v01, v10, v11, r)
     w = bilinear_interpolate(w00, w01, w10, w11, r)
 
-    return ti.math.normalize(ti.Vector([v, w]))
+    return normalise(ti.Vector([v, w]), G)
 
 # Apparently, interpolating angles does not work well (or I implemented something incorrectly)...
 # @ti.func
