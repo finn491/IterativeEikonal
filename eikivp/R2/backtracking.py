@@ -6,33 +6,7 @@ from eikivp.R2.interpolate import (
     vectorfield_bilinear_interpolate,
     scalar_bilinear_interpolate
 )
-
-# Helper Functions
-
-# Maybe does not belong here...
-
-
-@ti.kernel
-def sparse_to_dense(
-    sparse_thing: ti.template(),
-    dense_thing: ti.template()
-):
-    """
-    @taichi.func
-
-    Convert a sparse TaiChi object on an SNode into a dense object.
-
-    Args:
-      Static:
-        `sparse_thing`: Sparse TaiChi object.
-      Mutated:
-        `dense_thing`: Preinitialised dense TaiChi object of correct size, which
-          is updated in place.
-    """
-    for I in ti.grouped(sparse_thing):
-        dense_thing[I] = sparse_thing[I]
-    sparse_thing.deactivate()
-
+from eikivp.utils import sparse_to_dense
 
 def geodesic_back_tracking_R2(grad_W_np, source_point, target_point, G_np=None, dt=1., β=0., n_max=10000):
     """
