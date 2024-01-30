@@ -5,7 +5,7 @@ from eikivp.utils import (
     linear_interpolate,
     sanitize_index_SE2
 )
-from eikivp.R2.metric import (
+from eikivp.SE2.metric import (
     normalise_LI,
     normalise_static
 )
