@@ -8,7 +8,7 @@ from eikivp.SE2.interpolate import (
 
 
 @ti.func
-def derivatives_LI(
+def derivatives(
     u: ti.template(),
     dxy: ti.f32,
     A1_forward: ti.template(),
@@ -52,7 +52,7 @@ def derivatives_LI(
 
 
 @ti.func
-def abs_derivatives_LI(
+def abs_derivatives(
     u: ti.template(),
     dxy: ti.f32,
     A1_forward: ti.template(),
@@ -82,7 +82,7 @@ def abs_derivatives_LI(
         `abs_A*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
-    derivatives_LI(u, dxy, A1_forward, A1_backward, A2_forward, A2_backward, 
+    derivatives(u, dxy, A1_forward, A1_backward, A2_forward, A2_backward, 
                    A3_forward, A3_backward)
     for I in ti.grouped(u):
         abs_A1[I] = ti.math.max(-A1_forward[I], A1_backward[I], 0)
@@ -91,7 +91,7 @@ def abs_derivatives_LI(
 
 
 @ti.func
-def upwind_derivatives_LI(
+def upwind_derivatives(
     u: ti.template(),
     dxy: ti.f32,
     A1_forward: ti.template(),
@@ -121,7 +121,7 @@ def upwind_derivatives_LI(
         `upwind_A*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
-    derivatives_LI(u, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward)
+    derivatives(u, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward)
     for I in ti.grouped(u):
         upwind_A1[I] = select_upwind_derivative(A1_forward[I], A1_backward[I])
         upwind_A2[I] = select_upwind_derivative(A2_forward[I], A2_backward[I])
