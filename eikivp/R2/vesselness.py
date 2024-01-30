@@ -33,14 +33,9 @@ def rc_vessel_enhancement_R2(image, σ, α=0.2, γ=0.75, ε=0.2):
     #     Lyy = sp.ndimage.gaussian_filter(image, sigma=σ, order=(2, 0))
     # DIPlib provides more accurate Gaussian derivatives, but maybe we want our
     # own implementation. Note that DIPlib flips the order of dimensions.
-    if σ > 2:
-        Lxx = np.array(dip.Gauss(image, (σ, σ), (2, 0)))
-        Lxy = np.array(dip.Gauss(image, (σ, σ), (1, 1)))
-        Lyy = np.array(dip.Gauss(image, (σ, σ), (0, 2)))
-    else:  # Is this equivalent to what goes on in RcVesselEnhancement?
-        Lxx = np.array(dip.Gauss(image, (σ, σ), (2, 0)))
-        Lxy = np.array(dip.Gauss(image, (σ, σ), (1, 1)))
-        Lyy = np.array(dip.Gauss(image, (σ, σ), (0, 2)))
+    Lxx = np.array(dip.Gauss(image, (σ, σ), (2, 0)))
+    Lxy = np.array(dip.Gauss(image, (σ, σ), (1, 1)))
+    Lyy = np.array(dip.Gauss(image, (σ, σ), (0, 2)))
 
     # Calculate eigenvalues.
     λ = Lxx + Lyy
