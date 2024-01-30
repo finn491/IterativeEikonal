@@ -32,13 +32,12 @@ def get_initial_W(shape, initial_condition=100.):
 
 # Eikonal PDE
 
-# R2
-
-def eikonal_solver_R2(cost_np, source_point, G_np=None, n_max=1e5):
+def eikonal_solver_R2(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     """
-    Solve the Eikonal PDE on R2, with source at `source_point` and metric 
-    defined by `cost_np`, using the iterative method described in Bekkers et al.
-    "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    Solve the Eikonal PDE on R2, with source at `source_point` and datadriven
+    left invariant metric defined by `G_np` and `cost_np`, using the iterative 
+    method described in Bekkers et al. "A PDE approach to Data-Driven 
+    Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
         `cost_np`: np.ndarray of cost function.
@@ -48,22 +47,22 @@ def eikonal_solver_R2(cost_np, source_point, G_np=None, n_max=1e5):
         `G_np`: np.ndarray(shape=(2, 2), dtype=[float]) of matrix of left 
           invariant metric tensor field with respect to standard basis. Defaults
           to standard Euclidean metric.
+        `dxy`: Spatial step size, taking values greater than 0. Defaults to 1.
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
 
     Returns:
-        np.ndarray of (approximate) distance map with respect to the cost 
-          function described by `cost_np`.
-        np.ndarray of upwind gradient field of (approximate) distance map with
-          respect to cost function described by `cost_np`.
+        np.ndarray of (approximate) distance map with respect to the datadriven
+          left invariant metric tensor field described by `G_np` and `cost_np`.
+        np.ndarray of upwind gradient field of (approximate) distance map.
     """
     shape = cost_np.shape
-    ε = cost_np.min()
-    cost = get_padded_cost(cost_np)
-    W = get_initial_W(shape, 2)
     if G_np is None:
         G_np = np.identity(2)
     G_inv = ti.Matrix(invert_metric(G_np), ti.f32)
+    ε = cost_np.min() * dxy / G_inv.max()
+    cost = get_padded_cost(cost_np)
+    W = get_initial_W(shape, 2)
 
     # Create empty Taichi objects
     dx_forward = ti.field(dtype=ti.f32, shape=W.shape)
@@ -80,12 +79,12 @@ def eikonal_solver_R2(cost_np, source_point, G_np=None, n_max=1e5):
 
     # Compute approximate distance map
     for _ in tqdm(range(int(n_max))):
-        step_W_R2(W, cost, G_inv, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, ε, dW_dt)
+        step_W_R2(W, cost, G_inv, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, dxy, ε, dW_dt)
         apply_boundary_conditions(W, boundarypoints, boundaryvalues)
     # print(f"Converged after {n - 1} steps!")
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    distance_gradient_field_R2(W, cost, G_inv, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
+    distance_gradient_field_R2(W, cost, G_inv, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
 
     # Cleanup
     W_np = W.to_numpy()
@@ -119,6 +118,7 @@ def step_W_R2(
     dy_backward: ti.template(),
     dx_W: ti.template(),
     dy_W: ti.template(),
+    dxy: ti.f32,
     ε: ti.f32,
     dW_dt: ti.template()
 ):
@@ -135,6 +135,7 @@ def step_W_R2(
         `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
           inverse metric tensor with respect to standard basis.
         `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives.
+        `dxy`: Spatial step size, taking values greater than 0.
         `ε`: "Time" step size, taking values greater than 0.
         `*_target`: Indices of the target point.
       Mutated:
@@ -145,7 +146,7 @@ def step_W_R2(
         `d*_W*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
-    upwind_derivatives(W, 1., dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W)
+    upwind_derivatives(W, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W)
     for I in ti.grouped(W):
         dW_dt[I] = 1 - (ti.math.sqrt(
             1 * G_inv[0, 0] * dx_W[I] * dx_W[I] +
@@ -160,6 +161,7 @@ def distance_gradient_field_R2(
     W: ti.template(),
     cost: ti.template(),
     G_inv: ti.types.matrix(2, 2, ti.f32),
+    dxy: ti.f32,
     dx_forward: ti.template(),
     dx_backward: ti.template(),
     dy_forward: ti.template(),
@@ -180,6 +182,7 @@ def distance_gradient_field_R2(
         `cost`: ti.field(dtype=[float], shape=shape) of cost function.
         `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
           inverse metric tensor with respect to standard basis.
+        `dxy`: Spatial step size, taking values greater than 0.
       Mutated:
         `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
@@ -192,7 +195,6 @@ def distance_gradient_field_R2(
         `grad_W`: ti.field(dtype=[float], shape=shape) of upwind derivatives of 
           approximate distance map, which is updated inplace.
     """
-    dxy = 1.
     upwind_derivatives(W, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W)
     for I in ti.grouped(dx_W):
         grad_W[I] = ti.Vector([
