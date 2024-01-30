@@ -1,4 +1,4 @@
-# interpolate.py
+# metric.py
 
 import taichi as ti
 import numpy as np
@@ -141,7 +141,7 @@ def normalise_LI(
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of  metric 
+        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
           tensor with respect to left invariant basis.
 
     Returns:
