@@ -138,12 +138,6 @@ def step_W(
             1 * G_inv[1, 1] * dy_W[I] * dy_W[I]
         ) / cost[I])
         W[I] += dW_dt[I] * ε
-    # abs_derivatives(W, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W)
-    # for I in ti.grouped(W):
-    #     dW_dt[I] = 1 - (ti.math.sqrt(
-    #         G_inv[0, 0] * dx_W[I]**2 + G_inv[1, 1] * dy_W[I]**2
-    #     ) / cost[I])
-    #     W[I] += dW_dt[I] * ε
 
 @ti.kernel
 def distance_gradient_field(
