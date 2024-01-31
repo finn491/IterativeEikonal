@@ -2,6 +2,7 @@
 
 import numpy as np
 import taichi as ti
+import diplib as dip
 
 
 # Interpolation
@@ -199,6 +200,24 @@ def apply_boundary_conditions(
     """
     for I in ti.grouped(boundarypoints):
         u[boundarypoints[I]] = boundaryvalues[I]
+
+# Image Preprocessing
+        
+def image_rescale(image_array, new_max=1.):
+    """
+    Affinely rescale values in numpy array `image_array` to be between 0. and
+    `new_max`.
+    """
+    image_max = image_array.max()
+    image_min = image_array.min()
+    return new_max * (image_array - image_min) / (image_max - image_min)
+
+def high_pass_filter(image_array, σs):
+    """Apply a high pass filter with Gaussian scales `σs` to `image_array`."""
+    low_frequencies = dip.Gauss(image_array, σs)
+    image_array_unnormalised = image_array - low_frequencies
+    image_array_filtered = image_rescale(image_array_unnormalised)
+    return image_array_filtered
 
 # TaiChi Stuff
 
