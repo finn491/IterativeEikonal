@@ -6,10 +6,11 @@ from eikivp.R2.interpolate import (
     vectorfield_bilinear_interpolate,
     scalar_bilinear_interpolate
 )
+from eikivp.R2.metric import vector_standard_to_array
 from eikivp.utils import sparse_to_dense
 
 
-def geodesic_back_tracking(grad_W_np, source_point, target_point, G_np=None, dt=1., β=0., n_max=10000):
+def geodesic_back_tracking(grad_W_np, source_point, target_point, G_np=None, dxy=1., dt=1., β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -24,6 +25,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, G_np=None, dt=
         `G_np`: np.ndarray(shape=(2, 2), dtype=[float]) of matrix of left 
           invariant metric tensor field with respect to standard basis. Defaults
           to standard Euclidean metric.
+        `dxy`: Spatial resolution, taking values greater than 0. Defaults to 1.
         `dt`: Step size, taking values greater than 0. Defaults to 1.
         `β`: Momentum parameter in gradient descent, taking values between 0 and 
           1. Defaults to 0.
@@ -48,7 +50,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, G_np=None, dt=
     source_point = ti.Vector(source_point, dt=ti.f32)
     target_point = ti.Vector(target_point, dt=ti.f32)
 
-    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, G, dt, n_max, β, γ)
+    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, G, dxy, dt, n_max, β, γ)
     γ_dense = ti.Vector.field(n=2, dtype=ti.f32, shape=γ_len)
     print(f"Geodesic consists of {γ_len} points.")
     sparse_to_dense(γ, γ_dense)
@@ -61,6 +63,7 @@ def geodesic_back_tracking_backend(
     source_point: ti.types.vector(2, ti.f32),
     target_point: ti.types.vector(2, ti.f32),
     G: ti.types.matrix(2, 2, ti.f32),
+    dxy: ti.f32,
     dt: ti.f32,
     n_max: ti.i32,
     β: ti.f32,
@@ -84,6 +87,7 @@ def geodesic_back_tracking_backend(
           target point in `W_np`.
         `G`: ti.types.matrix(n=2, m=2, dtype=[float]) of constants of metric 
           tensor with respect to standard basis.
+        `dxy`: Spatial resolution, taking values greater than 0.
         `n_max`: Maximum number of points in geodesic, taking positive integral
           values. Defaults to 10000.
         `β`: *Currently not used* Momentum parameter in gradient descent, taking 
@@ -103,6 +107,7 @@ def geodesic_back_tracking_backend(
     # gradient_at_point = vectorfield_bilinear_interpolate(grad_W, target_point, G)
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
         gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point, G)
+        gradient_at_point_array = vector_standard_to_array(gradient_at_point, dxy)
         new_point = get_next_point(point, gradient_at_point, dt)
         γ.append(new_point)
         point = new_point
