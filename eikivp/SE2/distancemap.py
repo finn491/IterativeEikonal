@@ -78,6 +78,20 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, n_max=1e5):
 
     return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 1, 0))
 
+def get_boundary_conditions(source_point):
+    """
+    Determine the boundary conditions from `source_point`, giving the boundary
+    points and boundary values as TaiChi objects.
+    """
+    i_0, j_0, θ_0 = source_point
+    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1, θ_0 + 1]], dtype=int) # Account for padding.
+    boundaryvalues_np = np.array([0.], dtype=float)
+    boundarypoints = ti.Vector.field(n=3, dtype=ti.i32, shape=1)
+    boundarypoints.from_numpy(boundarypoints_np)
+    boundaryvalues = ti.field(shape=1, dtype=ti.f32)
+    boundaryvalues.from_numpy(boundaryvalues_np)
+    return boundarypoints, boundaryvalues
+
 @ti.kernel
 def step_W(
     W: ti.template(),
@@ -182,17 +196,3 @@ def distance_gradient_field(
             G_inv[0, 1] * A1_W[I] + G_inv[1, 1] * A2_W[I] + G_inv[2, 1] * A3_W[I],
             G_inv[0, 2] * A1_W[I] + G_inv[1, 2] * A2_W[I] + G_inv[2, 2] * A3_W[I]
         ]) / cost[I]
-
-def get_boundary_conditions(source_point):
-    """
-    Determine the boundary conditions from `source_point`, giving the boundary
-    points and boundary values as TaiChi objects.
-    """
-    i_0, j_0, θ_0 = source_point
-    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1, θ_0 + 1]], dtype=int) # Account for padding.
-    boundaryvalues_np = np.array([0.], dtype=float)
-    boundarypoints = ti.Vector.field(n=3, dtype=ti.i32, shape=1)
-    boundarypoints.from_numpy(boundarypoints_np)
-    boundaryvalues = ti.field(shape=1, dtype=ti.f32)
-    boundaryvalues.from_numpy(boundaryvalues_np)
-    return boundarypoints, boundaryvalues
