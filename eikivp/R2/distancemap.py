@@ -8,7 +8,7 @@ from eikivp.cleanarrays import (
     unpad_array,
     apply_boundary_conditions
 )
-from eikivp.R2.derivatives import upwind_derivatives
+from eikivp.R2.derivatives import upwind_derivatives, abs_derivatives
 from eikivp.R2.metric import invert_metric
 
 # Helper Functions
@@ -60,9 +60,12 @@ def eikonal_solver_R2(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     if G_np is None:
         G_np = np.identity(2)
     G_inv = ti.Matrix(invert_metric(G_np), ti.f32)
-    ε = cost_np.min() * dxy / G_inv.max()
+    # Heuristic, so that W does not become negative.
+    # The sqrt(4) comes from the fact that the norm of the gradient consists of
+    # 4 terms.
+    ε = (cost_np.min() * dxy / G_inv.max()) / np.sqrt(4)
     cost = get_padded_cost(cost_np)
-    W = get_initial_W(shape, 2)
+    W = get_initial_W(shape, initial_condition=10.)
 
     # Create empty Taichi objects
     dx_forward = ti.field(dtype=ti.f32, shape=W.shape)
@@ -84,12 +87,12 @@ def eikonal_solver_R2(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     # print(f"Converged after {n - 1} steps!")
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    distance_gradient_field_R2(W, cost, G_inv, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
+    # distance_gradient_field_R2(W, cost, G_inv, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
 
     # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
-    return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 0))
+    return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 0)), unpad_array(dx_forward.to_numpy()), unpad_array(dx_backward.to_numpy())
 
 
 def get_boundary_conditions_R2(source_point):
@@ -154,7 +157,12 @@ def step_W_R2(
             1 * G_inv[1, 1] * dy_W[I] * dy_W[I]
         ) / cost[I])
         W[I] += dW_dt[I] * ε
-
+    # abs_derivatives(W, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W)
+    # for I in ti.grouped(W):
+    #     dW_dt[I] = 1 - (ti.math.sqrt(
+    #         G_inv[0, 0] * dx_W[I]**2 + G_inv[1, 1] * dy_W[I]**2
+    #     ) / cost[I])
+    #     W[I] += dW_dt[I] * ε
 
 @ti.kernel
 def distance_gradient_field_R2(
