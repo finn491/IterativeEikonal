@@ -1,4 +1,4 @@
-# distancemap.py
+# backtracking.py
 
 import numpy as np
 import taichi as ti
@@ -8,7 +8,8 @@ from eikivp.R2.interpolate import (
 )
 from eikivp.utils import sparse_to_dense
 
-def geodesic_back_tracking_R2(grad_W_np, source_point, target_point, G_np=None, dt=1., β=0., n_max=10000):
+
+def geodesic_back_tracking(grad_W_np, source_point, target_point, G_np=None, dt=1., β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -47,7 +48,7 @@ def geodesic_back_tracking_R2(grad_W_np, source_point, target_point, G_np=None, 
     source_point = ti.Vector(source_point, dt=ti.f32)
     target_point = ti.Vector(target_point, dt=ti.f32)
 
-    γ_len = geodesic_back_tracking_R2_backend(grad_W, source_point, target_point, G, dt, n_max, β, γ)
+    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, G, dt, n_max, β, γ)
     γ_dense = ti.Vector.field(n=2, dtype=ti.f32, shape=γ_len)
     print(f"Geodesic consists of {γ_len} points.")
     sparse_to_dense(γ, γ_dense)
@@ -55,7 +56,7 @@ def geodesic_back_tracking_R2(grad_W_np, source_point, target_point, G_np=None, 
     return γ_dense.to_numpy()
 
 @ti.kernel
-def geodesic_back_tracking_R2_backend(
+def geodesic_back_tracking_backend(
     grad_W: ti.template(),
     source_point: ti.types.vector(2, ti.f32),
     target_point: ti.types.vector(2, ti.f32),
@@ -99,10 +100,10 @@ def geodesic_back_tracking_R2_backend(
     γ.append(point)
     tol = 2.
     n = 0
-    gradient_at_point = vectorfield_bilinear_interpolate(grad_W, target_point, G)
+    # gradient_at_point = vectorfield_bilinear_interpolate(grad_W, target_point, G)
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
         gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point, G)
-        new_point = get_next_point_R2(point, gradient_at_point, dt)
+        new_point = get_next_point(point, gradient_at_point, dt)
         γ.append(new_point)
         point = new_point
         n += 1
@@ -110,7 +111,7 @@ def geodesic_back_tracking_R2_backend(
     return γ.length()
 
 @ti.func
-def get_next_point_R2(
+def get_next_point(
     point: ti.types.vector(n=2, dtype=ti.f32),
     gradient_at_point: ti.types.vector(n=2, dtype=ti.f32),
     dt: ti.f32

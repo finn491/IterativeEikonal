@@ -32,7 +32,7 @@ def get_initial_W(shape, initial_condition=100.):
 
 # Eikonal PDE
 
-def eikonal_solver_R2(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
+def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     """
     Solve the Eikonal PDE on R2, with source at `source_point` and datadriven
     left invariant metric defined by `G_np` and `cost_np`, using the iterative 
@@ -77,25 +77,25 @@ def eikonal_solver_R2(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     dy_W = ti.field(dtype=ti.f32, shape=W.shape)
     grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=W.shape)
     
-    boundarypoints, boundaryvalues = get_boundary_conditions_R2(source_point)
+    boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
     # Compute approximate distance map
     for _ in tqdm(range(int(n_max))):
-        step_W_R2(W, cost, G_inv, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, dxy, ε, dW_dt)
+        step_W(W, cost, G_inv, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, dxy, ε, dW_dt)
         apply_boundary_conditions(W, boundarypoints, boundaryvalues)
     # print(f"Converged after {n - 1} steps!")
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    # distance_gradient_field_R2(W, cost, G_inv, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
+    distance_gradient_field(W, cost, G_inv, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
 
     # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
-    return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 0)), unpad_array(dx_forward.to_numpy()), unpad_array(dx_backward.to_numpy())
+    return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 0))
 
 
-def get_boundary_conditions_R2(source_point):
+def get_boundary_conditions(source_point):
     """
     Determine the boundary conditions from `source_point`, giving the boundary
     points and boundary values as TaiChi objects.
@@ -111,7 +111,7 @@ def get_boundary_conditions_R2(source_point):
 
 
 @ti.kernel
-def step_W_R2(
+def step_W(
     W: ti.template(),
     cost: ti.template(),
     G_inv: ti.types.matrix(2, 2, ti.f32),
@@ -165,7 +165,7 @@ def step_W_R2(
     #     W[I] += dW_dt[I] * ε
 
 @ti.kernel
-def distance_gradient_field_R2(
+def distance_gradient_field(
     W: ti.template(),
     cost: ti.template(),
     G_inv: ti.types.matrix(2, 2, ti.f32),
