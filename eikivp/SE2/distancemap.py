@@ -3,36 +3,17 @@
 import numpy as np
 import taichi as ti
 from tqdm import tqdm
-from eikivp.cleanarrays import(
-    pad_array,
-    unpad_array,
-    apply_boundary_conditions
-)
 from eikivp.SE2.derivatives import upwind_derivatives
 from eikivp.SE2.metric import invert_metric
-
-# Helper Functions
-
-def get_padded_cost(cost_unpadded):
-    """Pad the cost function `cost_unpadded` and convert to TaiChi object."""
-    cost_np = pad_array(cost_unpadded, pad_value=1., pad_shape=1)
-    cost = ti.field(dtype=ti.f32, shape=cost_np.shape)
-    cost.from_numpy(cost_np)
-    return cost
+from eikivp.utils import (
+    get_initial_W,
+    apply_boundary_conditions,
+    get_padded_cost,
+    unpad_array
+)
 
 
-def get_initial_W(shape, initial_condition=100.):
-    """Initialise the (approximate) distance map as TaiChi object."""
-    W_unpadded = np.full(shape=shape, fill_value=initial_condition)
-    W_np = pad_array(W_unpadded, pad_value=initial_condition, pad_shape=1)
-    W = ti.field(dtype=ti.f32, shape=W_np.shape)
-    W.from_numpy(W_np)
-    return W
-
-
-# Eikonal PDE
-
-def eikonal_solver_SE2(cost_np, source_point, G_np, dxy, n_max=1e5):
+def eikonal_solver(cost_np, source_point, G_np, dxy, n_max=1e5):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     metric tensor field defined by `G_np` and `cost_np`, with source at 
@@ -58,9 +39,12 @@ def eikonal_solver_SE2(cost_np, source_point, G_np, dxy, n_max=1e5):
     """
     shape = cost_np.shape
     G_inv = ti.Matrix(invert_metric(G_np), ti.f32)
-    ε = cost_np.min() * dxy / G_inv.max()
+    # Heuristic, so that W does not become negative.
+    # The sqrt(4) comes from the fact that the norm of the gradient consists of
+    # 4 terms.
+    ε = (cost_np.min() * dxy / G_inv.max()) / np.sqrt(9)
     cost = get_padded_cost(cost_np)
-    W = get_initial_W(shape, initial_condition=25.)
+    W = get_initial_W(shape, initial_condition=100.)
 
     # Create empty Taichi objects
     A1_forward = ti.field(dtype=ti.f32, shape=W.shape)
@@ -75,18 +59,18 @@ def eikonal_solver_SE2(cost_np, source_point, G_np, dxy, n_max=1e5):
     dW_dt = ti.field(dtype=ti.f32, shape=W.shape)
     grad_W = ti.Vector.field(n=3, dtype=ti.f32, shape=W.shape)
     
-    boundarypoints, boundaryvalues = get_boundary_conditions_SE2(source_point)
+    boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
     # Compute approximate distance map
     for _ in tqdm(range(int(n_max))):
-        step_W_SE2_LI(W, cost, G_inv, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, 
-                      A2_W, A3_W, dxy, ε, dW_dt)
+        step_W(W, cost, G_inv, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, A2_W, 
+               A3_W, dxy, ε, dW_dt)
         apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    distance_gradient_field_SE2_LI(W, cost, G_inv, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, 
-                                   A3_backward, A1_W, A2_W, A3_W, grad_W)
+    distance_gradient_field(W, cost, G_inv, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, 
+                            A3_backward, A1_W, A2_W, A3_W, grad_W)
 
     # Cleanup
     W_np = W.to_numpy()
@@ -95,7 +79,7 @@ def eikonal_solver_SE2(cost_np, source_point, G_np, dxy, n_max=1e5):
     return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 1, 0))
 
 @ti.kernel
-def step_W_SE2_LI(
+def step_W(
     W: ti.template(),
     cost: ti.template(),
     G_inv: ti.types.matrix(3, 3, ti.f32),
@@ -152,7 +136,7 @@ def step_W_SE2_LI(
         W[I] += dW_dt[I] * ε
 
 @ti.kernel
-def distance_gradient_field_SE2_LI(
+def distance_gradient_field(
     W: ti.template(),
     cost: ti.template(),
     G_inv: ti.types.matrix(3, 3, ti.f32),
@@ -199,7 +183,7 @@ def distance_gradient_field_SE2_LI(
             G_inv[0, 2] * A1_W[I] + G_inv[1, 2] * A2_W[I] + G_inv[2, 2] * A3_W[I]
         ]) / cost[I]
 
-def get_boundary_conditions_SE2(source_point):
+def get_boundary_conditions(source_point):
     """
     Determine the boundary conditions from `source_point`, giving the boundary
     points and boundary values as TaiChi objects.
