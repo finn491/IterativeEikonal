@@ -1,6 +1,6 @@
 # Access entire backend
 import eikivp.utils
-import eikivp.cleanarrays
+import eikivp.visualisations
 import eikivp.costfunction
 import eikivp.R2
 import eikivp.SE2
