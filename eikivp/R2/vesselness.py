@@ -4,7 +4,7 @@ import numpy as np
 import diplib as dip
 
 
-def rc_vessel_enhancement_R2(image, σ, α=0.2, γ=0.75, ε=0.2):
+def rc_vessel_enhancement(image, σ, α=0.2, γ=0.75, ε=0.2):
     """
     Compute Frangi filter of vessels in `image` at a single scale `σ`. Copied 
     from "Code A - Vesselness in SE(2)".
@@ -53,7 +53,7 @@ def rc_vessel_enhancement_R2(image, σ, α=0.2, γ=0.75, ε=0.2):
     return vesselness
 
 
-def multiscale_frangi_filter_R2(image, σs, α=0.3, γ=0.75, ε=0.3):
+def multiscale_frangi_filter(image, σs, α=0.3, γ=0.75, ε=0.3):
     """
     Compute Frangi filter of vessels in `image` at scales in `σs`. Copied from 
     "Code A - Vesselness in SE(2)".
@@ -73,12 +73,12 @@ def multiscale_frangi_filter_R2(image, σs, α=0.3, γ=0.75, ε=0.3):
     # each point.
     vesselnesses = []
     for σ in σs:
-        vesselnesses.append(rc_vessel_enhancement_R2(image, σ, α=α, γ=γ, ε=ε))
+        vesselnesses.append(rc_vessel_enhancement(image, σ, α=α, γ=γ, ε=ε))
     vesselness = np.maximum.reduce(vesselnesses)
     return vesselness
 
 # Does not work as well as the one based on the Mathematica implementation.
-# def multiscale_frangi_filter_R2(image, α, ε, σs):
+# def multiscale_frangi_filter(image, α, ε, σs):
 #     """
 #     Compute Frangi filter of vessels in `image` at scales in `σs`. Wrapper for
 #     scikit-image function `skimage.filters.frangi()`.
