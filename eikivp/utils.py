@@ -1,6 +1,10 @@
 # utils.py
 
+import numpy as np
 import taichi as ti
+
+
+# Interpolation
 
 @ti.func
 def linear_interpolate(
@@ -24,6 +28,8 @@ def linear_interpolate(
         Interpolated value.
     """
     return v0 * (1.0 - r) + v1 * r
+
+# Safe Indexing
 
 @ti.func
 def sanitize_index_R2(
@@ -72,6 +78,8 @@ def sanitize_index_SE2(
         ti.math.mod(index[2], shape[2])
     ], dt=ti.i32)
 
+# Derivatives
+
 @ti.func
 def select_upwind_derivative(
     d_forward: ti.f32,
@@ -91,6 +99,108 @@ def select_upwind_derivative(
     """
     return ti.math.max(-d_forward, d_backward, 0) * (-1.)**(-d_forward >= d_backward)
 
+# Padding
+
+def pad_array(u, pad_value=0., pad_shape=1):
+    """
+    Pad a numpy array `u` in each direction with `pad_shape` entries of values 
+    `pad_value`.
+
+    Args:
+        `u`: np.ndarray that is to be padded.
+        `pad_value`: Value with which `u` is padded.
+        `pad_shape`: Number of cells that is padded in each direction, taking
+          positive integral values.
+
+    Returns:
+        np.ndarray of the padded array.
+    """
+    return np.pad(u, pad_width=pad_shape, constant_values=pad_value)
+
+
+def extract_centre_slice(u, pad_shape=1):
+    """
+    Select the centre part of `u`, removing padding of size `pad_shape` in each 
+    direction.
+
+    Args:
+        `u`: np.ndarray from which the centre is to be extracted.
+        `pad_shape`: Number of cells that is padded in each direction.
+
+    Returns:
+        np.ndarray of the unpadded array.
+    """
+    if type(pad_shape) == int:
+        centre_slice = tuple(slice(pad_shape, dim_len - pad_shape, 1) for dim_len in u.shape)
+    else: 
+        centre_slice = tuple(slice(pad_shape[i], dim_len - pad_shape[i], 1) for i, dim_len in enumerate(u.shape))
+    return centre_slice
+
+
+def unpad_array(u, pad_shape=1):
+    """
+    Remove the outer `pad_shape` entries numpy array `u`.
+
+    Args:
+        `u`: np.ndarray from which the centre is to be extracted.
+        `pad_shape`: Number of cells that is padded in each direction, taking
+          positive integral values.
+
+    Returns:
+        np.ndarray of the unpadded array. Note that 
+        `unpad_array(*, pad_shape=pad_shape)` is the left-inverse of
+        `pad_array(*, pad_value=pad_value, pad_shape=pad_shape)` for all
+        `pad_value`, `pad_shape`.
+    """
+    centre_slice = extract_centre_slice(u, pad_shape=pad_shape)
+    return u[centre_slice]
+
+# Initialisation
+
+def get_padded_cost(cost_unpadded):
+    """Pad the cost function `cost_unpadded` and convert to TaiChi object."""
+    cost_np = pad_array(cost_unpadded, pad_value=1., pad_shape=1)
+    cost = ti.field(dtype=ti.f32, shape=cost_np.shape)
+    cost.from_numpy(cost_np)
+    return cost
+
+def get_initial_W(shape, initial_condition=100.):
+    """Initialise the (approximate) distance map as TaiChi object."""
+    W_unpadded = np.full(shape=shape, fill_value=initial_condition)
+    W_np = pad_array(W_unpadded, pad_value=initial_condition, pad_shape=1)
+    W = ti.field(dtype=ti.f32, shape=W_np.shape)
+    W.from_numpy(W_np)
+    return W
+
+@ti.kernel
+def apply_boundary_conditions(
+    u: ti.template(), 
+    boundarypoints: ti.template(), 
+    boundaryvalues: ti.template()
+):
+    """
+    @taichi.kernel
+
+    Apply `boundaryvalues` at `boundarypoints` to `u`.
+
+    Args:
+        `u`: ti.field(dtype=[float]) to which the boundary conditions should be 
+          applied.
+        `boundarypoints`: ti.Vector.field(n=dim, dtype=[int], shape=N_points),
+          where `N_points` is the number of boundary points and `dim` is the 
+          dimension of `u`.
+        `boundaryvalues`: ti.Vector.field(n=dim, dtype=[float], shape=N_points),
+          where `N_points` is the number of boundary points and `dim` is the 
+          dimension of `u`.
+
+    Returns:
+        ti.field equal to `u`, except at `boundarypoints`, where it equals
+          `boundaryvalues`.
+    """
+    for I in ti.grouped(boundarypoints):
+        u[boundarypoints[I]] = boundaryvalues[I]
+
+# TaiChi Stuff
 
 @ti.kernel
 def sparse_to_dense(
