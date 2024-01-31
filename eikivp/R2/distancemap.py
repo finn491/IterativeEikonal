@@ -3,34 +3,15 @@
 import numpy as np
 import taichi as ti
 from tqdm import tqdm
-from eikivp.cleanarrays import (
-    pad_array,
-    unpad_array,
-    apply_boundary_conditions
-)
-from eikivp.R2.derivatives import upwind_derivatives, abs_derivatives
+from eikivp.R2.derivatives import upwind_derivatives
 from eikivp.R2.metric import invert_metric
+from eikivp.utils import (
+    get_initial_W,
+    apply_boundary_conditions,
+    get_padded_cost,
+    unpad_array
+)
 
-# Helper Functions
-
-def get_padded_cost(cost_unpadded):
-    """Pad the cost function `cost_unpadded` and convert to TaiChi object."""
-    cost_np = pad_array(cost_unpadded, pad_value=1., pad_shape=1)
-    cost = ti.field(dtype=ti.f32, shape=cost_np.shape)
-    cost.from_numpy(cost_np)
-    return cost
-
-
-def get_initial_W(shape, initial_condition=100.):
-    """Initialise the (approximate) distance map as TaiChi object."""
-    W_unpadded = np.full(shape=shape, fill_value=initial_condition)
-    W_np = pad_array(W_unpadded, pad_value=initial_condition, pad_shape=1)
-    W = ti.field(dtype=ti.f32, shape=W_np.shape)
-    W.from_numpy(W_np)
-    return W
-
-
-# Eikonal PDE
 
 def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     """
@@ -65,7 +46,7 @@ def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     # 4 terms.
     ε = (cost_np.min() * dxy / G_inv.max()) / np.sqrt(4)
     cost = get_padded_cost(cost_np)
-    W = get_initial_W(shape, initial_condition=10.)
+    W = get_initial_W(shape, initial_condition=100.)
 
     # Create empty Taichi objects
     dx_forward = ti.field(dtype=ti.f32, shape=W.shape)
