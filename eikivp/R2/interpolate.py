@@ -79,7 +79,8 @@ def scalar_bilinear_interpolate(
 def vectorfield_bilinear_interpolate(
     vectorfield: ti.template(),
     index: ti.template(),
-    G: ti.types.matrix(2, 2, ti.f32)
+    G: ti.types.matrix(2, 2, ti.f32),
+    cost_field: ti.template()
 ) -> ti.types.vector(2, ti.f32):
     """
     @taichi.func
@@ -94,6 +95,8 @@ def vectorfield_bilinear_interpolate(
           want to interpolate.
         `G`: ti.types.matrix(n=2, m=2, dtype=[float]) of constants of metric 
           tensor with respect to standard basis.
+        `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
+          between 0 and 1.
 
     Returns:
         ti.types.vector(n=2, dtype=ti.f32) of value `vectorfield` interpolated 
@@ -113,7 +116,9 @@ def vectorfield_bilinear_interpolate(
     v = bilinear_interpolate(v00, v01, v10, v11, r)
     w = bilinear_interpolate(w00, w01, w10, w11, r)
 
-    return normalise(ti.Vector([v, w]), G)
+    cost = scalar_bilinear_interpolate(cost_field, index)
+
+    return normalise(ti.Vector([v, w]), G, cost)
 
 # Apparently, interpolating angles does not work well (or I implemented something incorrectly)...
 # @ti.func

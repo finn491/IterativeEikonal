@@ -10,7 +10,7 @@ from eikivp.R2.metric import vector_standard_to_array
 from eikivp.utils import sparse_to_dense
 
 
-def geodesic_back_tracking(grad_W_np, source_point, target_point, G_np=None, dxy=1., dt=1., β=0., n_max=10000):
+def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, G_np=None, dxy=1., dt=None, β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -21,12 +21,14 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, G_np=None, dxy
           the approximate distance map.
         `source_point`: Tuple[int] describing index of source point in `W_np`.
         `target_point`: Tuple[int] describing index of target point in `W_np`.
+        `cost_np`: np.ndarray of cost function throughout domain, taking values
+          between 0 and 1.
       Optional:
         `G_np`: np.ndarray(shape=(2, 2), dtype=[float]) of matrix of left 
           invariant metric tensor field with respect to standard basis. Defaults
           to standard Euclidean metric.
         `dxy`: Spatial resolution, taking values greater than 0. Defaults to 1.
-        `dt`: Step size, taking values greater than 0. Defaults to 1.
+        `dt`: Step size, taking values greater than 0. Defaults to the minimum
         `β`: Momentum parameter in gradient descent, taking values between 0 and 
           1. Defaults to 0.
         `n_max`: Maximum number of points in geodesic, taking positive integral
@@ -38,9 +40,15 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, G_np=None, dxy
     shape = grad_W_np.shape[0:2]
     grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=shape)
     grad_W.from_numpy(grad_W_np)
+    cost = ti.field(dtype=ti.f32, shape=shape)
+    cost.from_numpy(cost_np)
     if G_np is None:
         G_np = np.identity(2)
     G = ti.Matrix(G_np, ti.f32)
+
+    if dt is None:
+        # It would make sense to also include G somehow, but I am not sure how.
+        dt = cost_np.min()
 
     # Perform backtracking
     γ_list = ti.root.dynamic(ti.i, n_max)
@@ -50,7 +58,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, G_np=None, dxy
     source_point = ti.Vector(source_point, dt=ti.f32)
     target_point = ti.Vector(target_point, dt=ti.f32)
 
-    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, G, dxy, dt, n_max, β, γ)
+    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, G, cost, dxy, dt, n_max, β, γ)
     γ_dense = ti.Vector.field(n=2, dtype=ti.f32, shape=γ_len)
     print(f"Geodesic consists of {γ_len} points.")
     sparse_to_dense(γ, γ_dense)
@@ -63,6 +71,7 @@ def geodesic_back_tracking_backend(
     source_point: ti.types.vector(2, ti.f32),
     target_point: ti.types.vector(2, ti.f32),
     G: ti.types.matrix(2, 2, ti.f32),
+    cost: ti.template(),
     dxy: ti.f32,
     dt: ti.f32,
     n_max: ti.i32,
@@ -87,6 +96,8 @@ def geodesic_back_tracking_backend(
           target point in `W_np`.
         `G`: ti.types.matrix(n=2, m=2, dtype=[float]) of constants of metric 
           tensor with respect to standard basis.
+        `cost`: ti.field(dtype=[float]) of cost function, taking values between
+          0 and 1.
         `dxy`: Spatial resolution, taking values greater than 0.
         `n_max`: Maximum number of points in geodesic, taking positive integral
           values. Defaults to 10000.
@@ -106,9 +117,9 @@ def geodesic_back_tracking_backend(
     n = 0
     # gradient_at_point = vectorfield_bilinear_interpolate(grad_W, target_point, G)
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
-        gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point, G)
+        gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point, G, cost)
         gradient_at_point_array = vector_standard_to_array(gradient_at_point, dxy)
-        new_point = get_next_point(point, gradient_at_point, dt)
+        new_point = get_next_point(point, gradient_at_point_array, dt)
         γ.append(new_point)
         point = new_point
         n += 1
