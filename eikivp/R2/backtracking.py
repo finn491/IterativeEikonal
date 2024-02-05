@@ -29,6 +29,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, G_np=
           to standard Euclidean metric.
         `dxy`: Spatial resolution, taking values greater than 0. Defaults to 1.
         `dt`: Step size, taking values greater than 0. Defaults to the minimum
+          of `cost_np`.
         `β`: Momentum parameter in gradient descent, taking values between 0 and 
           1. Defaults to 0.
         `n_max`: Maximum number of points in geodesic, taking positive integral
@@ -118,8 +119,7 @@ def geodesic_back_tracking_backend(
     # gradient_at_point = vectorfield_bilinear_interpolate(grad_W, target_point, G)
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
         gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point, G, cost)
-        gradient_at_point_array = vector_standard_to_array(gradient_at_point, dxy)
-        new_point = get_next_point(point, gradient_at_point_array, dt)
+        new_point = get_next_point(point, gradient_at_point, dt)
         γ.append(new_point)
         point = new_point
         n += 1

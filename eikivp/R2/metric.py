@@ -78,22 +78,23 @@ def norm(
 
 # Coordinate Transforms
 
-@ti.func
-def vector_standard_to_array(
-    vector_standard: ti.types.vector(2, ti.f32),
-    dxy: ti.f32
-) -> ti.types.vector(2, ti.f32):
-    """
-    @taichi.func
+# Apparently shouldn't do this...
+# @ti.func
+# def vector_standard_to_array(
+#     vector_standard: ti.types.vector(2, ti.f32),
+#     dxy: ti.f32
+# ) -> ti.types.vector(2, ti.f32):
+#     """
+#     @taichi.func
 
-    Change the coordinates of the vector represented by `vector_standard` from 
-    the standard frame to the frame of array indices, given that the spatial
-    resolution is `dxy`.
+#     Change the coordinates of the vector represented by `vector_standard` from 
+#     the standard frame to the frame of array indices, given that the spatial
+#     resolution is `dxy`.
 
-    Args:
-      Static:
-        `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in LI
-          coordinates.
-        `dxy`: Spatial resolution, taking values greater than 0.
-    """
-    return vector_standard / dxy
+#     Args:
+#       Static:
+#         `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in LI
+#           coordinates.
+#         `dxy`: Spatial resolution, taking values greater than 0.
+#     """
+#     return vector_standard / dxy
