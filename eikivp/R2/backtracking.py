@@ -9,7 +9,7 @@ from eikivp.R2.interpolate import (
 from eikivp.utils import sparse_to_dense
 
 
-def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, G_np=None, dxy=1., dt=None, β=0., n_max=10000):
+def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, G_np=None, dt=None, β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -26,7 +26,6 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, G_np=
         `G_np`: np.ndarray(shape=(2, 2), dtype=[float]) of matrix of left 
           invariant metric tensor field with respect to standard basis. Defaults
           to standard Euclidean metric.
-        `dxy`: Spatial resolution, taking values greater than 0. Defaults to 1.
         `dt`: Step size, taking values greater than 0. Defaults to the minimum
           of `cost_np`.
         `β`: Momentum parameter in gradient descent, taking values between 0 and 
@@ -37,7 +36,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, G_np=
     Returns:
         np.ndarray of geodesic connecting `target_point` to `source_point`.
     """
-    shape = grad_W_np.shape[0:2]
+    shape = grad_W_np.shape[0:-1]
     grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=shape)
     grad_W.from_numpy(grad_W_np)
     cost = ti.field(dtype=ti.f32, shape=shape)

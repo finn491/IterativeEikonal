@@ -41,6 +41,7 @@ def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     if G_np is None:
         G_np = np.identity(2)
     G_inv = ti.Matrix(invert_metric(G_np), ti.f32)
+    print(G_inv)
     # Heuristic, so that W does not become negative.
     # The sqrt(4) comes from the fact that the norm of the gradient consists of
     # 4 terms.
@@ -82,7 +83,7 @@ def get_boundary_conditions(source_point):
     points and boundary values as TaiChi objects.
     """
     i_0, j_0 = source_point
-    boundarypoints_np = np.array([[i_0, j_0]], dtype=int)
+    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1]], dtype=int) # Account for padding.
     boundaryvalues_np = np.array([0.], dtype=float)
     boundarypoints = ti.Vector.field(n=2, dtype=ti.i32, shape=1)
     boundarypoints.from_numpy(boundarypoints_np)
