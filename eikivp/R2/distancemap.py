@@ -44,7 +44,7 @@ def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     # Heuristic, so that W does not become negative.
     # The sqrt(4) comes from the fact that the norm of the gradient consists of
     # 4 terms.
-    ε = (cost_np.min() * dxy / G_inv.max()) / np.sqrt(4)
+    ε = cost_np.min() * dxy / np.sqrt(4 * G_inv.max())
     cost = get_padded_cost(cost_np)
     W = get_initial_W(shape, initial_condition=100.)
 
@@ -183,4 +183,4 @@ def distance_gradient_field(
         grad_W[I] = ti.Vector([
             G_inv[0, 0] * dx_W[I] + G_inv[0, 1] * dy_W[I], 
             G_inv[1, 0] * dx_W[I] + G_inv[1, 1] * dy_W[I]
-        ]) / cost[I]
+        ]) / cost[I]**2

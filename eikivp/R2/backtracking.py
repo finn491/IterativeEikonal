@@ -6,7 +6,6 @@ from eikivp.R2.interpolate import (
     vectorfield_bilinear_interpolate,
     scalar_bilinear_interpolate
 )
-from eikivp.R2.metric import vector_standard_to_array
 from eikivp.utils import sparse_to_dense
 
 
@@ -59,7 +58,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, G_np=
     source_point = ti.Vector(source_point, dt=ti.f32)
     target_point = ti.Vector(target_point, dt=ti.f32)
 
-    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, G, cost, dxy, dt, n_max, β, γ)
+    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, G, cost, dt, n_max, β, γ)
     γ_dense = ti.Vector.field(n=2, dtype=ti.f32, shape=γ_len)
     print(f"Geodesic consists of {γ_len} points.")
     sparse_to_dense(γ, γ_dense)
@@ -73,7 +72,6 @@ def geodesic_back_tracking_backend(
     target_point: ti.types.vector(2, ti.f32),
     G: ti.types.matrix(2, 2, ti.f32),
     cost: ti.template(),
-    dxy: ti.f32,
     dt: ti.f32,
     n_max: ti.i32,
     β: ti.f32,
@@ -99,7 +97,6 @@ def geodesic_back_tracking_backend(
           tensor with respect to standard basis.
         `cost`: ti.field(dtype=[float]) of cost function, taking values between
           0 and 1.
-        `dxy`: Spatial resolution, taking values greater than 0.
         `n_max`: Maximum number of points in geodesic, taking positive integral
           values. Defaults to 10000.
         `β`: *Currently not used* Momentum parameter in gradient descent, taking 
