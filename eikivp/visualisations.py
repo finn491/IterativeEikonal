@@ -35,3 +35,13 @@ def view_image_arrays_side_by_side(image_array_list):
         ax[i].imshow(image_array, cmap="gray", origin="upper")
         ax[i].set_axis_off()
     return image_list, fig, ax
+
+def plot_image_array(image_array, x_min, x_max, y_min, y_max, cmap="gray", figsize=(10, 10), fig=None, ax=None):
+    if fig is None and ax is None:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize)
+    ax.imshow(image_array, cmap=cmap, extent=(x_min, x_max, y_min, y_max))
+    ax.set_xlabel("$x$")
+    ax.set_ylabel("$y$")
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+    return fig, ax
