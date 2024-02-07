@@ -144,7 +144,7 @@ def get_next_point(
         Next point in the gradient descent.
     """
     new_point = ti.Vector([0., 0.], dt=ti.f32)
-    new_point[0] = point[0] - dt * gradient_at_point[1] # Because arrays are
+    new_point[0] = point[0] + dt * gradient_at_point[1] # Because arrays are
     new_point[1] = point[1] - dt * gradient_at_point[0] # indexed stupidly.
     return new_point
 

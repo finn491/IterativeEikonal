@@ -32,7 +32,7 @@ def derivatives(
           updated in place.
     """
     I_dx = ti.Vector([0, 1], dt=ti.i32)
-    I_dy = ti.Vector([1, 0], dt=ti.i32)
+    I_dy = ti.Vector([-1, 0], dt=ti.i32)
     for I in ti.grouped(u):
         # We do not need to interpolate because we always end up on the grid.
         I_dx_forward = sanitize_index_R2(I + I_dx, u)

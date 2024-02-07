@@ -78,6 +78,41 @@ def norm(
 
 # Coordinate Transforms
 
+def coordinate_real_to_array(x, y, x_min, y_max, dxy):
+    """
+    Compute the array indices (I, J) of the point defined by real coordinates 
+    (`x`, `y`). Can broadcast over entire arrays of real coordinates.
+
+    Args:
+        `x`: x-coordinate of the point.
+        `y`: y-coordinate of the point.
+        `x_min`: minimum value of x-coordinates in rectangular domain.
+        `y_min`: minimum value of y-coordinates in rectangular domain.
+        `dxy`: spatial resolution, which is equal in the x- and y-directions,
+          taking values greater than 0.
+    """
+    J = np.rint((x - x_min) / dxy).astype(int)
+    I = np.rint((y_max - y) / dxy).astype(int)
+    return I, J
+
+
+def coordinate_array_to_real(I, J, x_min, y_max, dxy):
+    """
+    Compute the real coordinates (x, y) of the point defined by array indices 
+    (`I`, `J`). Can broadcast over entire arrays of array indices.
+
+    Args:
+        `I`: I index of the point.
+        `J`: J index of the point.
+        `x_min`: minimum value of x-coordinates in rectangular domain.
+        `y_min`: minimum value of y-coordinates in rectangular domain.
+        `dxy`: spatial resolution, which is equal in the x- and y-directions,
+          taking values greater than 0.
+    """
+    x = x_min + J * dxy
+    y = y_max - I * dxy
+    return x, y
+
 # Apparently shouldn't do this...
 # @ti.func
 # def vector_standard_to_array(
