@@ -41,7 +41,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, y
     Returns:
         np.ndarray of geodesic connecting `target_point` to `source_point`.
     """
-    # Align with (x, y)-frame.
+    # Align with (x, y)-frame
     grad_W_np = align_to_real_axis_vector_field(grad_W_np)
     shape = grad_W_np.shape[0:-1]
     cost_np = align_to_real_axis_scalar_field(cost_np)
@@ -50,25 +50,26 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, y
     xs = align_to_real_axis_scalar_field(xs)
     ys = align_to_real_axis_scalar_field(ys)
 
+    # Set hyperparameters
+    if G_np is None:
+        G_np = np.identity(2)
+    G = ti.Matrix(G_np, ti.f32)
+    if dt is None:
+        # It would make sense to also include G somehow, but I am not sure how.
+        dt = cost_np.min()
+
+    # Initialise Taichi objects
     grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=shape)
     grad_W.from_numpy(grad_W_np)
     cost = ti.field(dtype=ti.f32, shape=shape)
     cost.from_numpy(cost_np)
-    if G_np is None:
-        G_np = np.identity(2)
-    G = ti.Matrix(G_np, ti.f32)
-
-    if dt is None:
-        # It would make sense to also include G somehow, but I am not sure how.
-        dt = cost_np.min()
+    source_point = ti.Vector(source_point, dt=ti.f32)
+    target_point = ti.Vector(target_point, dt=ti.f32)
 
     # Perform backtracking
     γ_list = ti.root.dynamic(ti.i, n_max)
     γ = ti.Vector.field(n=2, dtype=ti.f32)
     γ_list.place(γ)
-
-    source_point = ti.Vector(source_point, dt=ti.f32)
-    target_point = ti.Vector(target_point, dt=ti.f32)
 
     γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, G, cost, dt, n_max, β, γ)
     γ_dense = ti.Vector.field(n=2, dtype=ti.f32, shape=γ_len)
@@ -76,7 +77,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, y
     sparse_to_dense(γ, γ_dense)
     γ_ci = γ_dense.to_numpy()
 
-    # Transpose to align with (I, J)-frame.
+    # Align with (I, J)-frame
     γ_np = convert_continuous_indices_to_real_space_R2(γ_ci, xs, ys)
     return γ_np
 

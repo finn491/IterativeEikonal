@@ -87,7 +87,7 @@ def coordinate_real_to_array(x, y, x_min, y_max, dxy):
         `x`: x-coordinate of the point.
         `y`: y-coordinate of the point.
         `x_min`: minimum value of x-coordinates in rectangular domain.
-        `y_min`: minimum value of y-coordinates in rectangular domain.
+        `y_max`: maximum value of y-coordinates in rectangular domain.
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
           taking values greater than 0.
     """
@@ -105,13 +105,176 @@ def coordinate_array_to_real(I, J, x_min, y_max, dxy):
         `I`: I index of the point.
         `J`: J index of the point.
         `x_min`: minimum value of x-coordinates in rectangular domain.
-        `y_min`: minimum value of y-coordinates in rectangular domain.
+        `y_max`: maximum value of y-coordinates in rectangular domain.
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
           taking values greater than 0.
     """
     x = x_min + J * dxy
     y = y_max - I * dxy
     return x, y
+
+def align_to_real_axis_point(point, shape):
+    """
+    Express `point`, given in indices with respect to standard array convention,
+    in terms of indices with respect to arrays aligned with real axes (see Notes
+    for more explanation). Here, `shape` gives the shape of the array in which
+    we index _after_ aligning with real axes.
+
+    Args:
+        `point`: Tuple[int, int] describing point with respect to standard array
+          indexing convention.
+        `shape`: shape of array, aligned to real axes, in which we want to
+          index. Note that `0 <= point[0] <= shape[1] - 1` and 
+          `0 <= point[1] <= shape[0]`.
+
+    Notes:
+        Alignment is achieved by first flipping and subsequently transposing the
+        array.
+            
+    ===================== DRAWING DOES NOT WORK IN HELP ========================    
+        
+               standard                  real axes aligned
+            I ^ ------                    I x ------
+            | | |    |        =>          | | |    |
+            v y ------                    v v ------
+                 x ->                          y ->
+                 J ->                          J ->  
+    """
+    return point[1], shape[1] - 1 - point[0]
+
+def align_to_real_axis_scalar_field(field):
+    """
+    Align `field`, given in indices with respect to standard array convention, 
+    with real axes (see Notes for more explanation).
+
+    Args:
+        `field`: np.ndarray of scalar field given with respect to standard array
+          convention.
+
+    Notes:
+        Alignment is achieved by first flipping and subsequently transposing the
+        array.
+            
+    ===================== DRAWING DOES NOT WORK IN HELP ========================    
+        
+               standard                  real axes aligned
+            I ^ ------                    I x ------
+            | | |    |        =>          | | |    |
+            v y ------                    v v ------
+                 x ->                          y ->
+                 J ->                          J ->  
+    """
+    field_flipped = np.flip(field, axis=0)
+    field_aligned = np.transpose(field_flipped, axes=(1, 0))
+    return field_aligned
+
+def align_to_real_axis_vector_field(vector_field):
+    """
+    Align `vector_field`, given in indices with respect to standard array 
+    convention, with real axes (see Notes for more explanation).
+    
+    Args:
+        `vector_field`: np.ndarray of vector field given with respect to 
+          standard array convention.
+
+    Notes:
+        Alignment is achieved by first flipping and subsequently transposing the
+        array.
+            
+    ===================== DRAWING DOES NOT WORK IN HELP ========================    
+        
+               standard                  real axes aligned
+            I ^ ------                    I x ------
+            | | |    |        =>          | | |    |
+            v y ------                    v v ------
+                 x ->                          y ->
+                 J ->                          J ->  
+    """
+    vector_field_flipped = np.flip(vector_field, axis=0)
+    vector_field_aligned = np.transpose(vector_field_flipped, axes=(1, 0, 2))
+    return vector_field_aligned
+
+def align_to_standard_array_axis_point(point, shape):
+    """
+    Express `point`, given in indices with respect to arrays aligned with real 
+    axes, in terms of indices with respect to standard array convention, (see 
+    Notes for more explanation). Here, `shape` gives the shape of the array in 
+    which we index _after_ aligning with standard array convention.
+
+    Args:
+        `point`: Tuple[int, int] describing point with respect to arrays aligned
+          with real axes.
+        `shape`: shape of array, with respect to standard array convention, in 
+          which we want to index. Note that `0 <= point[0] <= shape[1] - 1` and 
+          `0 <= point[1] <= shape[0]`.
+
+    Notes:
+        Alignment is achieved by first transposing and subsequently flipping the
+        array.
+            
+    ===================== DRAWING DOES NOT WORK IN HELP ========================    
+        
+           real axes aligned                 standard
+            I x ------                    I ^ ------
+            | | |    |        =>          | | |    |
+            v v ------                    v y ------
+                 y ->                          x ->
+                 J ->                          J ->  
+    """
+    return point[1], shape[1] - 1 - point[0]
+
+def align_to_standard_array_axis_scalar_field(field):
+    """
+    Align `field`, given in indices with respect to arrays aligned with real
+    axes, with respect to standard array convention (see Notes for more 
+    explanation).
+
+    Args:
+        `field`: np.ndarray of scalar field given in indices with respect to
+          arrays aligned with real axes.
+
+    Notes:
+        Alignment is achieved by first flipping and subsequently transposing the
+        array.
+            
+    ===================== DRAWING DOES NOT WORK IN HELP ========================    
+        
+           real axes aligned                 standard
+            I x ------                    I ^ ------
+            | | |    |        =>          | | |    |
+            v v ------                    v y ------
+                 y ->                          x ->
+                 J ->                          J ->  
+    """
+    field_transposed = np.transpose(field, axes=(1, 0))
+    field_aligned = np.flip(field_transposed, axis=0)
+    return field_aligned
+
+def align_to_standard_array_axis_vector_field(vector_field):
+    """
+    Align `vector_field`, given in with respect to standard array convention, 
+    with real axes (see Notes for more explanation).
+
+    Args:
+        `vector_field`: np.ndarray of vector field given in indices with respect
+          to arrays aligned with real axes.
+
+    Notes:
+        Alignment is achieved by first flipping and subsequently transposing the
+        array.
+            
+    ===================== DRAWING DOES NOT WORK IN HELP ========================    
+        
+           real axes aligned                 standard
+            I x ------                    I ^ ------
+            | | |    |        =>          | | |    |
+            v v ------                    v y ------
+                 y ->                          x ->
+                 J ->                          J ->  
+    """
+    vector_field_transposed = np.transpose(vector_field, axes=(1, 0, 2))
+    vector_field_aligned = np.flip(vector_field_transposed, axis=0)
+    return vector_field_aligned
 
 # Apparently shouldn't do this...
 # @ti.func

@@ -43,7 +43,7 @@ def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
           left invariant metric tensor field described by `G_np` and `cost_np`.
         np.ndarray of upwind gradient field of (approximate) distance map.
     """
-    # Align with (x, y)-frame.
+    # Align with (x, y)-frame
     cost_np = align_to_real_axis_scalar_field(cost_np)
     shape = cost_np.shape
     source_point = align_to_real_axis_point(source_point, shape)
@@ -56,9 +56,9 @@ def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     # The sqrt(4) comes from the fact that the norm of the gradient consists of
     # 4 terms.
     ε = cost_np.min() * dxy / np.sqrt(4 * G_inv.max())
-    cost = get_padded_cost(cost_np)
 
     # Initialise Taichi objects
+    cost = get_padded_cost(cost_np)
     W = get_initial_W(shape, initial_condition=100.)
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
@@ -81,7 +81,7 @@ def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5):
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
     distance_gradient_field(W, cost, G_inv, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
 
-    # Align with (I, J)-frame.
+    # Align with (I, J)-frame
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
     W_np = align_to_standard_array_axis_scalar_field(W_np)
