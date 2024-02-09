@@ -6,10 +6,15 @@ from eikivp.R2.interpolate import (
     vectorfield_bilinear_interpolate,
     scalar_bilinear_interpolate
 )
+from eikivp.R2.metric import (
+    align_to_real_axis_point,
+    align_to_real_axis_scalar_field,
+    align_to_real_axis_vector_field,
+)
 from eikivp.utils import sparse_to_dense
 
 
-def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, G_np=None, dt=None, β=0., n_max=10000):
+def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, ys, G_np=None, dt=None, β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -36,7 +41,15 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, G_np=
     Returns:
         np.ndarray of geodesic connecting `target_point` to `source_point`.
     """
+    # Align with (x, y)-frame.
+    grad_W_np = align_to_real_axis_vector_field(grad_W_np)
     shape = grad_W_np.shape[0:-1]
+    cost_np = align_to_real_axis_scalar_field(cost_np)
+    source_point = align_to_real_axis_point(source_point, shape)
+    target_point = align_to_real_axis_point(target_point, shape)
+    xs = align_to_real_axis_scalar_field(xs)
+    ys = align_to_real_axis_scalar_field(ys)
+
     grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=shape)
     grad_W.from_numpy(grad_W_np)
     cost = ti.field(dtype=ti.f32, shape=shape)
@@ -61,8 +74,11 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, G_np=
     γ_dense = ti.Vector.field(n=2, dtype=ti.f32, shape=γ_len)
     print(f"Geodesic consists of {γ_len} points.")
     sparse_to_dense(γ, γ_dense)
+    γ_ci = γ_dense.to_numpy()
 
-    return γ_dense.to_numpy()
+    # Transpose to align with (I, J)-frame.
+    γ_np = convert_continuous_indices_to_real_space_R2(γ_ci, xs, ys)
+    return γ_np
 
 @ti.kernel
 def geodesic_back_tracking_backend(
@@ -144,8 +160,10 @@ def get_next_point(
         Next point in the gradient descent.
     """
     new_point = ti.Vector([0., 0.], dt=ti.f32)
-    new_point[0] = point[0] + dt * gradient_at_point[1] # Because arrays are
-    new_point[1] = point[1] - dt * gradient_at_point[0] # indexed stupidly.
+    # new_point[0] = point[0] + dt * gradient_at_point[1] # Because arrays are
+    # new_point[1] = point[1] - dt * gradient_at_point[0] # indexed stupidly.
+    new_point[0] = point[0] - dt * gradient_at_point[0] # Because arrays are
+    new_point[1] = point[1] - dt * gradient_at_point[1] # indexed stupidly.
     return new_point
 
 def convert_continuous_indices_to_real_space_R2(γ_ci_np, xs_np, ys_np):
