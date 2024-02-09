@@ -9,6 +9,7 @@ from eikivp.SE2.interpolate import scalar_trilinear_interpolate
 def derivatives(
     u: ti.template(),
     dxy: ti.f32,
+    θs: ti.template(),
     A1_forward: ti.template(),
     A1_backward: ti.template(),
     A2_forward: ti.template(),
@@ -27,6 +28,7 @@ def derivatives(
       Static:
         `u`: ti.field(dtype=[float], shape=shape) which we want to 
           differentiate.
+        `θs`: angle coordinate at each grid point.
         `dxy`: step size in x and y direction, taking values greater than 0.
       Mutated:
         `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
@@ -35,7 +37,7 @@ def derivatives(
     dθ = 2.0 * ti.math.pi / ti.static(u.shape[2])
     I_A3 = ti.Vector([0.0,  0.0, 1.0], dt=ti.f32)
     for I in ti.grouped(A1_forward):
-        θ = I[2] * dθ
+        θ = θs[I]
         cos = ti.math.cos(θ)
         sin = ti.math.sin(θ)
         I_A1 = ti.Vector([cos, sin, 0.0], dt=ti.f32)
@@ -53,6 +55,7 @@ def derivatives(
 def abs_derivatives(
     u: ti.template(),
     dxy: ti.f32,
+    θs: ti.template(),
     A1_forward: ti.template(),
     A1_backward: ti.template(),
     A2_forward: ti.template(),
@@ -74,13 +77,14 @@ def abs_derivatives(
         `u`: ti.field(dtype=[float], shape=shape) which we want to 
           differentiate.
         `dxy`: step size in x and y direction, taking values greater than 0.
+        `θs`: angle coordinate at each grid point.
       Mutated:
         `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
         `abs_A*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
-    derivatives(u, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward)
+    derivatives(u, dxy, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward)
     for I in ti.grouped(u):
         abs_A1[I] = ti.math.max(-A1_forward[I], A1_backward[I], 0)
         abs_A2[I] = ti.math.max(-A2_forward[I], A2_backward[I], 0)
@@ -91,6 +95,7 @@ def abs_derivatives(
 def upwind_derivatives(
     u: ti.template(),
     dxy: ti.f32,
+    θs: ti.template(),
     A1_forward: ti.template(),
     A1_backward: ti.template(),
     A2_forward: ti.template(),
@@ -112,13 +117,14 @@ def upwind_derivatives(
         `u`: ti.field(dtype=[float], shape=shape) which we want to 
           differentiate.
         `dxy`: step size in x and y direction, taking values greater than 0.
+        `θs`: angle coordinate at each grid point.
       Mutated:
         `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
         `upwind_A*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
-    derivatives(u, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward)
+    derivatives(u, dxy, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward)
     for I in ti.grouped(u):
         upwind_A1[I] = select_upwind_derivative(A1_forward[I], A1_backward[I])
         upwind_A2[I] = select_upwind_derivative(A2_forward[I], A2_backward[I])
