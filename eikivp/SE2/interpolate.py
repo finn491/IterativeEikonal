@@ -96,7 +96,8 @@ def scalar_trilinear_interpolate(
 def vectorfield_trilinear_interpolate_LI(
     vectorfield: ti.template(),
     index: ti.template(),
-    G: ti.types.matrix(3, 3, ti.f32)
+    G: ti.types.matrix(3, 3, ti.f32),
+    cost_field: ti.template()
 ) -> ti.types.vector(3, ti.f32):
     """
     @taichi.func
@@ -114,6 +115,8 @@ def vectorfield_trilinear_interpolate_LI(
           we want to interpolate.
         `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
           tensor with respect to left invariant basis.
+        `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
+          between 0 and 1.
 
     Returns:
         ti.types.vector(n=3, dtype=[float]) of value `vectorfield` interpolated 
@@ -138,14 +141,17 @@ def vectorfield_trilinear_interpolate_LI(
     v = trilinear_interpolate(v000, v001, v010, v011, v100, v101, v110, v111, r)
     w = trilinear_interpolate(w000, w001, w010, w011, w100, w101, w110, w111, r)
 
-    return normalise_LI(ti.Vector([u, v, w]), G)
+    cost = scalar_trilinear_interpolate(cost_field, index)
+
+    return normalise_LI(ti.Vector([u, v, w]), G, cost)
 
 @ti.func
 def vectorfield_trilinear_interpolate_static(
     vectorfield: ti.template(),
     index: ti.template(),
     θs: ti.template(),
-    G: ti.types.matrix(3, 3, ti.f32)
+    G: ti.types.matrix(3, 3, ti.f32),
+    cost_field: ti.template()
 ) -> ti.types.vector(3, ti.f32):
     """
     @taichi.func
@@ -162,6 +168,8 @@ def vectorfield_trilinear_interpolate_static(
         `θs`: angle coordinate at each grid point.
         `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
           tensor with respect to left invariant basis.
+        `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
+          between 0 and 1.
 
     Returns:
         ti.types.vector(n=3, dtype=[float]) of value `vectorfield` interpolated 
@@ -188,4 +196,6 @@ def vectorfield_trilinear_interpolate_static(
 
     θ = scalar_trilinear_interpolate(θs, index)
 
-    return normalise_static(ti.Vector([u, v, w]), G, θ)
+    cost = scalar_trilinear_interpolate(cost_field, index)
+
+    return normalise_static(ti.Vector([u, v, w]), G, cost, θ)

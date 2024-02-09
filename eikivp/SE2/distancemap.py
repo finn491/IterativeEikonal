@@ -4,7 +4,13 @@ import numpy as np
 import taichi as ti
 from tqdm import tqdm
 from eikivp.SE2.derivatives import upwind_derivatives
-from eikivp.SE2.metric import invert_metric
+from eikivp.SE2.metric import (
+    invert_metric,
+    align_to_real_axis_point,
+    align_to_real_axis_scalar_field,
+    align_to_standard_array_axis_scalar_field,
+    align_to_standard_array_axis_vector_field
+)
 from eikivp.utils import (
     get_initial_W,
     apply_boundary_conditions,
@@ -13,7 +19,7 @@ from eikivp.utils import (
 )
 
 
-def eikonal_solver(cost_np, source_point, G_np, dxy, n_max=1e5):
+def eikonal_solver(cost_np, source_point, G_np, dxy, θs_np, n_max=1e5):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     metric tensor field defined by `G_np` and `cost_np`, with source at 
@@ -37,16 +43,29 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, n_max=1e5):
           left invariant metric tensor field described by `G_np` and `cost_np`.
         np.ndarray of upwind gradient field of (approximate) distance map.
     """
+    # Align with (x, y, θ)-frame
+    cost_np = align_to_real_axis_scalar_field(cost_np)
     shape = cost_np.shape
+    source_point = align_to_real_axis_point(source_point, shape)
+    θs_np = align_to_real_axis_scalar_field(θs_np)
+
+    # Set hyperparamters.
     G_inv = ti.Matrix(invert_metric(G_np), ti.f32)
     # Heuristic, so that W does not become negative.
     # The sqrt(4) comes from the fact that the norm of the gradient consists of
     # 4 terms.
     ε = (cost_np.min() * dxy / G_inv.max()) / np.sqrt(9)
+    print(ε)
+
+    # Initialise Taichi objects
     cost = get_padded_cost(cost_np)
     W = get_initial_W(shape, initial_condition=100.)
+    boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
+    apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
-    # Create empty Taichi objects
+    θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
+    θs.from_numpy(θs_np)
+
     A1_forward = ti.field(dtype=ti.f32, shape=W.shape)
     A1_backward = ti.field(dtype=ti.f32, shape=W.shape)
     A2_forward = ti.field(dtype=ti.f32, shape=W.shape)
@@ -58,23 +77,22 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, n_max=1e5):
     A3_W = ti.field(dtype=ti.f32, shape=W.shape)
     dW_dt = ti.field(dtype=ti.f32, shape=W.shape)
     grad_W = ti.Vector.field(n=3, dtype=ti.f32, shape=W.shape)
-    
-    boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
-    apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
     # Compute approximate distance map
     for _ in tqdm(range(int(n_max))):
-        step_W(W, cost, G_inv, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, A2_W, 
-               A3_W, dxy, ε, dW_dt)
+        step_W(W, cost, G_inv, dxy, θs, ε, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, A2_W, 
+               A3_W, dW_dt)
         apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    distance_gradient_field(W, cost, G_inv, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, 
+    distance_gradient_field(W, cost, G_inv, dxy, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, 
                             A3_backward, A1_W, A2_W, A3_W, grad_W)
 
-    # Cleanup
+    # Align with (I, J, K)-frame
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
+    W_np = align_to_standard_array_axis_scalar_field(W_np)
+    grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
     return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 1, 0))
 
@@ -97,6 +115,9 @@ def step_W(
     W: ti.template(),
     cost: ti.template(),
     G_inv: ti.types.matrix(3, 3, ti.f32),
+    dxy: ti.f32,
+    θs: ti.template(),
+    ε: ti.f32,
     A1_forward: ti.template(),
     A1_backward: ti.template(),
     A2_forward: ti.template(),
@@ -106,8 +127,6 @@ def step_W(
     A1_W: ti.template(),
     A2_W: ti.template(),
     A3_W: ti.template(),
-    dxy: ti.f32,
-    ε: ti.f32,
     dW_dt: ti.template()
 ):
     """
@@ -123,6 +142,7 @@ def step_W(
         `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
           inverse metric tensor with respect to left invariant basis.
         `dxy`: Spatial step size, taking values greater than 0.
+        `θs`: angle coordinate at each grid point.
         `ε`: "Time" step size, taking values greater than 0.
         `*_target`: Indices of the target point.
       Mutated:
@@ -135,7 +155,7 @@ def step_W(
         `dW_dt`: ti.field(dtype=[float], shape=shape) of error of the distance 
           map with respect to the Eikonal PDE, which is updated in place.
     """
-    upwind_derivatives(W, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, A2_W,
+    upwind_derivatives(W, dxy, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, A2_W,
                        A3_W)
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
@@ -155,6 +175,7 @@ def distance_gradient_field(
     cost: ti.template(),
     G_inv: ti.types.matrix(3, 3, ti.f32),
     dxy: ti.f32,
+    θs: ti.template(),
     A1_forward: ti.template(),
     A1_backward: ti.template(),
     A2_forward: ti.template(),
@@ -179,6 +200,7 @@ def distance_gradient_field(
         `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
           diagonal metric tensor with respect to left invariant basis.
         `dxy`: Spatial step size, taking values greater than 0.
+        `θs`: angle coordinate at each grid point.
       Mutated:
         `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
@@ -188,11 +210,11 @@ def distance_gradient_field(
         `grad_W`: ti.field(dtype=[float], shape=shape) of upwind derivatives of 
           approximate distance map, which is updated inplace.
     """
-    upwind_derivatives(W, dxy, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, A2_W,
+    upwind_derivatives(W, dxy, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, A2_W,
                        A3_W)
     for I in ti.grouped(A1_W):
         grad_W[I] = ti.Vector([
             G_inv[0, 0] * A1_W[I] + G_inv[1, 0] * A2_W[I] + G_inv[2, 0] * A3_W[I],
             G_inv[0, 1] * A1_W[I] + G_inv[1, 1] * A2_W[I] + G_inv[2, 1] * A3_W[I],
             G_inv[0, 2] * A1_W[I] + G_inv[1, 2] * A2_W[I] + G_inv[2, 2] * A3_W[I]
-        ]) / cost[I]
+        ]) / cost[I]**2
