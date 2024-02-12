@@ -244,7 +244,7 @@ def abs_A1(
     θs: ti.template(),
     A1_forward: ti.template(),
     A1_backward: ti.template(),
-    abs_A1: ti.template()
+    abs_A1_u: ti.template()
 ):
     """
     @taichi.func
@@ -261,12 +261,12 @@ def abs_A1(
       Mutated:
         `A1_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
-        `abs_A1`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
+        `abs_A1_u`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
     derivative_A1(u, dxy, θs, A1_forward, A1_backward)
     for I in ti.grouped(u):
-        abs_A1[I] = ti.math.max(-A1_forward[I], A1_backward[I], 0)
+        abs_A1_u[I] = ti.math.max(-A1_forward[I], A1_backward[I], 0)
 
 
 @ti.func
@@ -276,7 +276,7 @@ def abs_A2(
     θs: ti.template(),
     A2_forward: ti.template(),
     A2_backward: ti.template(),
-    abs_A2: ti.template()
+    abs_A2_u: ti.template()
 ):
     """
     @taichi.func
@@ -293,12 +293,12 @@ def abs_A2(
       Mutated:
         `A2_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
-        `abs_A2`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
+        `abs_A2_u`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
     derivative_A2(u, dxy, θs, A2_forward, A2_backward)
     for I in ti.grouped(u):
-        abs_A2[I] = ti.math.max(-A2_forward[I], A2_backward[I], 0)
+        abs_A2_u[I] = ti.math.max(-A2_forward[I], A2_backward[I], 0)
 
 
 @ti.func
@@ -307,7 +307,7 @@ def abs_A3(
     dθ: ti.f32,
     A3_forward: ti.template(),
     A3_backward: ti.template(),
-    abs_A3: ti.template()
+    abs_A3_u: ti.template()
 ):
     """
     @taichi.func
@@ -324,12 +324,12 @@ def abs_A3(
       Mutated:
         `A3_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
-        `abs_A3`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
+        `abs_A3_u`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
     derivative_A3(u, dθ, A3_forward, A3_backward)
     for I in ti.grouped(u):
-        abs_A3[I] = ti.math.max(-A3_forward[I], A3_backward[I], 0)
+        abs_A3_u[I] = ti.math.max(-A3_forward[I], A3_backward[I], 0)
 
 
 @ti.func
@@ -339,7 +339,7 @@ def upwind_A1(
     θs: ti.template(),
     A1_forward: ti.template(),
     A1_backward: ti.template(),
-    upwind_A1: ti.template()
+    upwind_A1_u: ti.template()
 ):
     """
     @taichi.func
@@ -355,12 +355,12 @@ def upwind_A1(
       Mutated:
         `A1_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
-        `upwind_A1`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
-          which are updated in place.
+        `upwind_A1_u`: ti.field(dtype=[float], shape=shape) of upwind 
+          derivatives, which are updated in place.
     """
     derivative_A1(u, dxy, θs, A1_forward, A1_backward)
     for I in ti.grouped(u):
-        upwind_A1[I] = select_upwind_derivative(A1_forward[I], A1_backward[I])
+        upwind_A1_u[I] = select_upwind_derivative(A1_forward[I], A1_backward[I])
 
 
 @ti.func
@@ -370,7 +370,7 @@ def upwind_A2(
     θs: ti.template(),
     A2_forward: ti.template(),
     A2_backward: ti.template(),
-    upwind_A2: ti.template()
+    upwind_A2_u: ti.template()
 ):
     """
     @taichi.func
@@ -386,12 +386,12 @@ def upwind_A2(
       Mutated:
         `A2_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
-        `upwind_A2`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
-          which are updated in place.
+        `upwind_A2_u`: ti.field(dtype=[float], shape=shape) of upwind 
+          derivatives, which are updated in place.
     """
     derivative_A2(u, dxy, θs, A2_forward, A2_backward)
     for I in ti.grouped(u):
-        upwind_A2[I] = select_upwind_derivative(A2_forward[I], A2_backward[I])
+        upwind_A2_u[I] = select_upwind_derivative(A2_forward[I], A2_backward[I])
 
 
 @ti.func
@@ -400,7 +400,7 @@ def upwind_A3(
     dθ: ti.f32,
     A3_forward: ti.template(),
     A3_backward: ti.template(),
-    upwind_A3: ti.template()
+    upwind_A3_u: ti.template()
 ):
     """
     @taichi.func
@@ -416,11 +416,11 @@ def upwind_A3(
       Mutated:
         `A3_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
-        `upwind_A3`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
-          which are updated in place.
+        `upwind_A3_u`: ti.field(dtype=[float], shape=shape) of upwind
+          derivatives, which are updated in place.
     """
     derivative_A3(u, dθ, A3_forward, A3_backward)
     for I in ti.grouped(u):
-        upwind_A3[I] = select_upwind_derivative(A3_forward[I], A3_backward[I])
+        upwind_A3_u[I] = select_upwind_derivative(A3_forward[I], A3_backward[I])
 
 # Gauge Frame ???
