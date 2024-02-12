@@ -18,8 +18,9 @@ from eikivp.utils import (
     unpad_array
 )
 
+# (sub-)Riemannian Eikonal PDE solver
 
-def eikonal_solver(cost_np, source_point, G_np, dxy, θs_np, n_max=1e5):
+def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, n_max=1e5):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     metric tensor field defined by `G_np` and `cost_np`, with source at 
@@ -34,6 +35,7 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, θs_np, n_max=1e5):
         `G_np`: np.ndarray(shape=(3, 3), dtype=[float]) of constants of the 
           metric tensor with respect to left invariant basis.
         `dxy`: Spatial step size, taking values greater than 0.
+        `dθ`: Orientational step size, taking values greater than 0.
       Optional:
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
@@ -55,7 +57,7 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, θs_np, n_max=1e5):
     # The sqrt(4) comes from the fact that the norm of the gradient consists of
     # 4 terms.
     ε = (cost_np.min() * dxy / G_inv.max()) / np.sqrt(9)
-    print(ε)
+    print(f"Step size is {ε}")
 
     # Initialise Taichi objects
     cost = get_padded_cost(cost_np)
@@ -80,12 +82,12 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, θs_np, n_max=1e5):
 
     # Compute approximate distance map
     for _ in tqdm(range(int(n_max))):
-        step_W(W, cost, G_inv, dxy, θs, ε, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, A2_W, 
-               A3_W, dW_dt)
+        step_W(W, cost, G_inv, dxy, dθ, θs, ε, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, 
+               A3_backward, A1_W, A2_W, A3_W, dW_dt)
         apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    distance_gradient_field(W, cost, G_inv, dxy, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, 
+    distance_gradient_field(W, cost, G_inv, dxy, dθ, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, 
                             A3_backward, A1_W, A2_W, A3_W, grad_W)
 
     # Align with (I, J, K)-frame
@@ -96,26 +98,13 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, θs_np, n_max=1e5):
 
     return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 1, 0))
 
-def get_boundary_conditions(source_point):
-    """
-    Determine the boundary conditions from `source_point`, giving the boundary
-    points and boundary values as TaiChi objects.
-    """
-    i_0, j_0, θ_0 = source_point
-    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1, θ_0 + 1]], dtype=int) # Account for padding.
-    boundaryvalues_np = np.array([0.], dtype=float)
-    boundarypoints = ti.Vector.field(n=3, dtype=ti.i32, shape=1)
-    boundarypoints.from_numpy(boundarypoints_np)
-    boundaryvalues = ti.field(shape=1, dtype=ti.f32)
-    boundaryvalues.from_numpy(boundaryvalues_np)
-    return boundarypoints, boundaryvalues
-
 @ti.kernel
 def step_W(
     W: ti.template(),
     cost: ti.template(),
     G_inv: ti.types.matrix(3, 3, ti.f32),
     dxy: ti.f32,
+    dθ: ti.f32,
     θs: ti.template(),
     ε: ti.f32,
     A1_forward: ti.template(),
@@ -142,6 +131,7 @@ def step_W(
         `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
           inverse metric tensor with respect to left invariant basis.
         `dxy`: Spatial step size, taking values greater than 0.
+        `dθ`: Orientational step size, taking values greater than 0.
         `θs`: angle coordinate at each grid point.
         `ε`: "Time" step size, taking values greater than 0.
         `*_target`: Indices of the target point.
@@ -155,8 +145,8 @@ def step_W(
         `dW_dt`: ti.field(dtype=[float], shape=shape) of error of the distance 
           map with respect to the Eikonal PDE, which is updated in place.
     """
-    upwind_derivatives(W, dxy, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, A2_W,
-                       A3_W)
+    upwind_derivatives(W, dxy, dθ, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, 
+                       A2_W, A3_W)
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
         dW_dt[I] = 1 - (ti.math.sqrt(
@@ -175,6 +165,7 @@ def distance_gradient_field(
     cost: ti.template(),
     G_inv: ti.types.matrix(3, 3, ti.f32),
     dxy: ti.f32,
+    dθ: ti.f32,
     θs: ti.template(),
     A1_forward: ti.template(),
     A1_backward: ti.template(),
@@ -200,6 +191,7 @@ def distance_gradient_field(
         `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
           diagonal metric tensor with respect to left invariant basis.
         `dxy`: Spatial step size, taking values greater than 0.
+        `dθ`: Orientational step size, taking values greater than 0.
         `θs`: angle coordinate at each grid point.
       Mutated:
         `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
@@ -210,11 +202,28 @@ def distance_gradient_field(
         `grad_W`: ti.field(dtype=[float], shape=shape) of upwind derivatives of 
           approximate distance map, which is updated inplace.
     """
-    upwind_derivatives(W, dxy, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, A2_W,
-                       A3_W)
+    upwind_derivatives(W, dxy, dθ, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, 
+                       A2_W, A3_W)
     for I in ti.grouped(A1_W):
         grad_W[I] = ti.Vector([
             G_inv[0, 0] * A1_W[I] + G_inv[1, 0] * A2_W[I] + G_inv[2, 0] * A3_W[I],
             G_inv[0, 1] * A1_W[I] + G_inv[1, 1] * A2_W[I] + G_inv[2, 1] * A3_W[I],
             G_inv[0, 2] * A1_W[I] + G_inv[1, 2] * A2_W[I] + G_inv[2, 2] * A3_W[I]
         ]) / cost[I]**2
+
+
+# Helper functions
+
+def get_boundary_conditions(source_point):
+    """
+    Determine the boundary conditions from `source_point`, giving the boundary
+    points and boundary values as TaiChi objects.
+    """
+    i_0, j_0, θ_0 = source_point
+    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1, θ_0 + 1]], dtype=int) # Account for padding.
+    boundaryvalues_np = np.array([0.], dtype=float)
+    boundarypoints = ti.Vector.field(n=3, dtype=ti.i32, shape=1)
+    boundarypoints.from_numpy(boundarypoints_np)
+    boundaryvalues = ti.field(shape=1, dtype=ti.f32)
+    boundaryvalues.from_numpy(boundaryvalues_np)
+    return boundarypoints, boundaryvalues
