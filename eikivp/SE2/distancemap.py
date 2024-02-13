@@ -402,7 +402,7 @@ def distance_gradient_field_sub_Riemannian(
 
 # Plus-controller Eikonal PDE solver
 
-def eikonal_solver_plus(cost_np, source_point, ξ, dxy, dθ, θs_np, n_max=1e5):
+def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_np, n_max=1e5):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     Finsler function defined by `ξ` and `cost_np`, with source at `source_point`
@@ -463,7 +463,7 @@ def eikonal_solver_plus(cost_np, source_point, ξ, dxy, dθ, θs_np, n_max=1e5):
 
     # Compute approximate distance map
     for _ in tqdm(range(int(n_max))):
-        step_W_plus(W, cost, ξ, dxy, dθ, θs, ε, A1_forward, A1_backward, A3_forward, A3_backward, A1_W, A3_W, dW_dt)
+        step_W_plus(W, cost, ξ, plus_softness, dxy, dθ, θs, ε, A1_forward, A1_backward, A3_forward, A3_backward, A1_W, A3_W, dW_dt)
         apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
     # DON'T YET KNOW HOW I WANT TO COMPUTE GRADIENT FIELD FOR BACKTRACKING
@@ -484,6 +484,7 @@ def step_W_plus(
     W: ti.template(),
     cost: ti.template(),
     ξ: ti.f32,
+    plus_softness: ti.f32,
     dxy: ti.f32,
     dθ: ti.f32,
     θs: ti.template(),
@@ -528,10 +529,24 @@ def step_W_plus(
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
         dW_dt[I] = 1 - (ti.math.sqrt(
-            A1_W[I]**2 / ξ**2 +
+            soft_plus(A1_W[I], plus_softness)**2 / ξ**2 +
             A3_W[I]**2 
         ) / cost[I])
         W[I] += dW_dt[I] * ε
+
+# It seems like actually making it soft makes the algorithm unstable 🤔.
+@ti.func
+def soft_plus(
+    x: ti.f32, 
+    ε: ti.f32
+) -> ti.f32:
+    """
+    @taichi.func
+
+    Return
+    """
+    return ti.math.max(x, 0)
+    # return ε * (ti.math.log(1 + ti.math.exp(x/ε)) - ti.math.log(2))
 
 @ti.kernel
 def distance_gradient_field_plus(
