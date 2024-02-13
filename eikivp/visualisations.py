@@ -1,4 +1,9 @@
-# cleanarrays.py
+"""
+    visualisations
+    ==============
+    
+    Provides methods to visualise 2D images using matplotlib.
+"""
 
 import numpy as np
 from PIL import Image

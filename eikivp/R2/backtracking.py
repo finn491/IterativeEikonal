@@ -1,4 +1,14 @@
-# backtracking.py
+"""
+  backtracking
+  ============
+
+  Provides methods to compute the geodesic, with respect to some distance map,
+  connecting two points in R^2. The primary method is:
+    1. geodesic_back_tracking: compute the geodesic using gradient descent. The
+    gradient must be provided; it is computed along with the distance map by the
+    methods in the distancemap module.
+
+"""
 
 import numpy as np
 import taichi as ti

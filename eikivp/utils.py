@@ -1,4 +1,10 @@
-# utils.py
+"""
+    utils
+    =====
+
+    Provides miscellaneous computational utilities that can be used both on R^2
+    and SE(2).
+"""
 
 import numpy as np
 import taichi as ti

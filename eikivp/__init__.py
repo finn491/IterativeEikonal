@@ -1,7 +1,28 @@
+"""
+    EikIVP
+    ======
+
+    The Python package *eikivp* contains methods to solve the Eikonal PDE on R^2
+    and SE(2) using the iterative Initial Value Problem (IVP) technique
+    described in Bekkers et al. "A PDE approach to Data-Driven Sub-Riemannian 
+    Geodesics in SE(2)" (2015), and to find geodesics connecting points with
+    respect to the distance map that solves the Eikonal PDE.
+
+    One application in which we want to solve the Eikonal PDE and subsequently
+    find geodesics connecting pairs of points is vascular tracking. This package
+    contains methods to construct data-driven metrics on R^2 and SE(2), based
+    on multiscale vesselness filters, that will lead to geodesics that 
+    (hopefully) track vessels.
+
+    Summary: compute distance map and geodesics with respect to data-driven 
+    metric on R^2 and SE(2).
+"""
+
 # Access entire backend
 import eikivp.utils
 import eikivp.visualisations
 import eikivp.costfunction
+import eikivp.orientationscore
 import eikivp.R2
 import eikivp.SE2
 

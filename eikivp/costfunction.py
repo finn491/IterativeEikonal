@@ -1,4 +1,9 @@
-# costfunction.py
+"""
+    costfunction
+    ============
+
+    Compute the cost function from the R^2- or SE(2)-vesselness.
+"""
 
 import numpy as np
 
