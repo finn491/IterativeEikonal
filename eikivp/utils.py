@@ -164,17 +164,17 @@ def unpad_array(u, pad_shape=1):
 
 # Initialisation
 
-def get_padded_cost(cost_unpadded):
+def get_padded_cost(cost_unpadded, pad_shape=1):
     """Pad the cost function `cost_unpadded` and convert to TaiChi object."""
-    cost_np = pad_array(cost_unpadded, pad_value=1., pad_shape=1)
+    cost_np = pad_array(cost_unpadded, pad_value=1., pad_shape=pad_shape)
     cost = ti.field(dtype=ti.f32, shape=cost_np.shape)
     cost.from_numpy(cost_np)
     return cost
 
-def get_initial_W(shape, initial_condition=100.):
+def get_initial_W(shape, initial_condition=100., pad_shape=1):
     """Initialise the (approximate) distance map as TaiChi object."""
     W_unpadded = np.full(shape=shape, fill_value=initial_condition)
-    W_np = pad_array(W_unpadded, pad_value=initial_condition, pad_shape=1)
+    W_np = pad_array(W_unpadded, pad_value=initial_condition, pad_shape=pad_shape)
     W = ti.field(dtype=ti.f32, shape=W_np.shape)
     W.from_numpy(W_np)
     return W

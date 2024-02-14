@@ -24,7 +24,7 @@ from eikivp.utils import (
 
 # Riemannian Eikonal PDE solver
 
-def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, n_max=1e5):
+def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, n_max=1e5, dε=1.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     metric tensor field defined by `G_np` and `cost_np`, with source at 
@@ -60,12 +60,12 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, n_max=1e5):
     # Heuristic, so that W does not become negative.
     # The sqrt(4) comes from the fact that the norm of the gradient consists of
     # 4 terms.
-    ε = (cost_np.min() * dxy / G_inv.max()) / np.sqrt(9)
+    ε = dε * (cost_np.min() * dxy / G_inv.max()) / np.sqrt(9)
     print(f"Step size is {ε}")
 
     # Initialise Taichi objects
-    cost = get_padded_cost(cost_np)
-    W = get_initial_W(shape, initial_condition=100.)
+    cost = get_padded_cost(cost_np, pad_shape=((1,), (1,), (0,)))
+    W = get_initial_W(shape, initial_condition=100., pad_shape=((1,), (1,), (0,)))
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
@@ -100,7 +100,7 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, n_max=1e5):
     W_np = align_to_standard_array_axis_scalar_field(W_np)
     grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
-    return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 1, 0))
+    return unpad_array(W_np, pad_shape=(1, 1, 0)), unpad_array(grad_W_np, pad_shape=(1, 1, 0, 0))
 
 @ti.kernel
 def step_W(
@@ -218,7 +218,7 @@ def distance_gradient_field(
 
 # Sub-Riemannian Eikonal PDE solver
 
-def eikonal_solver_sub_Riemannian(cost_np, source_point, ξ, dxy, dθ, θs_np, n_max=1e5):
+def eikonal_solver_sub_Riemannian(cost_np, source_point, ξ, dxy, dθ, θs_np, n_max=1e5, dε=1.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     metric tensor field defined by `ξ` and `cost_np`, with source at 
@@ -256,12 +256,12 @@ def eikonal_solver_sub_Riemannian(cost_np, source_point, ξ, dxy, dθ, θs_np, n
 
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
-    ε = (cost_np.min() * dxy / (1 + ξ**-2)) / np.sqrt(9)
+    ε = dε * (cost_np.min() * dxy / (1 + ξ**-2)) / np.sqrt(9)
     print(f"Step size is {ε}")
 
     # Initialise Taichi objects
-    cost = get_padded_cost(cost_np)
-    W = get_initial_W(shape, initial_condition=100.)
+    cost = get_padded_cost(cost_np, pad_shape=((1,), (1,), (0,)))
+    W = get_initial_W(shape, initial_condition=100., pad_shape=((1,), (1,), (0,)))
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
@@ -294,7 +294,7 @@ def eikonal_solver_sub_Riemannian(cost_np, source_point, ξ, dxy, dθ, θs_np, n
     W_np = align_to_standard_array_axis_scalar_field(W_np)
     grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
-    return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 1, 0))
+    return unpad_array(W_np, pad_shape=(1, 1, 0)), unpad_array(grad_W_np, pad_shape=(1, 1, 0, 0))
 
 @ti.kernel
 def step_W_sub_Riemannian(
@@ -402,7 +402,7 @@ def distance_gradient_field_sub_Riemannian(
 
 # Plus-controller Eikonal PDE solver
 
-def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_np, n_max=1e5):
+def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_np, n_max=1e5, dε=1.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     Finsler function defined by `ξ` and `cost_np`, with source at `source_point`
@@ -440,12 +440,12 @@ def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_
 
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
-    ε = (cost_np.min() * dxy / (1 + ξ**-2)) / np.sqrt(9)
+    ε = dε * (cost_np.min() * dxy / (1 + ξ**-2)) / np.sqrt(9)
     print(f"Step size is {ε}")
 
     # Initialise Taichi objects
-    cost = get_padded_cost(cost_np)
-    W = get_initial_W(shape, initial_condition=100.)
+    cost = get_padded_cost(cost_np, pad_shape=((1,), (1,), (0,)))
+    W = get_initial_W(shape, initial_condition=100., pad_shape=((1,), (1,), (0,)))
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
@@ -477,7 +477,7 @@ def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_
     W_np = align_to_standard_array_axis_scalar_field(W_np)
     grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
-    return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 1, 0))
+    return unpad_array(W_np, pad_shape=(1, 1, 0)), unpad_array(grad_W_np, pad_shape=(1, 1, 0, 0))
 
 @ti.kernel
 def step_W_plus(
@@ -609,7 +609,7 @@ def get_boundary_conditions(source_point):
     points and boundary values as TaiChi objects.
     """
     i_0, j_0, θ_0 = source_point
-    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1, θ_0 + 1]], dtype=int) # Account for padding.
+    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1, θ_0]], dtype=int) # Account for padding.
     boundaryvalues_np = np.array([0.], dtype=float)
     boundarypoints = ti.Vector.field(n=3, dtype=ti.i32, shape=1)
     boundarypoints.from_numpy(boundarypoints_np)
