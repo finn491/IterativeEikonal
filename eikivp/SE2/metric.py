@@ -1,4 +1,30 @@
-# metric.py
+"""
+    metric
+    ======
+
+    Provides tools to deal with metrics SE(2). The primary methods are:
+      1. `invert_metric`: compute the matrix defining the dual metric from the
+      matrix defining the primal metric.
+      2. `normalise_LI`: normalise a vector, given with respect to the left
+      invariant frame, to norm 1 with respect to some data-driven metric.
+      3. `norm_LI`: compute the norm of a vector, given with respect to the left
+      invariant frame, with respect to some data-driven metric.
+      4. `normalise_static`: normalise a vector, given with respect to the
+      static frame, to norm 1 with respect to some data-driven metric.
+      5. `norm_static`: compute the norm of a vector, given with respect to the
+      static frame, with respect to some data-driven metric.
+      6. `vector_static_to_LI`: compute the components of a vector, given with
+      respect to the static frame, in the left invariant frame.
+      7. `vectorfield_static_to_LI`: compute the components of a vectorfield,
+      given with respect to the static frame, in the left invariant frame.
+      8. `vector_LI_to_static`: compute the components of a vector, given with
+      respect to the left invariant frame, in the left static frame.
+      9. `vectorfield_LI_to_static`: compute the components of a vectorfield,
+      given with respect to the left invariant, in the static frame.
+    
+    Additionally, we have numerous functions to reorder arrays to align either
+    with the standard array indexing conventions or with the real axes.
+"""
 
 import taichi as ti
 import numpy as np

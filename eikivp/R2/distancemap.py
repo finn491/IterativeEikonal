@@ -1,4 +1,21 @@
-# distancemap.py
+"""
+    distancemap
+    ============
+
+    Provides methods to compute the distance map on R^2 with respect to various
+    metrics, by solving the Eikonal PDE using the iterative Initial Value 
+    Problem (IVP) technique described in Bekkers et al. "A PDE approach to 
+    Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015). The primary method
+    is:
+      1. `eikonal_solver`: solve the Eikonal PDE with respect to some 
+      data-driven left invariant metric, defined by a matrix giving the
+      underlying left invariant metric and a cost function. Currently, the 
+      method gives incorrect results when the underlying metric is not diagonal
+      (with respect to the left invariant frame). This is likely caused by the
+      upwind derivatives that are used.
+    This method has a uniform cost variant, found by appending to the
+    method name.
+"""
 
 import numpy as np
 import taichi as ti

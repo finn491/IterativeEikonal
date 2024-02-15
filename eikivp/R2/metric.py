@@ -1,4 +1,18 @@
-# metric.py
+"""
+    metric
+    ======
+
+    Provides tools to deal with metrics R^2. The primary methods are:
+      1. `invert_metric`: compute the matrix defining the dual metric from the
+      matrix defining the primal metric.
+      2. `normalise`: normalise a vector to norm 1 with respect to some
+      data-driven metric.
+      3. `norm`: compute the norm of a vector with respect to some data-driven
+      metric.
+    
+    Additionally, we have numerous functions to reorder arrays to align either
+    with the standard array indexing conventions or with the real axes.
+"""
 
 import taichi as ti
 import numpy as np

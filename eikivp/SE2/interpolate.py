@@ -1,4 +1,17 @@
-# interpolate.py
+"""
+    interpolate
+    ===========
+
+    Provides tools to interpolate fields on SE(2). The primary methods are:
+      1. `scalar_bilinear_interpolate`: interpolate a scalar field bilinearly at
+      some point in the domain.
+      2. `vectorfield_bilinear_interpolate_LI`: interpolate a vector field, with
+      norm 1, given with respect to the left invariant frame, bilinearly at some
+      point in the domain. This method seems not to work properly.
+      3. `vectorfield_bilinear_interpolate_LI`: interpolate a vector field, with
+      norm 1, given with respect to the static frame, bilinearly at some point
+      in the domain.
+"""
 
 import taichi as ti
 from eikivp.utils import (

@@ -1,4 +1,17 @@
-# derivatives.py
+"""
+    derivatives
+    ===========
+
+    Provides a variety of derivative operators on R^2, namely:
+      1. `derivatives`: computes the forward and backward finite difference
+      approximations of the A1-, A2, and A3-derivatives.
+      2. `abs_derivatives`: computes the absolute value of the upwind
+      approximations of the A1-, A2-, and A3-derivatives.
+      2. `upwind_derivatives`: computes the the upwind approximations of the
+      A1-, A2-, and A3-derivatives.
+    Each of these methods has variants to compute only the derivatives in the
+    A1-, A2-, or A3-direction.
+"""
 
 import taichi as ti
 from eikivp.utils import select_upwind_derivative

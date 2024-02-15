@@ -1,4 +1,17 @@
-# backtracking.py
+"""
+    backtracking
+    ============
+
+    Provides methods to compute the geodesic, with respect to some distance map,
+    connecting two points in SE(2). The primary methods are:
+      1. `geodesic_back_tracking`: compute the geodesic using gradient descent.
+      The gradient must be provided; it is computed along with the distance map
+      by the corresponding methods in the distancemap module.
+      2. TODO `geodesic_back_tracking_plus`: compute the geodesic using gradient
+      descent when the distance map was computed using the plus controller. The
+      gradient must be provided; it is computed along with the distance map by
+      the corresponding methods in the distancemap module.
+"""
 
 import numpy as np
 import taichi as ti

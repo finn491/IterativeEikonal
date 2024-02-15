@@ -1,4 +1,34 @@
-# distancemap.py
+"""
+    distancemap
+    ============
+
+    Provides methods to compute the distance map on SE(2) with respect to various
+    metrics, by solving the Eikonal PDE using the iterative Initial Value 
+    Problem (IVP) technique described in Bekkers et al. "A PDE approach to 
+    Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015). The primary methods
+    are:
+      1. `eikonal_solver`: solve the Eikonal PDE with respect to some 
+      data-driven left invariant metric, defined by a matrix giving the
+      underlying left invariant metric and a cost function. Currently, the 
+      method gives incorrect results when the underlying metric is not diagonal
+      (with respect to the left invariant frame). This is likely caused by the
+      upwind derivatives that are used.
+      2. `eikonal_solver_sub_Riemannian`: solve the Eikonal PDE with respect to
+      some data-driven left invariant sub-Riemannian metric, defined by a 
+      stiffness parameter ξ a cost function. The stiffness parameter ξ fixes the
+      relative cost of moving in the A1-direction compared to the A3-direction
+      (it corresponds to β in the paper by Bekkers et al.); motion in the 
+      A2-direction is inhibited.
+      3. `eikonal_solver_plus`: solve the Eikonal PDE with respect to some
+      data-driven left invariant plus controller, defined by a stiffness 
+      parameter ξ, a plus softness ε, and a cost function. The stiffness 
+      parameter ξ fixes the relative cost of moving in the A1-direction compared
+      to the A3-direction (it corresponds to β in the paper by Bekkers et al.);
+      the plus softness ε restricts the motion in the reverse A1-direction; 
+      motion in the A2-direction is inhibited.
+    Each of these methods has a uniform cost variant, found by appending to the
+    method name.
+"""
 
 import numpy as np
 import taichi as ti
@@ -30,9 +60,8 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, n_max=1e5, dε
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     metric tensor field defined by `G_np` and `cost_np`, with source at 
-    `source_point` and metric, using the iterative method described in Bekkers 
-    et al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" 
-    (2015).
+    `source_point`, using the iterative method described in Bekkers et al. 
+    "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
         `cost_np`: np.ndarray of cost function.
@@ -224,9 +253,8 @@ def eikonal_solver_sub_Riemannian(cost_np, source_point, ξ, dxy, dθ, θs_np, n
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     metric tensor field defined by `ξ` and `cost_np`, with source at 
-    `source_point` and metric, using the iterative method described in Bekkers 
-    et al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)"
-    (2015).
+    `source_point`, using the iterative method described in Bekkers et al. 
+    "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
         `cost_np`: np.ndarray of cost function.
@@ -407,8 +435,8 @@ def distance_gradient_field_sub_Riemannian(
 def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_np, n_max=1e5, dε=1.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
-    Finsler function defined by `ξ` and `cost_np`, with source at `source_point`
-    and metric, using the iterative method described in Bekkers et al. 
+    Finsler function defined by `ξ` and `cost_np`, with source at 
+    `source_point`, using the iterative method described in Bekkers et al. 
     "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
@@ -417,6 +445,12 @@ def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_
           `cost_np`.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
+        `plus_softness`: Strength of the plus controller, taking values between
+          0 and 1. As `plus_softness` is decreased, motion in the reverse A1
+          direction is increasingly inhibited. For `plus_softness` 0, motion is
+          possibly exclusively in the forward A1 direction; for `plus_softness`
+          1, we recover the sub-Riemannian metric that is symmetric in the A1
+          direction.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
       Optional:
@@ -465,13 +499,14 @@ def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_
 
     # Compute approximate distance map
     for _ in tqdm(range(int(n_max))):
-        step_W_plus(W, cost, ξ, plus_softness, dxy, dθ, θs, ε, A1_forward, A1_backward, A3_forward, A3_backward, A1_W, A3_W, dW_dt)
+        step_W_plus(W, cost, ξ, plus_softness, dxy, dθ, θs, ε, A1_forward, A1_backward, A3_forward, A3_backward, A1_W,
+                    A3_W, dW_dt)
         apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
     # DON'T YET KNOW HOW I WANT TO COMPUTE GRADIENT FIELD FOR BACKTRACKING
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    # distance_gradient_field_plus(W, cost, G_inv, dxy, dθ, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, 
-    #                         A3_backward, A1_W, A2_W, A3_W, grad_W)
+    distance_gradient_field_plus(W, cost, ξ, dxy, dθ, θs, A1_forward, A1_backward, A3_forward, A3_backward, A1_W, A3_W,
+                                 grad_W)
 
     # Align with (I, J, K)-frame
     W_np = W.to_numpy()
@@ -511,6 +546,12 @@ def step_W_plus(
         `cost`: ti.field(dtype=[float], shape=shape) of cost function.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
+        `plus_softness`: Strength of the plus controller, taking values between
+          0 and 1. As `plus_softness` is decreased, motion in the reverse A1
+          direction is increasingly inhibited. For `plus_softness` 0, motion is
+          possibly exclusively in the forward A1 direction; for `plus_softness`
+          1, we recover the sub-Riemannian metric that is symmetric in the A1
+          direction.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
         `θs`: angle coordinate at each grid point.
@@ -540,18 +581,16 @@ def step_W_plus(
 def distance_gradient_field_plus(
     W: ti.template(),
     cost: ti.template(),
-    G_inv: ti.types.matrix(3, 3, ti.f32),
+    ξ: ti.f32,
+    plus_softness: ti.f32,
     dxy: ti.f32,
     dθ: ti.f32,
     θs: ti.template(),
     A1_forward: ti.template(),
     A1_backward: ti.template(),
-    A2_forward: ti.template(),
-    A2_backward: ti.template(),
     A3_forward: ti.template(),
     A3_backward: ti.template(),
     A1_W: ti.template(),
-    A2_W: ti.template(),
     A3_W: ti.template(),
     grad_W: ti.template()
 ):
@@ -565,8 +604,14 @@ def distance_gradient_field_plus(
       Static:
         `W`: ti.field(dtype=[float], shape=shape) of approximate distance map.
         `cost`: ti.field(dtype=[float], shape=shape) of cost function.
-        `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
-          diagonal metric tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
+        `plus_softness`: Strength of the plus controller, taking values between
+          0 and 1. As `plus_softness` is decreased, motion in the reverse A1
+          direction is increasingly inhibited. For `plus_softness` 0, motion is
+          possibly exclusively in the forward A1 direction; for `plus_softness`
+          1, we recover the sub-Riemannian metric that is symmetric in the A1
+          direction.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
         `θs`: angle coordinate at each grid point.
@@ -579,13 +624,13 @@ def distance_gradient_field_plus(
         `grad_W`: ti.field(dtype=[float], shape=shape) of upwind derivatives of 
           approximate distance map, which is updated inplace.
     """
-    upwind_derivatives(W, dxy, dθ, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, A3_backward, A1_W, 
-                       A2_W, A3_W)
+    upwind_A1(W, dxy, θs, A1_forward, A1_backward, A1_W)
+    upwind_A3(W, dθ, A3_forward, A3_backward, A3_W)
     for I in ti.grouped(A1_W):
         grad_W[I] = ti.Vector([
-            G_inv[0, 0] * A1_W[I] + G_inv[1, 0] * A2_W[I] + G_inv[2, 0] * A3_W[I],
-            G_inv[0, 1] * A1_W[I] + G_inv[1, 1] * A2_W[I] + G_inv[2, 1] * A3_W[I],
-            G_inv[0, 2] * A1_W[I] + G_inv[1, 2] * A2_W[I] + G_inv[2, 2] * A3_W[I]
+            soft_plus(A1_W[I], plus_softness) / ξ**2,
+            0.,
+            A3_W[I]
         ]) / cost[I]**2
 
 
@@ -601,8 +646,10 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dxy, dθ, θs_np, n
     Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
+        `domain_shape`: Tuple[int] describing the shape of the domain, with
+          respect to standard array indexing.
         `source_point`: Tuple[int] describing index of source point in 
-          `cost_np`.
+          `domain_shape`.
         `G_np`: np.ndarray(shape=(3, 3), dtype=[float]) of constants of the 
           metric tensor with respect to left invariant basis.
         `dxy`: Spatial step size, taking values greater than 0.
@@ -612,8 +659,8 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dxy, dθ, θs_np, n
           to 1e5.
 
     Returns:
-        np.ndarray of (approximate) distance map with respect to the datadriven
-          left invariant metric tensor field described by `G_np` and `cost_np`.
+        np.ndarray of (approximate) distance map with respect to the left 
+          invariant metric tensor field described by `G_np`.
         np.ndarray of upwind gradient field of (approximate) distance map.
     """
     # Align with (x, y, θ)-frame
@@ -747,8 +794,7 @@ def distance_gradient_field_uniform(
     """
     @taichi.kernel
 
-    Compute the gradient with respect to `cost` of the (approximate) distance
-    map `W`.
+    Compute the gradient of the (approximate) distance map `W`.
 
     Args:
       Static:
@@ -779,17 +825,19 @@ def distance_gradient_field_uniform(
 
 ## Sub-Riemannian Eikonal PDE solver
 
-def eikonal_solver_sub_Riemannian_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, n_max=1e5, dε=1., initial_condition=100.):
+def eikonal_solver_sub_Riemannian_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, n_max=1e5, dε=1., 
+                                          initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
-    metric tensor field defined by `ξ` and `cost_np`, with source at 
-    `source_point` and metric, using the iterative method described in Bekkers 
-    et al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)"
-    (2015).
+    metric tensor field defined by `ξ`, with source at `source_point`,
+    using the iterative method described in Bekkers et al. "A PDE approach to 
+    Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
+        `domain_shape`: Tuple[int] describing the shape of the domain, with
+          respect to standard array indexing.
         `source_point`: Tuple[int] describing index of source point in 
-          `cost_np`.
+          `domain_shape`.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `dxy`: Spatial step size, taking values greater than 0.
@@ -799,8 +847,8 @@ def eikonal_solver_sub_Riemannian_uniform(domain_shape, source_point, ξ, dxy, d
           to 1e5.
 
     Returns:
-        np.ndarray of (approximate) distance map with respect to the datadriven
-          left invariant metric tensor field described by `G_np` and `cost_np`.
+        np.ndarray of (approximate) distance map with respect to the left
+          invariant metric tensor field described by `G_np`.
         np.ndarray of upwind gradient field of (approximate) distance map.
 
     Notes:
@@ -924,8 +972,7 @@ def distance_gradient_field_sub_Riemannian_uniform(
     """
     @taichi.kernel
 
-    Compute the gradient with respect to `cost` of the (approximate) distance
-    map `W`.
+    Compute the gradient of the (approximate) distance map `W`.
 
     Args:
       Static:
@@ -956,17 +1003,19 @@ def distance_gradient_field_sub_Riemannian_uniform(
 
 ## Plus-controller Eikonal PDE solver
 
-def eikonal_solver_plus_uniform(domain_shape, source_point, ξ, plus_softness, dxy, dθ, θs_np, n_max=1e5, dε=1., initial_condition=100.):
+def eikonal_solver_plus_uniform(domain_shape, source_point, ξ, plus_softness, dxy, dθ, θs_np, n_max=1e5, dε=1., 
+                                initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
-    Finsler function defined by `ξ` and `cost_np`, with source at `source_point`
-    and metric, using the iterative method described in Bekkers et al. 
-    "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    Finsler function defined by `ξ`, with source at `source_point`, using the 
+    iterative method described in Bekkers et al. "A PDE approach to Data-Driven
+    Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
-        `cost_np`: np.ndarray of cost function.
+        `domain_shape`: Tuple[int] describing the shape of the domain, with
+          respect to standard array indexing.
         `source_point`: Tuple[int] describing index of source point in 
-          `cost_np`.
+          `domain_shape`.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `dxy`: Spatial step size, taking values greater than 0.
@@ -1158,6 +1207,9 @@ def soft_plus(
     """
     @taichi.func
 
-    Return
+    Return the `ε`-softplus of `x`:
+      `soft_plus(x, ε)` = (x)_+ + ε (x)_-,
+    where (x)_+ := max{x, 0} and (x)_- := min{x, 0} are the positive and
+    negative parts of x, respectively.
     """
     return ti.math.max(x, 0) + ε * ti.math.min(x, 0)

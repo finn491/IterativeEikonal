@@ -4,10 +4,10 @@
 
     Provides methods to compute the orientation score of a 2D image. The primary
     methods are:
-      1. CakeWaveletStack: compute the stack of cakewavelets, as described in
+      1. `CakeWaveletStack`: compute the stack of cakewavelets, as described in
       Duits "Perceptual Organization in Image Analysis" (2005)
       (https://www.win.tue.nl/~rduits/THESISRDUITS.pdf).
-      2. WaveletTransform2D: compute the wavelet transform of a 2D image,
+      2. `WaveletTransform2D`: compute the wavelet transform of a 2D image,
       with respect to some wavelet (which need not be a cakewavelet).
 """
 

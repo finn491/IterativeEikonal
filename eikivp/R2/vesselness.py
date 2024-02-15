@@ -1,4 +1,14 @@
-# vesselness.py
+"""
+    vesselness
+    ==========
+
+    Provides tools compute vesselness scores on R^2. The available methods are:
+      1. `rc_vessel_enhancement`: compute the singlescale vesselness using a
+      Frangi filter.
+      2. `multiscale_frangi_filter`: compute the multiscale vesselness by
+      applying the Frangi filter at numerous scales and combining the results
+      via maximum projection.
+"""
 
 import numpy as np
 import diplib as dip
