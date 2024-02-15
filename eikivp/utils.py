@@ -164,9 +164,9 @@ def unpad_array(u, pad_shape=1):
 
 # Initialisation
 
-def get_padded_cost(cost_unpadded, pad_shape=1):
+def get_padded_cost(cost_unpadded, pad_shape=1, pad_value=1.):
     """Pad the cost function `cost_unpadded` and convert to TaiChi object."""
-    cost_np = pad_array(cost_unpadded, pad_value=1., pad_shape=pad_shape)
+    cost_np = pad_array(cost_unpadded, pad_value=pad_value, pad_shape=pad_shape)
     cost = ti.field(dtype=ti.f32, shape=cost_np.shape)
     cost.from_numpy(cost_np)
     return cost
