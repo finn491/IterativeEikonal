@@ -87,6 +87,7 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
     
     print("Solving Eikonal PDE data-driven left invariant metric.")
     # Align with (x, y)-frame
+    W_init_np = align_to_real_axis_scalar_field(W_init_np)
     cost_np = align_to_real_axis_scalar_field(cost_np)
     shape = cost_np.shape
     source_point = align_to_real_axis_point(source_point, shape)
@@ -98,14 +99,13 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
     # Heuristic, so that W does not become negative.
     # The sqrt(4) comes from the fact that the norm of the gradient consists of
     # 4 terms.
-    ε = dε * cost_np.min() * dxy / np.sqrt(4 * G_inv.max())
+    ε = dε * dxy / np.sqrt(4 * G_inv.max()) #  * cost_np.min()
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
     N_check = int(n_max / n_check)
 
     # Initialise Taichi objects
     cost = get_padded_cost(cost_np)
-    W_init_np = align_to_real_axis_scalar_field(W_init_np)
     W = get_padded_cost(W_init_np, pad_value=initial_condition)
     # W = get_initial_W(shape, initial_condition=100.)
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
@@ -206,7 +206,7 @@ def step_W(
             2 * G_inv[0, 1] * dx_W[I] * dy_W[I] + # Metric tensor is symmetric.
             1 * G_inv[1, 1] * dy_W[I] * dy_W[I]
         ) / cost[I])
-        W[I] += dW_dt[I] * ε
+        W[I] += dW_dt[I] * ε * cost[I]
 
 @ti.kernel
 def distance_gradient_field(
