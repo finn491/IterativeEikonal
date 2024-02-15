@@ -142,7 +142,7 @@ def geodesic_back_tracking_backend(
     """
     point = target_point
     γ.append(point)
-    tol = 0.5
+    tol = 2 * dt
     n = 0
     # while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
     #     gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, G)
