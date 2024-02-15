@@ -38,7 +38,7 @@ from eikivp.utils import (
 # Data-driven left invariant
 
 def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., n_max=1e5, n_max_initialisation=1e5,
-                   n_check=1e3, tol=1e-3, dε=1., initial_condition=100.):
+                   n_check=None, tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on R2, with source at `source_point` and datadriven
     left invariant metric defined by `G_np` and `cost_np`, using the iterative 
@@ -65,9 +65,12 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
           initialisation, taking positive values. Defaults to 1e5.
         `n_check`: Number of iterations between each convergence check, taking
           positive values. Should be at most `n_max` and `n_max_initialisation`.
-          Defaults to 1e3.
+          Defaults to `None`; if no `n_check` is passed, convergence is only
+          checked at `n_max`.
         `tol`: Tolerance for determining convergence of the Hamiltonian, taking
           positive values. Defaults to 1e-3.
+        `dε`: Multiplier for varying the "time" step size, taking positive
+          values. Defaults to 1.
         `initial_condition`: Initial value of the approximate distance map.
           Defaults to 100.
 
@@ -102,6 +105,7 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
 
     # Initialise Taichi objects
     cost = get_padded_cost(cost_np)
+    W_init_np = align_to_real_axis_scalar_field(W_init_np)
     W = get_padded_cost(W_init_np, pad_value=initial_condition)
     # W = get_initial_W(shape, initial_condition=100.)
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
@@ -278,13 +282,14 @@ def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=N
         `dxy`: Spatial step size, taking values greater than 0. Defaults to 1.
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
-        `n_max`: Maximum number of iterations, taking positive values. Defaults 
-          to 1e5.
         `n_check`: Number of iterations between each convergence check, taking
           positive values. Should be at most `n_max` and `n_max_initialisation`.
-          Defaults to 1e3.
+          Defaults to `None`; if no `n_check` is passed, convergence is only
+          checked at `n_max`.
         `tol`: Tolerance for determining convergence of the Hamiltonian, taking
           positive values. Defaults to 1e-3.
+        `dε`: Multiplier for varying the "time" step size, taking positive
+          values. Defaults to 1.
         `initial_condition`: Initial value of the approximate distance map.
           Defaults to 100.
           
