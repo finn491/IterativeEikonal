@@ -37,7 +37,8 @@ from eikivp.utils import (
 
 # Data-driven left invariant
 
-def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5, dε=1., initial_condition=100.):
+def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., n_max=1e5, n_max_initialisation=1e5,
+                   n_check=1e3, tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on R2, with source at `source_point` and datadriven
     left invariant metric defined by `G_np` and `cost_np`, using the iterative 
@@ -49,12 +50,26 @@ def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5, dε=1., 
         `source_point`: Tuple[int] describing index of source point in 
           `cost_np`.
       Optional:
+        `target_point`: Tuple[int] describing index of target point in
+          `cost_np`. Defaults to `None`. If `target_point` is provided, the
+          algorithm will terminate when the Hamiltonian has converged at
+          `target_point`; otherwise it will terminate when the Hamiltonian has
+          converged throughout the domain. 
         `G_np`: np.ndarray(shape=(2, 2), dtype=[float]) of matrix of left 
           invariant metric tensor field with respect to standard basis. Defaults
           to standard Euclidean metric.
         `dxy`: Spatial step size, taking values greater than 0. Defaults to 1.
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
+        `n_max_initialisation`: Maximum number of iterations for the
+          initialisation, taking positive values. Defaults to 1e5.
+        `n_check`: Number of iterations between each convergence check, taking
+          positive values. Should be at most `n_max` and `n_max_initialisation`.
+          Defaults to 1e3.
+        `tol`: Tolerance for determining convergence of the Hamiltonian, taking
+          positive values. Defaults to 1e-3.
+        `initial_condition`: Initial value of the approximate distance map.
+          Defaults to 100.
 
     Returns:
         np.ndarray of (approximate) distance map with respect to the datadriven
@@ -63,7 +78,8 @@ def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5, dε=1., 
     """
     # First compute for uniform cost to get initial W
     print("Solving Eikonal PDE with left invariant metric to compute initialisation.")
-    W_init_np, _ = eikonal_solver_uniform(cost_np.shape, source_point, G_np=G_np, dxy=dxy, n_max=n_max, dε=dε,
+    W_init_np, _ = eikonal_solver_uniform(cost_np.shape, source_point, target_point=target_point, G_np=G_np, dxy=dxy,
+                                          n_max=n_max_initialisation, n_check=n_check, tol=tol, dε=dε,
                                           initial_condition=initial_condition)
     
     print("Solving Eikonal PDE data-driven left invariant metric.")
@@ -80,6 +96,9 @@ def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5, dε=1., 
     # The sqrt(4) comes from the fact that the norm of the gradient consists of
     # 4 terms.
     ε = dε * cost_np.min() * dxy / np.sqrt(4 * G_inv.max())
+    if n_check is None: # Only check convergence at n_max
+        n_check = n_max
+    N_check = int(n_max / n_check)
 
     # Initialise Taichi objects
     cost = get_padded_cost(cost_np)
@@ -98,10 +117,17 @@ def eikonal_solver(cost_np, source_point, G_np=None, dxy=1., n_max=1e5, dε=1., 
     grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=W.shape)
 
     # Compute approximate distance map
-    for _ in tqdm(range(int(n_max))):
-        step_W(W, cost, G_inv, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, dxy, ε, dW_dt)
-        apply_boundary_conditions(W, boundarypoints, boundaryvalues)
-    # print(f"Converged after {n - 1} steps!")
+    is_converged = False
+    for n in range(N_check):
+        for _ in tqdm(range(int(n_check))):
+            step_W(W, cost, G_inv, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, dxy, ε, dW_dt)
+            apply_boundary_conditions(W, boundarypoints, boundaryvalues)
+        is_converged = check_convergence(dW_dt, tol=tol, target_point=target_point)
+        if is_converged: # Hamiltonian throughout domain is sufficiently small
+            print(f"Converged after {(n + 1) * n_check} steps!")
+            break
+    if not is_converged:
+        print(f"Hamiltonian did not converge to tolerance {tol}!")
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
     distance_gradient_field(W, cost, G_inv, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
@@ -227,7 +253,8 @@ def distance_gradient_field(
 
 # Left invariant
         
-def eikonal_solver_uniform(domain_shape, source_point, G_np=None, dxy=1., n_max=1e5, dε=1., initial_condition=100.):
+def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=None, dxy=1., n_max=1e5, n_check=None,
+                           tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on R2, with source at `source_point` and datadriven
     left invariant metric defined by `G_np` and `cost_np`, using the iterative 
@@ -240,12 +267,27 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np=None, dxy=1., n_max=
         `source_point`: Tuple[int] describing index of source point in 
           `domain_shape`.
       Optional:
+        `target_point`: Tuple[int] describing index of target point in
+          `domain_shape`. Defaults to `None`. If `target_point` is provided, the
+          algorithm will terminate when the Hamiltonian has converged at
+          `target_point`; otherwise it will terminate when the Hamiltonian has
+          converged throughout the domain. 
         `G_np`: np.ndarray(shape=(2, 2), dtype=[float]) of matrix of left 
           invariant metric tensor field with respect to standard basis. Defaults
           to standard Euclidean metric.
         `dxy`: Spatial step size, taking values greater than 0. Defaults to 1.
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
+        `n_max`: Maximum number of iterations, taking positive values. Defaults 
+          to 1e5.
+        `n_check`: Number of iterations between each convergence check, taking
+          positive values. Should be at most `n_max` and `n_max_initialisation`.
+          Defaults to 1e3.
+        `tol`: Tolerance for determining convergence of the Hamiltonian, taking
+          positive values. Defaults to 1e-3.
+        `initial_condition`: Initial value of the approximate distance map.
+          Defaults to 100.
+          
 
     Returns:
         np.ndarray of (approximate) distance map with respect to the datadriven
@@ -264,6 +306,9 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np=None, dxy=1., n_max=
     # The sqrt(4) comes from the fact that the norm of the gradient consists of
     # 4 terms.
     ε = dε * dxy / np.sqrt(4 * G_inv.max())
+    if n_check is None: # Only check convergence at n_max
+        n_check = n_max
+    N_check = int(n_max / n_check)
 
     # Initialise Taichi objects
     W = get_initial_W(shape, initial_condition=initial_condition)
@@ -280,10 +325,17 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np=None, dxy=1., n_max=
     grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=W.shape)
 
     # Compute approximate distance map
-    for _ in tqdm(range(int(n_max))):
-        step_W_uniform(W, G_inv, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, dxy, ε, dW_dt)
-        apply_boundary_conditions(W, boundarypoints, boundaryvalues)
-    # print(f"Converged after {n - 1} steps!")
+    is_converged = False
+    for n in range(N_check):
+        for _ in tqdm(range(int(n_check))):
+            step_W_uniform(W, G_inv, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, dxy, ε, dW_dt)
+            apply_boundary_conditions(W, boundarypoints, boundaryvalues)
+        is_converged = check_convergence(dW_dt, tol=tol, target_point=target_point)
+        if is_converged: # Hamiltonian throughout domain is sufficiently small
+            print(f"Converged after {(n + 1) * n_check} steps!")
+            break
+    if not is_converged:
+        print(f"Hamiltonian did not converge to tolerance {tol}!")
 
     # Compute gradient field: note that ||grad W|| = 1 by Eikonal PDE.
     distance_gradient_field_uniform(W, G_inv, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
@@ -403,3 +455,36 @@ def get_boundary_conditions(source_point):
     boundaryvalues = ti.field(shape=1, dtype=ti.f32)
     boundaryvalues.from_numpy(boundaryvalues_np)
     return boundarypoints, boundaryvalues
+
+@ti.kernel
+def field_abs_max(
+    scalar_field: ti.template()
+) -> ti.f32:
+    """
+    @taichi.kernel
+
+    Find the largest absolute value in `scalar_field`.
+
+    Args:
+        static: ti.field(dtype=[float], shape=shape) of 2D scalar field.
+
+    Returns:
+        Largest absolute value in `scalar_field`.
+    """
+    value = ti.abs(scalar_field[0, 0])
+    for I in ti.grouped(scalar_field):
+        value = ti.atomic_min(value, ti.abs(scalar_field[I]))
+    return value
+
+def check_convergence(dW_dt, tol=1e-3, target_point=None):
+    """
+    Check whether the IVP method has converged by comparing the Hamiltonian
+    `dW_dt` to tolerance `tol`. If `target_point` is provided, only check
+    convergence at `target_point`; otherwise check throughout the domain.
+    """
+    is_converged = False
+    if target_point is None:
+        is_converged = field_abs_max(dW_dt) < tol
+    else:
+        is_converged = ti.abs(dW_dt[target_point[1], target_point[0]]) < tol
+    return is_converged
