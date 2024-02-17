@@ -7,5 +7,5 @@ Solve Eikonal PDEs using an iterative method.
 2. Clone this repository.
 3. In this directory, execute 
 ```
-mamba env create -f=minenv_old.yml 
+mamba env create -f=minenv.yml 
 ```
