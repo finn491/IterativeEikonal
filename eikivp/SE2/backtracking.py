@@ -17,12 +17,10 @@ import numpy as np
 import taichi as ti
 from eikivp.SE2.interpolate import (
     vectorfield_trilinear_interpolate_LI,
-    vectorfield_trilinear_interpolate_static,
     scalar_trilinear_interpolate
 )
 from eikivp.SE2.metric import (
     vector_LI_to_static, 
-    vectorfield_LI_to_static,
     align_to_real_axis_point,
     align_to_real_axis_scalar_field,
     align_to_real_axis_vector_field,
@@ -80,17 +78,15 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
     cost.from_numpy(cost_np)
     source_point = ti.Vector(source_point, dt=ti.f32)
     target_point = ti.Vector(target_point, dt=ti.f32)
-    grad_W_static = ti.Vector.field(n=3, dtype=ti.f32, shape=shape)
     θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
     θs.from_numpy(θs_np)
-    get_grad_W_static(grad_W, θs, grad_W_static)
 
     # Perform backtracking
     γ_list = ti.root.dynamic(ti.i, n_max)
     γ = ti.Vector.field(n=3, dtype=ti.f32)
     γ_list.place(γ)
 
-    γ_len = geodesic_back_tracking_backend(grad_W_static, source_point, target_point, θs, G, cost, dt, n_max, β, γ)
+    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, θs, G, cost, dt, n_max, β, γ)
     γ_dense = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_len)
     print(f"Geodesic consists of {γ_len} points.")
     sparse_to_dense(γ, γ_dense)
@@ -99,14 +95,6 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
     # Align with (I, J, K)-frame
     γ_np = convert_continuous_indices_to_real_space_SE2(γ_ci, xs_np, ys_np, θs_np)
     return γ_np
-
-@ti.kernel
-def get_grad_W_static(
-    grad_W_LI: ti.template(),
-    θs: ti.template(),
-    grad_W_static:ti.template()
-):
-    vectorfield_LI_to_static(grad_W_LI, θs, grad_W_static)
 
 @ti.kernel
 def geodesic_back_tracking_backend(
@@ -157,16 +145,10 @@ def geodesic_back_tracking_backend(
     γ.append(point)
     tol = 2 * dt
     n = 0
-    # while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
-    #     gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, G)
-    #     θ = point[2]
-    #     gradient_at_point_static = vector_LI_to_static(gradient_at_point_LI, θ)
-    #     new_point = get_next_point(point, gradient_at_point_static, dt)
-    #     γ.append(new_point)
-    #     point = new_point
-    #     n += 1
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
-        gradient_at_point = vectorfield_trilinear_interpolate_static(grad_W, point, θs, G, cost)
+        gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, G, cost)
+        θ = scalar_trilinear_interpolate(θs, point)
+        gradient_at_point = vector_LI_to_static(gradient_at_point_LI, θ)
         new_point = get_next_point(point, gradient_at_point, dt)
         γ.append(new_point)
         point = new_point
