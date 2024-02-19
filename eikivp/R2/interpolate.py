@@ -34,7 +34,7 @@ def bilinear_interpolate(
     Args:
         `v**`: values at points between which we want to interpolate, taking 
           real values.
-        `r`: ti.types.vector(n=2, dtype=ti.f32) defining the distance to the
+        `r`: ti.types.vector(n=2, dtype=[float]) defining the distance to the
           points between which we to interpolate.
 
     Returns:
@@ -61,8 +61,8 @@ def scalar_bilinear_interpolate(
 
     Args:
         `input`: ti.field(dtype=[float]) in which we want to interpolate.
-        `index`: ti.types.vector(n=2, dtype=ti.f32) continuous index at which we 
-          want to interpolate.
+        `index`: ti.types.vector(n=2, dtype=[float]) continuous index at which
+          we want to interpolate.
 
     Returns:
         Value of `input` interpolated at `index`.
@@ -100,15 +100,15 @@ def vectorfield_bilinear_interpolate(
     Args:
         `vectorfield`: ti.Vector.field(n=2, dtype=[float]) in which we want to 
           interpolate.
-        `index`: ti.types.vector(n=2, dtype=ti.f32) continuous index at which we 
-          want to interpolate.
+        `index`: ti.types.vector(n=2, dtype=[float]) continuous index at which
+          we want to interpolate.
         `G`: ti.types.matrix(n=2, m=2, dtype=[float]) of constants of metric 
           tensor with respect to standard basis.
         `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
           between 0 and 1.
 
     Returns:
-        ti.types.vector(n=2, dtype=ti.f32) of value `vectorfield` interpolated 
+        ti.types.vector(n=2, dtype=[float]) of value `vectorfield` interpolated 
           at `index`.
     """
     r = ti.math.fract(index)
@@ -144,11 +144,11 @@ def vectorfield_bilinear_interpolate(
 #     Args:
 #         `vectorfield`: ti.Vector.field(n=2, dtype=[float]) in which we want to 
 #           interpolate.
-#         `index`: ti.types.vector(n=2, dtype=ti.f32) continuous index at which we 
+#         `index`: ti.types.vector(n=2, dtype=[float]) continuous index at which we 
 #           want to interpolate.
 
 #     Returns:
-#         ti.types.vector(n=2, dtype=ti.f32) of value interpolation of 
+#         ti.types.vector(n=2, dtype=[float]) of value interpolation of 
 #         `vectorfield` at `index`.
 #     """
 #     r = ti.math.fract(index)
