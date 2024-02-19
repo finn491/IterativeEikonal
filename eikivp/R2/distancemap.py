@@ -37,8 +37,8 @@ from eikivp.utils import (
 
 # Data-driven left invariant
 
-def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., n_max=1e5, n_max_initialisation=1e5,
-                   n_check=None, tol=1e-3, dε=1., initial_condition=100.):
+def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., n_max=1e5, n_max_initialisation=1e4,
+                   n_check=None, n_check_initialisation=None, tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on R2, with source at `source_point` and datadriven
     left invariant metric defined by `G_np` and `cost_np`, using the iterative 
@@ -62,11 +62,15 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
         `n_max_initialisation`: Maximum number of iterations for the
-          initialisation, taking positive values. Defaults to 1e5.
+          initialisation, taking positive values. Defaults to 1e4.
         `n_check`: Number of iterations between each convergence check, taking
-          positive values. Should be at most `n_max` and `n_max_initialisation`.
-          Defaults to `None`; if no `n_check` is passed, convergence is only
-          checked at `n_max`.
+          positive values. Should be at most `n_max`. Defaults to `None`; if no
+          `n_check` is passed, convergence is only checked at `n_max`.
+        `n_check_initialisation`: Number of iterations between each convergence
+          check in the initialisation, taking positive values. Should be at most
+          `n_max_initialisation`. Defaults to `None`; if no
+          `n_check_initialisation` is passed, convergence is only checked at
+          `n_max_initialisation`.
         `tol`: Tolerance for determining convergence of the Hamiltonian, taking
           positive values. Defaults to 1e-3.
         `dε`: Multiplier for varying the "time" step size, taking positive
@@ -82,7 +86,7 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
     # First compute for uniform cost to get initial W
     print("Solving Eikonal PDE with left invariant metric to compute initialisation.")
     W_init_np, _ = eikonal_solver_uniform(cost_np.shape, source_point, target_point=target_point, G_np=G_np, dxy=dxy,
-                                          n_max=n_max_initialisation, n_check=n_check, tol=tol, dε=dε,
+                                          n_max=n_max_initialisation, n_check=n_check_initialisation, tol=tol, dε=dε,
                                           initial_condition=initial_condition)
     
     print("Solving Eikonal PDE data-driven left invariant metric.")
@@ -145,21 +149,6 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
     return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 0))
 
 
-def get_boundary_conditions(source_point):
-    """
-    Determine the boundary conditions from `source_point`, giving the boundary
-    points and boundary values as TaiChi objects.
-    """
-    i_0, j_0 = source_point
-    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1]], dtype=int) # Account for padding.
-    boundaryvalues_np = np.array([0.], dtype=float)
-    boundarypoints = ti.Vector.field(n=2, dtype=ti.i32, shape=1)
-    boundarypoints.from_numpy(boundarypoints_np)
-    boundaryvalues = ti.field(shape=1, dtype=ti.f32)
-    boundaryvalues.from_numpy(boundaryvalues_np)
-    return boundarypoints, boundaryvalues
-
-
 @ti.kernel
 def step_W(
     W: ti.template(),
@@ -201,12 +190,12 @@ def step_W(
     """
     upwind_derivatives(W, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W)
     for I in ti.grouped(W):
-        dW_dt[I] = 1 - (ti.math.sqrt(
+        dW_dt[I] = (1 - (ti.math.sqrt(
             1 * G_inv[0, 0] * dx_W[I] * dx_W[I] +
             2 * G_inv[0, 1] * dx_W[I] * dy_W[I] + # Metric tensor is symmetric.
             1 * G_inv[1, 1] * dy_W[I] * dy_W[I]
-        ) / cost[I])
-        W[I] += dW_dt[I] * ε * cost[I]
+        ) / cost[I])) * cost[I]
+        W[I] += dW_dt[I] * ε
 
 @ti.kernel
 def distance_gradient_field(
