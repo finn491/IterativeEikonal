@@ -17,6 +17,7 @@ import numpy as np
 import taichi as ti
 from eikivp.SE2.interpolate import (
     vectorfield_trilinear_interpolate_LI,
+    vectorfield_trilinear_interpolate_static,
     scalar_trilinear_interpolate
 )
 from eikivp.SE2.metric import (
@@ -143,7 +144,7 @@ def geodesic_back_tracking_backend(
     """
     point = target_point
     γ.append(point)
-    tol = 2 * dt
+    tol = 2 
     n = 0
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
         gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, G, cost)
