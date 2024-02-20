@@ -56,8 +56,8 @@ from eikivp.utils import (
 
 ## Riemannian Eikonal PDE solver
 
-def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, target_point=None, n_max=1e5, n_max_initialisation=1e5,
-                   n_check=None, tol=1e-3, dε=1., initial_condition=100.):
+def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, target_point=None, n_max=1e5, n_max_initialisation=1e4,
+                   n_check=None, n_check_initialisation=None, tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     metric tensor field defined by `G_np` and `cost_np`, with source at 
@@ -81,11 +81,15 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, target_point=N
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
         `n_max_initialisation`: Maximum number of iterations for the
-          initialisation, taking positive values. Defaults to 1e5.
+          initialisation, taking positive values. Defaults to 1e4.
         `n_check`: Number of iterations between each convergence check, taking
-          positive values. Should be at most `n_max` and `n_max_initialisation`.
-          Defaults to `None`; if no `n_check` is passed, convergence is only
-          checked at `n_max`.
+          positive values. Should be at most `n_max`. Defaults to `None`; if no
+          `n_check` is passed, convergence is only checked at `n_max`.
+        `n_check_initialisation`: Number of iterations between each convergence
+          check in the initialisation, taking positive values. Should be at most
+          `n_max_initialisation`. Defaults to `None`; if no
+          `n_check_initialisation` is passed, convergence is only checked at
+          `n_max_initialisation`.
         `tol`: Tolerance for determining convergence of the Hamiltonian, taking
           positive values. Defaults to 1e-3.
         `dε`: Multiplier for varying the "time" step size, taking positive
@@ -101,7 +105,7 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, target_point=N
     # First compute for uniform cost to get initial W
     print("Solving Eikonal PDE with left invariant metric to compute initialisation.")
     W_init_np, _ = eikonal_solver_uniform(cost_np.shape, source_point, G_np, dxy, dθ, θs_np, target_point=target_point,
-                                          n_max=n_max_initialisation, n_check=n_check, tol=tol, dε=dε,
+                                          n_max=n_max_initialisation, n_check=n_check_initialisation, tol=tol, dε=dε,
                                           initial_condition=initial_condition)
     
     print("Solving Eikonal PDE data-driven left invariant metric.")
@@ -115,9 +119,9 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, target_point=N
     # Set hyperparameters
     G_inv = ti.Matrix(invert_metric(G_np), ti.f32)
     # Heuristic, so that W does not become negative.
-    # The sqrt(4) comes from the fact that the norm of the gradient consists of
-    # 4 terms.
-    ε = dε * (dxy / G_inv.max()) / np.sqrt(9) # cost_np.min() * 
+    # The sqrt(9) comes from the fact that the norm of the gradient consists of
+    # 9 terms.
+    ε = dε * (dxy / G_inv.max()) / np.sqrt(9) # * cost_np.min() 
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
     N_check = int(n_max / n_check)
@@ -125,7 +129,6 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, target_point=N
     # Initialise Taichi objects
     cost = get_padded_cost(cost_np, pad_shape=((1,), (1,), (0,)))
     W = get_padded_cost(W_init_np, pad_shape=((1,), (1,), (0,)), pad_value=initial_condition)
-    # W = get_initial_W(shape, initial_condition=100., pad_shape=((1,), (1,), (0,)))
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
@@ -221,15 +224,15 @@ def step_W(
                        A2_W, A3_W)
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
-        dW_dt[I] = 1 - (ti.math.sqrt(
+        dW_dt[I] = (1 - (ti.math.sqrt(
             1 * G_inv[0, 0] * A1_W[I] * A1_W[I] +
             2 * G_inv[0, 1] * A1_W[I] * A2_W[I] + # Metric tensor is symmetric.
             2 * G_inv[0, 2] * A1_W[I] * A3_W[I] +
             1 * G_inv[1, 1] * A2_W[I] * A2_W[I] +
             2 * G_inv[1, 2] * A2_W[I] * A3_W[I] +
             1 * G_inv[2, 2] * A3_W[I] * A3_W[I]
-        ) / cost[I])
-        W[I] += dW_dt[I] * ε * cost[I]
+        ) / cost[I])) * cost[I]
+        W[I] += dW_dt[I] * ε # ti.math.max(dW_dt[I] * ε, -W[I]) # 🤢
 
 @ti.kernel
 def distance_gradient_field(
@@ -287,7 +290,8 @@ def distance_gradient_field(
 ## Sub-Riemannian Eikonal PDE solver
 
 def eikonal_solver_sub_Riemannian(cost_np, source_point, ξ, dxy, dθ, θs_np, target_point=None, n_max=1e5,
-                                  n_max_initialisation=1e5, n_check=None, tol=1e-3, dε=1., initial_condition=100.):
+                                  n_max_initialisation=1e4, n_check=None, n_check_initialisation=None, tol=1e-3, dε=1.,
+                                  initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     metric tensor field defined by `ξ` and `cost_np`, with source at 
@@ -311,11 +315,15 @@ def eikonal_solver_sub_Riemannian(cost_np, source_point, ξ, dxy, dθ, θs_np, t
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
         `n_max_initialisation`: Maximum number of iterations for the
-          initialisation, taking positive values. Defaults to 1e5.
+          initialisation, taking positive values. Defaults to 1e4.
         `n_check`: Number of iterations between each convergence check, taking
-          positive values. Should be at most `n_max` and `n_max_initialisation`.
-          Defaults to `None`; if no `n_check` is passed, convergence is only
-          checked at `n_max`.
+          positive values. Should be at most `n_max`. Defaults to `None`; if no
+          `n_check` is passed, convergence is only checked at `n_max`.
+        `n_check_initialisation`: Number of iterations between each convergence
+          check in the initialisation, taking positive values. Should be at most
+          `n_max_initialisation`. Defaults to `None`; if no
+          `n_check_initialisation` is passed, convergence is only checked at
+          `n_max_initialisation`.
         `tol`: Tolerance for determining convergence of the Hamiltonian, taking
           positive values. Defaults to 1e-3.
         `dε`: Multiplier for varying the "time" step size, taking positive
@@ -337,7 +345,7 @@ def eikonal_solver_sub_Riemannian(cost_np, source_point, ξ, dxy, dθ, θs_np, t
     print("Solving Eikonal PDE with left invariant metric to compute initialisation.")
     W_init_np, _ = eikonal_solver_sub_Riemannian_uniform(cost_np.shape, source_point, ξ, dxy, dθ, θs_np,
                                                          target_point=target_point, n_max=n_max_initialisation,
-                                                         n_check=n_check, tol=tol, dε=dε,
+                                                         n_check=n_check_initialisation, tol=tol, dε=dε,
                                                          initial_condition=initial_condition)
     
     print("Solving Eikonal PDE data-driven left invariant metric.")
@@ -346,11 +354,14 @@ def eikonal_solver_sub_Riemannian(cost_np, source_point, ξ, dxy, dθ, θs_np, t
     cost_np = align_to_real_axis_scalar_field(cost_np)
     shape = cost_np.shape
     source_point = align_to_real_axis_point(source_point, shape)
+    if target_point is not None:
+        target_point = align_to_real_axis_point(target_point, shape)
     θs_np = align_to_real_axis_scalar_field(θs_np)
 
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
-    ε = dε * (dxy / (1 + ξ**-2)) / np.sqrt(9) # cost_np.min() * 
+    ε = dε * (dxy / (1 + ξ**-2)) / np.sqrt(9) # * cost_np.min()
+    print(f"ε = {ε}")
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
     N_check = int(n_max / n_check)
@@ -448,11 +459,15 @@ def step_W_sub_Riemannian(
     upwind_A3(W, dθ, A3_forward, A3_backward, A3_W)
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
-        dW_dt[I] = 1 - (ti.math.sqrt(
+        dW_dt[I] = (1 - (ti.math.sqrt(
             A1_W[I]**2 / ξ**2 +
             A3_W[I]**2 
-        ) / cost[I])
-        W[I] += dW_dt[I] * ε * cost[I]
+        ) / cost[I])) * cost[I]
+        # dW_dt[I] = (1 - ti.math.sqrt(
+        #     A1_W[I]**2 / ξ**2 +
+        #     A3_W[I]**2 
+        # ) * (3 / cost[I] + 1)) # "scaledSpeed" found in Mathematica notebook Nickys_backtracking.nb
+        W[I] += dW_dt[I] * ε
 
 @ti.kernel
 def distance_gradient_field_sub_Riemannian(
@@ -507,7 +522,8 @@ def distance_gradient_field_sub_Riemannian(
 ## Plus-controller Eikonal PDE solver
 
 def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_np, target_point=None, n_max=1e5,
-                        n_max_initialisation=1e5, n_check=None, tol=1e-3, dε=1., initial_condition=100.):
+                        n_max_initialisation=1e4, n_check=None, n_check_initialisation=None, tol=1e-3, dε=1.,
+                        initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     Finsler function defined by `ξ` and `cost_np`, with source at 
@@ -537,11 +553,15 @@ def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
         `n_max_initialisation`: Maximum number of iterations for the
-          initialisation, taking positive values. Defaults to 1e5.
+          initialisation, taking positive values. Defaults to 1e4.
         `n_check`: Number of iterations between each convergence check, taking
-          positive values. Should be at most `n_max` and `n_max_initialisation`.
-          Defaults to `None`; if no `n_check` is passed, convergence is only
-          checked at `n_max`.
+          positive values. Should be at most `n_max`. Defaults to `None`; if no
+          `n_check` is passed, convergence is only checked at `n_max`.
+        `n_check_initialisation`: Number of iterations between each convergence
+          check in the initialisation, taking positive values. Should be at most
+          `n_max_initialisation`. Defaults to `None`; if no
+          `n_check_initialisation` is passed, convergence is only checked at
+          `n_max_initialisation`.
         `tol`: Tolerance for determining convergence of the Hamiltonian, taking
           positive values. Defaults to 1e-3.
         `dε`: Multiplier for varying the "time" step size, taking positive
@@ -563,8 +583,8 @@ def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_
     # First compute for uniform cost to get initial W
     print("Solving Eikonal PDE with left invariant metric to compute initialisation.")
     W_init_np, _ = eikonal_solver_plus_uniform(cost_np.shape, source_point, ξ, plus_softness, dxy, dθ, θs_np,
-                                               n_max=n_max_initialisation, n_check=n_check, tol=tol, dε=dε,
-                                               initial_condition=initial_condition)
+                                               n_max=n_max_initialisation, n_check=n_check_initialisation, tol=tol,
+                                               dε=dε, initial_condition=initial_condition)
     
     print("Solving Eikonal PDE data-driven left invariant metric.")
     # Align with (x, y, θ)-frame
@@ -572,6 +592,8 @@ def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_
     cost_np = align_to_real_axis_scalar_field(cost_np)
     shape = cost_np.shape
     source_point = align_to_real_axis_point(source_point, shape)
+    if target_point is not None:
+        target_point = align_to_real_axis_point(target_point, shape)
     θs_np = align_to_real_axis_scalar_field(θs_np)
 
     # Set hyperparameters.
@@ -614,8 +636,8 @@ def eikonal_solver_plus(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_
         print(f"Hamiltonian did not converge to tolerance {tol}!")
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    distance_gradient_field_plus(W, cost, ξ, dxy, dθ, θs, A1_forward, A1_backward, A3_forward, A3_backward, A1_W, A3_W,
-                                 grad_W)
+    distance_gradient_field_plus(W, cost, ξ, plus_softness, dxy, dθ, θs, A1_forward, A1_backward, A3_forward,
+                                 A3_backward, A1_W, A3_W, grad_W)
 
     # Align with (I, J, K)-frame
     W_np = W.to_numpy()
@@ -680,11 +702,11 @@ def step_W_plus(
     upwind_A3(W, dθ, A3_forward, A3_backward, A3_W)
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
-        dW_dt[I] = 1 - (ti.math.sqrt(
+        dW_dt[I] = (1 - (ti.math.sqrt(
             soft_plus(A1_W[I], plus_softness)**2 / ξ**2 +
-            A3_W[I]**2 
-        ) / cost[I])
-        W[I] += dW_dt[I] * ε * cost[I]
+            A3_W[I]**2
+        ) / cost[I])) * cost[I]
+        W[I] += dW_dt[I] * ε
 
 @ti.kernel
 def distance_gradient_field_plus(
@@ -799,6 +821,7 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dxy, dθ, θs_np, t
     # The sqrt(4) comes from the fact that the norm of the gradient consists of
     # 4 terms.
     ε = dε * (dxy / G_inv.max()) / np.sqrt(9)
+    print(f"ε = {ε}")
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
     N_check = int(n_max / n_check)
@@ -1009,11 +1032,14 @@ def eikonal_solver_sub_Riemannian_uniform(domain_shape, source_point, ξ, dxy, d
     # Align with (x, y, θ)-frame
     shape = (domain_shape[1], domain_shape[0], domain_shape[2])
     source_point = align_to_real_axis_point(source_point, shape)
+    if target_point is not None:
+        target_point = align_to_real_axis_point(target_point, shape)
     θs_np = align_to_real_axis_scalar_field(θs_np)
 
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
     ε = dε * (dxy / (1 + ξ**-2)) / np.sqrt(9)
+    print(f"ε = {ε}")
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
     N_check = int(n_max / n_check)
@@ -1212,11 +1238,14 @@ def eikonal_solver_plus_uniform(domain_shape, source_point, ξ, plus_softness, d
     # Align with (x, y, θ)-frame
     shape = (domain_shape[1], domain_shape[0], domain_shape[2])
     source_point = align_to_real_axis_point(source_point, shape)
+    if target_point is not None:
+        target_point = align_to_real_axis_point(target_point, shape)
     θs_np = align_to_real_axis_scalar_field(θs_np)
 
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
     ε = dε * (dxy / (1 + ξ**-2)) / np.sqrt(9)
+    print(f"ε = {ε}")
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
     N_check = int(n_max / n_check)
@@ -1425,7 +1454,11 @@ def check_convergence(dW_dt, tol=1e-3, target_point=None):
     """
     is_converged = False
     if target_point is None:
-        is_converged = field_abs_max(dW_dt) < tol
+        error = field_abs_max(dW_dt)
+        print(error)
+        is_converged = error < tol
     else:
-        is_converged = ti.abs(dW_dt[target_point[1], target_point[0], target_point[2]]) < tol
+        error = ti.abs(dW_dt[target_point[1], target_point[0], target_point[2]])
+        print(error)
+        is_converged = error < tol
     return is_converged
