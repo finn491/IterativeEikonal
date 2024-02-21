@@ -33,18 +33,13 @@ import numpy as np
 
 def invert_metric(G):
     """
-    Invert the metric tensor defined by the matrix `G`. If `G` is semidefinite,
-    e.g. when we are dealing with a sub-Riemannian metric, the metric is first
-    made definite by adding `1e-8` to the diagonal.
+    Invert the diagonal metric tensor defined by the matrix `G`.
 
     Args:
-        `G`: np.ndarray(shape=(3, 3), dtype=[float]) of matrix of left invariant
+        `G`: np.ndarray(shape=(3,), dtype=[float]) of matrix of left invariant
           metric tensor field with respect to left invariant basis.
     """
-    # try:
-    G_inv = np.linalg.inv(G)
-    # except np.linalg.LinAlgError:
-    #     G_inv = np.linalg.inv(G + np.identity(3) * 1e-8)
+    G_inv = 1 / G
     return G_inv
 
 
