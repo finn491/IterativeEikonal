@@ -43,8 +43,8 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
         `target_point`: Tuple[int] describing index of target point in `W_np`.
         `cost_np`: np.ndarray of cost function throughout domain, taking values
           between 0 and 1.
-        `G_np`: np.ndarray(shape=(3, 3), dtype=[float]) of matrix of left 
-          invariant metric tensor field with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `dt`: Step size, taking values greater than 0. Defaults to the minimum
           of `cost_np`.
       Optional:
@@ -68,10 +68,8 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
     θs_np = align_to_real_axis_scalar_field(θs_np)
 
     # Set hyperparameters
-    # G = ti.Matrix(G_np, ti.f32)
-    G = np.identity(3)
     if dt is None:
-        # It would make sense to also include G somehow, but I am not sure how.
+        # It would make sense to also include ξ somehow, but I am not sure how.
         dt = cost_np.min()
 
     # Initialise Taichi objects
@@ -89,7 +87,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
     γ = ti.Vector.field(n=3, dtype=ti.f32)
     γ_list.place(γ)
 
-    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, θs, G, cost, dt, n_max, β, γ)
+    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, θs, ξ, cost, dt, n_max, β, γ)
     γ_dense = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_len)
     print(f"Geodesic consists of {γ_len} points.")
     sparse_to_dense(γ, γ_dense)
@@ -105,7 +103,7 @@ def geodesic_back_tracking_backend(
     source_point: ti.types.vector(3, ti.f32),
     target_point: ti.types.vector(3, ti.f32),
     θs: ti.template(),
-    G: ti.types.matrix(3, 3, ti.f32),
+    ξ: ti.f32,
     cost: ti.template(),
     dt: ti.f32,
     n_max: ti.i32,
@@ -128,8 +126,8 @@ def geodesic_back_tracking_backend(
           source point in `W_np`.
         `target_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
           target point in `W_np`.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost`: ti.field(dtype=[float]) of cost function, taking values between
           0 and 1.
         `n_max`: Maximum number of points in geodesic, taking positive integral
@@ -149,7 +147,7 @@ def geodesic_back_tracking_backend(
     tol = 2 
     n = 0
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
-        gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, G, cost)
+        gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, ξ, cost)
         θ = scalar_trilinear_interpolate(θs, point)
         gradient_at_point = vector_LI_to_static(gradient_at_point_LI, θ)
         new_point = get_next_point(point, gradient_at_point, dt)

@@ -38,12 +38,14 @@ from eikivp.SE2.derivatives import (
     upwind_A1,
     upwind_A3
 )
-from eikivp.SE2.metric import (
-    invert_metric,
+from eikivp.SE2.utils import (
     align_to_real_axis_point,
     align_to_real_axis_scalar_field,
     align_to_standard_array_axis_scalar_field,
     align_to_standard_array_axis_vector_field
+)
+from eikivp.SE2.Riemannian.metric import (
+    invert_metric
 )
 from eikivp.utils import (
     get_initial_W,

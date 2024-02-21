@@ -25,3 +25,6 @@
 import eikivp.SE2.derivatives
 import eikivp.SE2.vesselness
 import eikivp.SE2.utils
+import eikivp.SE2.Riemannian
+import eikivp.SE2.subRiemannian
+import eikivp.SE2.plus
