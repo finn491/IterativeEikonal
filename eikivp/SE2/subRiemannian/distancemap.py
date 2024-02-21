@@ -124,7 +124,9 @@ def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, target_point=Non
 
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
-    ε = dε * (dxy / (1 + ξ**-2)) / np.sqrt(9) # * cost_np.min()
+    # The sqrt(2) comes from the fact that the norm of the gradient consists of
+    # 2 terms.
+    ε = dε * (dxy / (1 + ξ**-2)) / np.sqrt(2) # * cost_np.min()
     print(f"ε = {ε}")
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
@@ -338,6 +340,8 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, tar
 
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
+    # The sqrt(2) comes from the fact that the norm of the gradient consists of
+    # 2 terms.
     ε = dε * (dxy / (1 + ξ**-2)) / np.sqrt(9)
     print(f"ε = {ε}")
     if n_check is None: # Only check convergence at n_max
