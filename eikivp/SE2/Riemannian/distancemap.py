@@ -471,8 +471,8 @@ def distance_gradient_field_uniform(
     Args:
       Static:
         `W`: ti.field(dtype=[float], shape=shape) of approximate distance map.
-        `G_inv`: ti.types.vector(n=3, dtype=[float]) of constants of the
-          diagonal metric tensor with respect to left invariant basis.
+        `G_inv`: ti.types.vector(n=3, dtype=[float]) of constants of the inverse
+          of the diagonal metric tensor with respect to left invariant basis.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
         `θs`: angle coordinate at each grid point.
