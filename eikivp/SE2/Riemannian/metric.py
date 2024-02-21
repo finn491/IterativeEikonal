@@ -48,7 +48,7 @@ def invert_metric(G):
 @ti.func
 def normalise_LI(
     vec: ti.types.vector(3, ti.f32),
-    G: ti.types.matrix(3, 3, ti.f32),
+    G: ti.types.vector(3, ti.f32),
     cost: ti.f32
 ) -> ti.types.vector(3, ti.f32):
     """
@@ -59,7 +59,7 @@ def normalise_LI(
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
           tensor with respect to left invariant basis.
         `cost`: cost function at point, taking values between 0 and 1.
 
@@ -71,7 +71,7 @@ def normalise_LI(
 @ti.func
 def norm_LI(
     vec: ti.types.vector(3, ti.f32),
-    G: ti.types.matrix(3, 3, ti.f32),
+    G: ti.types.vector(3, ti.f32),
     cost: ti.f32
 ) -> ti.f32:
     """
@@ -82,7 +82,7 @@ def norm_LI(
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
           tensor with respect to left invariant basis.
         `cost`: cost function at point, taking values between 0 and 1.
 
@@ -91,18 +91,15 @@ def norm_LI(
     """
     c_1, c_2, c_3 = vec[0], vec[1], vec[2]
     return ti.math.sqrt(
-            1 * G[0, 0] * c_1 * c_1 +
-            2 * G[0, 1] * c_1 * c_2 + # Metric tensor is symmetric.
-            2 * G[0, 2] * c_1 * c_3 +
-            1 * G[1, 1] * c_2 * c_2 +
-            2 * G[1, 2] * c_2 * c_3 +
-            1 * G[2, 2] * c_3 * c_3
+            G[0] * c_1**2 +
+            G[1] * c_2**2 +
+            G[2] * c_3**2
     ) * cost
 
 @ti.func
 def normalise_static(
     vec: ti.types.vector(3, ti.f32),
-    G: ti.types.matrix(3, 3, ti.f32),
+    G: ti.types.vector(3, ti.f32),
     cost: ti.f32,
     θ: ti.f32
 ) -> ti.types.vector(3, ti.f32):
@@ -114,7 +111,7 @@ def normalise_static(
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
           tensor with respect to left invariant basis.
         `cost`: cost function at point, taking values between 0 and 1.
         `θ`: angle coordinate of corresponding point on the manifold.
@@ -132,7 +129,7 @@ def normalise_static(
 @ti.func
 def norm_static(
     vec: ti.types.vector(3, ti.f32),
-    G: ti.types.matrix(3, 3, ti.f32),
+    G: ti.types.vector(3, ti.f32),
     cost: ti.f32,
     θ: ti.f32
 ) -> ti.f32:
@@ -144,7 +141,7 @@ def norm_static(
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
           tensor with respect to left invariant basis.
         `cost`: cost function at point, taking values between 0 and 1.
         `θ`: angle coordinate of corresponding point on the manifold.
@@ -157,12 +154,9 @@ def norm_static(
     c_2 = -a_1 * ti.math.sin(θ) + a_2 * ti.math.cos(θ)
     c_3 = a_3
     return ti.math.sqrt(
-            1 * G[0, 0] * c_1 * c_1 +
-            2 * G[0, 1] * c_1 * c_2 + # Metric tensor is symmetric.
-            2 * G[0, 2] * c_1 * c_3 +
-            1 * G[1, 1] * c_2 * c_2 +
-            2 * G[1, 2] * c_2 * c_3 +
-            1 * G[2, 2] * c_3 * c_3
+            G[0] * c_1**2 +
+            G[1] * c_2**2 +
+            G[2] * c_3**2
     ) * cost
 
 

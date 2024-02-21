@@ -32,7 +32,7 @@ from eikivp.SE2.Riemannian.metric import (
 def vectorfield_trilinear_interpolate_LI(
     vectorfield: ti.template(),
     index: ti.template(),
-    G: ti.types.matrix(3, 3, ti.f32),
+    G: ti.types.vector(3, ti.f32),
     cost_field: ti.template()
 ) -> ti.types.vector(3, ti.f32):
     """
@@ -49,7 +49,7 @@ def vectorfield_trilinear_interpolate_LI(
           interpolate.
         `index`: ti.types.vector(n=3, dtype=[float]) continuous index at which 
           we want to interpolate.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
           tensor with respect to left invariant basis.
         `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
           between 0 and 1.
@@ -86,7 +86,7 @@ def vectorfield_trilinear_interpolate_static(
     vectorfield: ti.template(),
     index: ti.template(),
     θs: ti.template(),
-    G: ti.types.matrix(3, 3, ti.f32),
+    G: ti.types.vector(3, ti.f32),
     cost_field: ti.template()
 ) -> ti.types.vector(3, ti.f32):
     """
@@ -102,7 +102,7 @@ def vectorfield_trilinear_interpolate_static(
         `index`: ti.types.vector(n=3, dtype=[float]) continuous index at which 
           we want to interpolate.
         `θs`: angle coordinate at each grid point.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
           tensor with respect to left invariant basis.
         `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
           between 0 and 1.

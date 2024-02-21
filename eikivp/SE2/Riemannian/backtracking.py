@@ -66,7 +66,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
     θs_np = align_to_real_axis_scalar_field(θs_np)
 
     # Set hyperparameters
-    G = ti.Matrix(G_np, ti.f32)
+    G = ti.Vector(G_np, ti.f32)
     if dt is None:
         # It would make sense to also include G somehow, but I am not sure how.
         dt = cost_np.min()
@@ -102,7 +102,7 @@ def geodesic_back_tracking_backend(
     source_point: ti.types.vector(3, ti.f32),
     target_point: ti.types.vector(3, ti.f32),
     θs: ti.template(),
-    G: ti.types.matrix(3, 3, ti.f32),
+    G: ti.types.vector(3, ti.f32),
     cost: ti.template(),
     dt: ti.f32,
     n_max: ti.i32,
@@ -125,7 +125,7 @@ def geodesic_back_tracking_backend(
           source point in `W_np`.
         `target_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
           target point in `W_np`.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
+        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
           tensor with respect to left invariant basis.
         `cost`: ti.field(dtype=[float]) of cost function, taking values between
           0 and 1.
