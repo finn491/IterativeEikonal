@@ -15,7 +15,7 @@
 
 import taichi as ti
 from eikivp.utils import select_upwind_derivative
-from eikivp.SE2.interpolate import scalar_trilinear_interpolate
+from eikivp.SE2.utils import scalar_trilinear_interpolate
 
 
 # All at once

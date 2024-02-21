@@ -40,12 +40,12 @@ def normalise_LI(
     @taichi.func
 
     Normalise `vec`, represented in left invariant coordinates, to 1 with 
-    respect to the left invariant metric tensor defined by `G`.
+    respect to the left invariant Finsler function defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
 
     Returns:
@@ -63,12 +63,12 @@ def norm_LI(
     @taichi.func
 
     Compute the norm of `vec` represented in left invariant coordinates with
-    respect to the left invariant metric tensor defined by `G`.
+    respect to the left invariant Finsler function defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
 
     Returns:
@@ -90,12 +90,12 @@ def normalise_static(
     @taichi.func
 
     Normalise `vec`, represented in static coordinates, to 1 with respect to the 
-    left invariant metric tensor defined by `G`.
+    left invariant Finsler function defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
         `θ`: angle coordinate of corresponding point on the manifold.
 
@@ -115,12 +115,12 @@ def norm_static(
     @taichi.func
 
     Compute the norm of `vec` represented in static coordinates with respect to 
-    the left invariant metric tensor defined by `G`.
+    the left invariant Finsler function defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
         `θ`: angle coordinate of corresponding point on the manifold.
 

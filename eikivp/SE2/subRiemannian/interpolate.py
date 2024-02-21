@@ -31,7 +31,7 @@ from eikivp.SE2.subRiemannian.metric import (
 def vectorfield_trilinear_interpolate_LI(
     vectorfield: ti.template(),
     index: ti.template(),
-    G: ti.types.matrix(3, 3, ti.f32),
+    ξ: ti.f32,
     cost_field: ti.template()
 ) -> ti.types.vector(3, ti.f32):
     """
@@ -48,8 +48,8 @@ def vectorfield_trilinear_interpolate_LI(
           interpolate.
         `index`: ti.types.vector(n=3, dtype=[float]) continuous index at which 
           we want to interpolate.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
           between 0 and 1.
 
@@ -78,14 +78,14 @@ def vectorfield_trilinear_interpolate_LI(
 
     cost = scalar_trilinear_interpolate(cost_field, index)
 
-    return normalise_LI(ti.Vector([u, v, w]), G, cost)
+    return normalise_LI(ti.Vector([u, v, w]), ξ, cost)
 
 @ti.func
 def vectorfield_trilinear_interpolate_static(
     vectorfield: ti.template(),
     index: ti.template(),
     θs: ti.template(),
-    G: ti.types.matrix(3, 3, ti.f32),
+    ξ: ti.f32,
     cost_field: ti.template()
 ) -> ti.types.vector(3, ti.f32):
     """
@@ -101,8 +101,8 @@ def vectorfield_trilinear_interpolate_static(
         `index`: ti.types.vector(n=3, dtype=[float]) continuous index at which 
           we want to interpolate.
         `θs`: angle coordinate at each grid point.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
           between 0 and 1.
 
@@ -133,4 +133,4 @@ def vectorfield_trilinear_interpolate_static(
 
     cost = scalar_trilinear_interpolate(cost_field, index)
 
-    return normalise_static(ti.Vector([u, v, w]), G, cost, θ)
+    return normalise_static(ti.Vector([u, v, w]), ξ, cost, θ)
