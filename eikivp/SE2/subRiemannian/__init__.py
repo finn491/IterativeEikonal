@@ -1,8 +1,8 @@
 """
-    SE2
-    ===
+    Sub-Riemannian
+    ==============
 
-    Solve the Eikonal PDE on SE(2).
+    Solve the Eikonal PDE on SE(2) using a sub-Riemannian controller.
 
     Provides the following "top level" submodules:
       1. distancemap: compute the distance map (as solution of the Eikonal PDE)
@@ -22,6 +22,7 @@
 """
 
 # Access entire backend
-import eikivp.SE2.derivatives
-import eikivp.SE2.vesselness
-import eikivp.SE2.utils
+import eikivp.SE2.subRiemannian.distancemap
+import eikivp.SE2.subRiemannian.backtracking
+import eikivp.SE2.subRiemannian.interpolate
+import eikivp.SE2.subRiemannian.metric
