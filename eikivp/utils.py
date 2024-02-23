@@ -46,7 +46,8 @@ def select_upwind_derivative(
     """
     @taichi.func
 
-    Select the correct derivative for the upwind derivative.
+    Select the correct derivative for the upwind derivative for morphological
+    erosion.
 
     Args:
         `d_forward`: derivative in the forward direction.
