@@ -59,19 +59,22 @@ from eikivp.utils import (
 def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, target_point=None, n_max=1e5, n_max_initialisation=1e4,
                    n_check=None, n_check_initialisation=None, tol=1e-3, dε=1., initial_condition=100.):
     """
-    Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
-    metric tensor field defined by `G_np` and `cost_np`, with source at 
-    `source_point`, using the iterative method described in Bekkers et al. 
+    Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant
+    Riemannian metric tensor field defined by `G_np` and `cost_np`, with source
+    at `source_point`, using the iterative method described in Bekkers et al. 
     "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
-        `cost_np`: np.ndarray of cost function.
+        `cost_np`: np.ndarray of cost function throughout domain, taking values
+          between 0 and 1.
         `source_point`: Tuple[int] describing index of source point in 
           `cost_np`.
         `G_np`: np.ndarray(shape=(3,), dtype=[float]) of constants of the
           diagonal metric tensor with respect to left invariant basis.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
+        `θs_np`: Orientation coordinate at every point in the grid on which
+          `cost` is sampled.
       Optional:
         `target_point`: Tuple[int] describing index of target point in
           `cost_np`. Defaults to `None`. If `target_point` is provided, the
@@ -302,9 +305,11 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dxy, dθ, θs_np, t
           diagonal metric tensor with respect to left invariant basis.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
+        `θs_np`: Orientation coordinate at every point in the grid on which
+          `cost` is sampled.
       Optional:
         `target_point`: Tuple[int] describing index of target point in
-          `cost_np`. Defaults to `None`. If `target_point` is provided, the
+          `domain_shape`. Defaults to `None`. If `target_point` is provided, the
           algorithm will terminate when the Hamiltonian has converged at
           `target_point`; otherwise it will terminate when the Hamiltonian has
           converged throughout the domain. 

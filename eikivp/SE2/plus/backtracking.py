@@ -43,6 +43,12 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
         `target_point`: Tuple[int] describing index of target point in `W_np`.
         `cost_np`: np.ndarray of cost function throughout domain, taking values
           between 0 and 1.
+        `xs_np`: x-coordinate at every point in the grid on which `cost` is
+          sampled.
+        `ys_np`: y-coordinate at every point in the grid on which `cost` is
+          sampled.
+        `θs_np`: Orientation coordinate at every point in the grid on which
+          `cost` is sampled.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `dt`: Step size, taking values greater than 0. Defaults to the minimum
