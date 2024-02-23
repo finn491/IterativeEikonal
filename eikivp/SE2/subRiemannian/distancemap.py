@@ -55,22 +55,25 @@ from eikivp.utils import (
 
 # Data-driven left invariant
 
-def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, target_point=None, n_max=1e5,n_max_initialisation=1e4,
+def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, target_point=None, n_max=1e5, n_max_initialisation=1e4,
                    n_check=None, n_check_initialisation=None, tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
-    metric tensor field defined by `ξ` and `cost_np`, with source at 
-    `source_point`, using the iterative method described in Bekkers et al. 
+    sub-Riemannian metric tensor field defined by `ξ` and `cost_np`, with source
+    at `source_point`, using the iterative method described in Bekkers et al. 
     "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
-        `cost_np`: np.ndarray of cost function.
+        `cost_np`: np.ndarray of cost function throughout domain, taking values
+          between 0 and 1.
         `source_point`: Tuple[int] describing index of source point in 
           `cost_np`.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
+        `θs_np`: Orientation coordinate at every point in the grid on which
+          `cost` is sampled.
       Optional:
         `target_point`: Tuple[int] describing index of target point in
           `cost_np`. Defaults to `None`. If `target_point` is provided, the
@@ -104,7 +107,7 @@ def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, target_point=Non
     Notes:
         The base metric tensor field (i.e. with uniform cost), is given, for a
         pair of vectors v = v^i A_i and w = w^i A_i at point p, by 
-          G_p(v, w) = ξ^2 v^1 w^2 + v^3 w^3.
+          G_p(v, w) = ξ^2 v^1 w^1 + v^3 w^3.
     """
     # First compute for uniform cost to get initial W
     print("Solving Eikonal PDE with left invariant metric to compute initialisation.")
@@ -302,9 +305,11 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, tar
           direction, taking values greater than 0.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
+        `θs_np`: Orientation coordinate at every point in the grid on which
+          `cost` is sampled.
       Optional:
         `target_point`: Tuple[int] describing index of target point in
-          `cost_np`. Defaults to `None`. If `target_point` is provided, the
+          `domain_shape`. Defaults to `None`. If `target_point` is provided, the
           algorithm will terminate when the Hamiltonian has converged at
           `target_point`; otherwise it will terminate when the Hamiltonian has
           converged throughout the domain. 

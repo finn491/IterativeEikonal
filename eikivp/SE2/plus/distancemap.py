@@ -54,7 +54,7 @@ from eikivp.utils import (
 
 # Data-driven left invariant
 
-def eikonal_solver(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_np, target_point=None, n_max=1e5, 
+def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, plus_softness=0., target_point=None, n_max=1e5, 
                    n_max_initialisation=1e4, n_check=None, n_check_initialisation=None, tol=1e-3, dε=1., 
                    initial_condition=100.):
     """
@@ -64,20 +64,23 @@ def eikonal_solver(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_np, t
     "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
-        `cost_np`: np.ndarray of cost function.
+        `cost_np`: np.ndarray of cost function throughout domain, taking values
+          between 0 and 1.
         `source_point`: Tuple[int] describing index of source point in 
           `cost_np`.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
+        `dxy`: Spatial step size, taking values greater than 0.
+        `dθ`: Orientational step size, taking values greater than 0.
+        `θs_np`: Orientation coordinate at every point in the grid on which
+          `cost` is sampled.
+      Optional:
         `plus_softness`: Strength of the plus controller, taking values between
           0 and 1. As `plus_softness` is decreased, motion in the reverse A1
           direction is increasingly inhibited. For `plus_softness` 0, motion is
           possibly exclusively in the forward A1 direction; for `plus_softness`
           1, we recover the sub-Riemannian metric that is symmetric in the A1
-          direction.
-        `dxy`: Spatial step size, taking values greater than 0.
-        `dθ`: Orientational step size, taking values greater than 0.
-      Optional:
+          direction. Defaults to 0.
         `target_point`: Tuple[int] describing index of target point in
           `cost_np`. Defaults to `None`. If `target_point` is provided, the
           algorithm will terminate when the Hamiltonian has converged at
@@ -115,7 +118,7 @@ def eikonal_solver(cost_np, source_point, ξ, plus_softness, dxy, dθ, θs_np, t
     """
     # First compute for uniform cost to get initial W
     print("Solving Eikonal PDE with left invariant metric to compute initialisation.")
-    W_init_np, _ = eikonal_solver_uniform(cost_np.shape, source_point, ξ, plus_softness, dxy, dθ, θs_np, 
+    W_init_np, _ = eikonal_solver_uniform(cost_np.shape, source_point, ξ, dxy, dθ, θs_np, plus_softness=plus_softness,
                                           n_max=n_max_initialisation, n_check=n_check_initialisation, tol=tol, dε=dε,
                                           initial_condition=initial_condition)
     
@@ -302,7 +305,7 @@ def distance_gradient_field(
 
 # Left invariant
 
-def eikonal_solver_uniform(domain_shape, source_point, ξ, plus_softness, dxy, dθ, θs_np, target_point=None, n_max=1e5,
+def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, plus_softness=0., target_point=None, n_max=1e5,
                            n_check=None, tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
@@ -319,9 +322,17 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, plus_softness, dxy, d
           direction, taking values greater than 0.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
+        `θs_np`: Orientation coordinate at every point in the grid on which
+          `cost` is sampled.
       Optional:
+        `plus_softness`: Strength of the plus controller, taking values between
+          0 and 1. As `plus_softness` is decreased, motion in the reverse A1
+          direction is increasingly inhibited. For `plus_softness` 0, motion is
+          possibly exclusively in the forward A1 direction; for `plus_softness`
+          1, we recover the sub-Riemannian metric that is symmetric in the A1
+          direction. Defaults to 0.
         `target_point`: Tuple[int] describing index of target point in
-          `cost_np`. Defaults to `None`. If `target_point` is provided, the
+          `domain_shape`. Defaults to `None`. If `target_point` is provided, the
           algorithm will terminate when the Hamiltonian has converged at
           `target_point`; otherwise it will terminate when the Hamiltonian has
           converged throughout the domain. 
