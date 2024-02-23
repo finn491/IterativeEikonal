@@ -42,6 +42,7 @@ def view_image_arrays_side_by_side(image_array_list):
     return image_list, fig, ax
 
 def plot_image_array(image_array, x_min, x_max, y_min, y_max, cmap="gray", figsize=(10, 10), fig=None, ax=None):
+    """Plot `image_array` as a heatmap."""
     if fig is None and ax is None:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize)
         ax.set_xlabel("$x$")
@@ -53,6 +54,7 @@ def plot_image_array(image_array, x_min, x_max, y_min, y_max, cmap="gray", figsi
 
 def plot_contour(distance, xs, ys, levels=None, linestyles=None, figsize=(12, 10), fig=None, ax=None, x_min=None, 
                  x_max=None, y_min=None, y_max=None):
+    """Plot the contours of the two-dimensional array `distance`."""
     if fig is None and ax is None:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize)
         ax.set_xlabel("$x$")
@@ -66,9 +68,11 @@ def plot_contour(distance, xs, ys, levels=None, linestyles=None, figsize=(12, 10
     contour = ax.contour(xs, ys, distance, levels=levels, linestyles=linestyles)
     return fig, ax, contour
 
-def plot_isosurface(verts, faces, x_min, x_max, y_min, y_max, θ_min, θ_max, dxy, dθ, alpha=0.5, label=None, figsize=(10, 10), fig=None, ax=None):
+def plot_isosurface(verts, faces, x_min, x_max, y_min, y_max, θ_min, θ_max, dxy, dθ, alpha=0.5, label=None,
+                    figsize=(10, 10), fig=None, ax=None):
+    """Plot the isosurface given by `verts` and `faces`."""
     if fig is None and ax is None:
-        fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure(figsize=figsize)
         fig.canvas.toolbar_visible = False
         fig.canvas.header_visible = False
         fig.canvas.footer_visible = False
@@ -85,12 +89,17 @@ def plot_isosurface(verts, faces, x_min, x_max, y_min, y_max, θ_min, θ_max, dx
     
 
 def overwrite_default(passed_value, default_value):
+    """
+    Overwrite the value of some parameter if the user has not passed that
+    parameter.
+    """
     if passed_value is None: # User did not pass any value
         passed_value = default_value
     return default_value
 
 def plot_vector_field(vector_field, xs, ys, color="red", figsize=(10, 10), fig=None, ax=None, x_min=None, x_max=None, 
                       y_min=None, y_max=None):
+    """Streamplot of `vector_field`."""
     if fig is None and ax is None:
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_xlabel("$x$")
@@ -106,6 +115,7 @@ def plot_vector_field(vector_field, xs, ys, color="red", figsize=(10, 10), fig=N
 
 def plot_scalar_field(scalar_field, xs, ys, levels=None, figsize=(12, 10), fig=None, ax=None, x_min=None, x_max=None, 
                       y_min=None, y_max=None):
+    """Plot two-dimensional `scalar_field` using coloured in contours."""
     if fig is None and ax is None:
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_xlabel("$x$")

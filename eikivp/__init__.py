@@ -2,11 +2,11 @@
     EikIVP
     ======
 
-    The Python package *eikivp* contains methods to solve the Eikonal PDE on R^2
-    and SE(2) using the iterative Initial Value Problem (IVP) technique
-    described in Bekkers et al. "A PDE approach to Data-Driven Sub-Riemannian 
-    Geodesics in SE(2)" (2015), and to find geodesics connecting points with
-    respect to the distance map that solves the Eikonal PDE.
+    The Python package *eikivp* contains methods to solve the Eikonal PDE on
+    R^2, SE(2), and (soon) SO(3) using the iterative Initial Value Problem (IVP)
+    technique described in Bekkers et al. "A PDE approach to Data-Driven
+    Sub-Riemannian Geodesics in SE(2)" (2015), and to find geodesics connecting
+    points with respect to the distance map that solves the Eikonal PDE.
 
     One application in which we want to solve the Eikonal PDE and subsequently
     find geodesics connecting pairs of points is vascular tracking. This package
@@ -15,7 +15,7 @@
     (hopefully) track vessels.
 
     Summary: compute distance map and geodesics with respect to data-driven 
-    metric on R^2 and SE(2).
+    metric on R^2, SE(2), and (soon) SO(3).
 """
 
 # Access entire backend
@@ -50,9 +50,9 @@ def eikonal_solver_SE2(cost, source_point, dxy, dθ, θs, controller="sub-Rieman
                        n_check_initialisation=None, tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant
-    Riemannian metric tensor field defined by `G_np` and `cost_np`, with source
-    at `source_point`, using the iterative method described in Bekkers et al. 
-    "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    norm, with source at `source_point`, using the iterative method described in
+    Bekkers et al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in
+    SE(2)" (2015).
 
     Args:
         `cost`: np.ndarray of cost function throughout domain, taking values
@@ -152,10 +152,10 @@ def eikonal_solver_SE2_uniform(domain_shape, source_point, dxy, dθ, θs, contro
                                plus_softness=0., target_point=None, n_max=1e5,n_check=None, tol=1e-3, dε=1.,
                                initial_condition=100.):
     """
-    Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
-    metric tensor field defined by `G_np`, with source at `source_point`, using
-    the iterative method described in Bekkers et al. "A PDE approach to 
-    Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    Solve the Eikonal PDE on SE(2) equipped with a left invariant norm, with
+    source at `source_point`, using the iterative method described in Bekkers et
+    al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)"
+    (2015).
 
     Args:
         `domain_shape`: Tuple[int] describing the shape of the domain, with
@@ -241,12 +241,11 @@ def eikonal_solver_SE2_uniform(domain_shape, source_point, dxy, dθ, θs, contro
     return W, grad_W
 
 def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, xs, ys, θs, controller="sub-Riemannian",
-                               G=None, ξ=None, plus_softness=0., dt=None, β=0., n_max=10000):
+                               G=None, ξ=None, dt=None, β=0., n_max=10000):
     """
-    Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant
-    Riemannian metric tensor field defined by `G_np` and `cost_np`, with source
-    at `source_point`, using the iterative method described in Bekkers et al. 
-    "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    Find the geodesic connecting `target_point` to `source_point`, using 
+    gradient descent back tracking, as described in Bekkers et al. "A PDE 
+    approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
         `grad_W`: np.ndarray of upwind gradient with respect to some cost of the
@@ -273,12 +272,6 @@ def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, xs, ys,
           to `None`
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0. Defaults to `None`.
-        `plus_softness`: Strength of the plus controller, taking values between
-          0 and 1. As `plus_softness` is decreased, motion in the reverse A1
-          direction is increasingly inhibited. For `plus_softness` 0, motion is
-          possibly exclusively in the forward A1 direction; for `plus_softness`
-          1, we recover the sub-Riemannian metric that is symmetric in the A1
-          direction. Defaults to 0.
         `dt`: Step size, taking values greater than 0. Defaults to 1.
         `β`: Momentum parameter in gradient descent, taking values between 0 and 
           1. Defaults to 0.
