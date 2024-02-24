@@ -7,27 +7,20 @@
     Problem (IVP) technique described in Bekkers et al. "A PDE approach to 
     Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015). The primary methods
     are:
-      1. `eikonal_solver`: solve the Eikonal PDE with respect to some 
-      data-driven left invariant metric, defined by a matrix giving the
-      underlying left invariant metric and a cost function. Currently, the 
-      method gives incorrect results when the underlying metric is not diagonal
-      (with respect to the left invariant frame). This is likely caused by the
-      upwind derivatives that are used.
-      2. `eikonal_solver_sub_Riemannian`: solve the Eikonal PDE with respect to
-      some data-driven left invariant sub-Riemannian metric, defined by a 
-      stiffness parameter ξ a cost function. The stiffness parameter ξ fixes the
-      relative cost of moving in the A1-direction compared to the A3-direction
-      (it corresponds to β in the paper by Bekkers et al.); motion in the 
-      A2-direction is inhibited.
-      3. `eikonal_solver_plus`: solve the Eikonal PDE with respect to some
+      1. `eikonal_solver`: solve the Eikonal PDE with respect to some
       data-driven left invariant plus controller, defined by a stiffness 
       parameter ξ, a plus softness ε, and a cost function. The stiffness 
       parameter ξ fixes the relative cost of moving in the A1-direction compared
       to the A3-direction (it corresponds to β in the paper by Bekkers et al.);
       the plus softness ε restricts the motion in the reverse A1-direction; 
       motion in the A2-direction is inhibited.
-    Each of these methods has a uniform cost variant, found by appending to the
-    method name.
+      2. `eikonal_solver_uniform`: solve the Eikonal PDE with respect to some
+      left invariant plus controller, defined by a stiffness parameter ξ, a plus
+      softness ε, and a cost function. The stiffness parameter ξ fixes the
+      relative cost of moving in the A1-direction compared to the A3-direction
+      (it corresponds to β in the paper by Bekkers et al.); the plus softness ε
+      restricts the motion in the reverse A1-direction; motion in the
+      A2-direction is inhibited.
 """
 
 import numpy as np

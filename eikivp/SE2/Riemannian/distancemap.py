@@ -3,10 +3,10 @@
     ============
 
     Provides methods to compute the distance map on SE(2) with respect to a
-    data-driven left invariant Riemannian metric, by solving the Eikonal PDE using the iterative Initial Value 
-    Problem (IVP) technique described in Bekkers et al. "A PDE approach to 
-    Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015). The primary methods
-    are:
+    data-driven left invariant Riemannian metric, by solving the Eikonal PDE
+    using the iterative Initial Value Problem (IVP) technique described in
+    Bekkers et al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in
+    SE(2)" (2015). The primary methods are:
       1. `eikonal_solver`: solve the Eikonal PDE with respect to some 
       data-driven left invariant Riemannian metric, defined by the diagonal
       components of the underlying left invariant metric, with respect to the

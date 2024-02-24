@@ -11,9 +11,9 @@
       2. backtracking: compute the geodesic, with respect to the distance map,
       connecting two points. 
 
-    Additionally, we have the following "internal" submodules
+    Additionally, we have the following "internal" submodules:
       1. interpolate: interpolate scalar and vector fields between grid points
-      with bilinear interpolation.
+      with trilinear interpolation.
       2. metric: compute the norm of vectors given some data-driven metric.
 """
 
