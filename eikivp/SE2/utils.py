@@ -144,14 +144,14 @@ def field_abs_max(
     Find the largest absolute value in `scalar_field`.
 
     Args:
-        static: ti.field(dtype=[float], shape=shape) of 2D scalar field.
+        static: ti.field(dtype=[float], shape=shape) of 3D scalar field.
 
     Returns:
         Largest absolute value in `scalar_field`.
     """
     value = ti.abs(scalar_field[0, 0, 0])
     for I in ti.grouped(scalar_field):
-        value = ti.atomic_min(value, ti.abs(scalar_field[I]))
+        value = ti.atomic_max(value, ti.abs(scalar_field[I]))
     return value
 
 def check_convergence(dW_dt, tol=1e-3, target_point=None):
