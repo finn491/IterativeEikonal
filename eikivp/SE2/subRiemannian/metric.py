@@ -2,7 +2,8 @@
     metric
     ======
 
-    Provides tools to deal with metrics SE(2). The primary methods are:
+    Provides tools to deal with sub-Riemannian metrics SE(2). The primary
+    methods are:
       1. `invert_metric`: compute the matrix defining the dual metric from the
       matrix defining the primal metric.
       2. `normalise_LI`: normalise a vector, given with respect to the left
@@ -21,9 +22,6 @@
       respect to the left invariant frame, in the left static frame.
       9. `vectorfield_LI_to_static`: compute the components of a vectorfield,
       given with respect to the left invariant, in the static frame.
-    
-    Additionally, we have numerous functions to reorder arrays to align either
-    with the standard array indexing conventions or with the real axes.
 """
 
 import taichi as ti
@@ -40,12 +38,12 @@ def normalise_LI(
     @taichi.func
 
     Normalise `vec`, represented in left invariant coordinates, to 1 with 
-    respect to the left invariant metric tensor defined by `G`.
+    respect to the left invariant sub-Riemannian metric tensor defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
 
     Returns:
@@ -63,12 +61,12 @@ def norm_LI(
     @taichi.func
 
     Compute the norm of `vec` represented in left invariant coordinates with
-    respect to the left invariant metric tensor defined by `G`.
+    respect to the left invariant sub-Riemannian metric tensor defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
 
     Returns:
@@ -91,23 +89,18 @@ def normalise_static(
     @taichi.func
 
     Normalise `vec`, represented in static coordinates, to 1 with respect to the 
-    left invariant metric tensor defined by `G`.
+    left invariant sub-Riemannian metric tensor defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
         `θ`: angle coordinate of corresponding point on the manifold.
 
     Returns:
         ti.types.vector(n=3, dtype=[float]) of normalisation of `vec`.
     """
-    # Can do this but it's not necessary
-    # vec_LI = vector_LI_to_static(vec, θ)
-    # vec_normalised_LI = normalise_LI(vec_LI, G_inv)
-    # vec_normalised = vector_static_to_LI(vec_normalised_LI, θ)
-    # return vec_normalised
     return vec / norm_static(vec, ξ, cost, θ)
 
 @ti.func
@@ -121,12 +114,12 @@ def norm_static(
     @taichi.func
 
     Compute the norm of `vec` represented in static coordinates with respect to 
-    the left invariant metric tensor defined by `G`.
+    the left invariant sub-Riemannian metric tensor defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `G`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of metric 
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
         `θ`: angle coordinate of corresponding point on the manifold.
 

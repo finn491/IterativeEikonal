@@ -2,7 +2,8 @@
     metric
     ======
 
-    Provides tools to deal with metrics SE(2). The primary methods are:
+    Provides tools to deal with Riemannian metrics SE(2). The primary methods
+    are:
       1. `invert_metric`: compute the matrix defining the dual metric from the
       matrix defining the primal metric.
       2. `normalise_LI`: normalise a vector, given with respect to the left
@@ -115,11 +116,6 @@ def normalise_static(
     Returns:
         ti.types.vector(n=3, dtype=[float]) of normalisation of `vec`.
     """
-    # Can do this but it's not necessary
-    # vec_LI = vector_LI_to_static(vec, θ)
-    # vec_normalised_LI = normalise_LI(vec_LI, G_inv)
-    # vec_normalised = vector_static_to_LI(vec_normalised_LI, θ)
-    # return vec_normalised
     return vec / norm_static(vec, G, cost, θ)
 
 @ti.func

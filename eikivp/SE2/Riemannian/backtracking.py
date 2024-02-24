@@ -44,8 +44,8 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
           sampled.
         `θs_np`: Orientation coordinate at every point in the grid on which
           `cost` is sampled.
-        `G_np`: np.ndarray(shape=(3, 3), dtype=[float]) of matrix of left 
-          invariant metric tensor field with respect to left invariant basis.
+        `G_np`: np.ndarray(shape=(3,), dtype=[float]) of constants of the
+          diagonal metric tensor with respect to left invariant basis.
       Optional:
         `dt`: Step size, taking values greater than 0. Defaults to 1.
         `β`: Momentum parameter in gradient descent, taking values between 0 and 
