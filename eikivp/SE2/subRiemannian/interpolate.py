@@ -2,31 +2,29 @@
     interpolate
     ===========
 
-    Provides tools to interpolate fields on SE(2). The primary methods are:
-      1. `scalar_bilinear_interpolate`: interpolate a scalar field bilinearly at
-      some point in the domain.
-      2. `vectorfield_bilinear_interpolate_LI`: interpolate a vector field, with
+    Provides tools to interpolate vector fields, normalised to 1 with respect to
+    a Riemannian metric, on SE(2). The primary methods are:
+      1. `vectorfield_bilinear_interpolate_LI`: interpolate a vector field, with
       norm 1, given with respect to the left invariant frame, bilinearly at some
       point in the domain. This method seems not to work properly.
-      3. `vectorfield_bilinear_interpolate_LI`: interpolate a vector field, with
+      2. `vectorfield_bilinear_interpolate_LI`: interpolate a vector field, with
       norm 1, given with respect to the static frame, bilinearly at some point
       in the domain.
 """
 
 import taichi as ti
-from eikivp.utils import (
-    sanitize_index_SE2
-)
 from eikivp.SE2.utils import (
     trilinear_interpolate,
-    scalar_trilinear_interpolate
+    scalar_trilinear_interpolate,
+    sanitize_index
 )
 from eikivp.SE2.subRiemannian.metric import (
     normalise_LI,
     normalise_static
 )
 
-# I don't think this works properly, we should actually also interpolate the frame...
+# I don't think this works properly, we should actually also interpolate the
+# frame... But for sufficiently fine discretisation it won't matter.
 @ti.func
 def vectorfield_trilinear_interpolate_LI(
     vectorfield: ti.template(),
@@ -36,8 +34,6 @@ def vectorfield_trilinear_interpolate_LI(
 ) -> ti.types.vector(3, ti.f32):
     """
     @taichi.func
-
-    ---------------------------PROBABLY DOESN'T WORK---------------------------
 
     Interpolate vector field, normalised to 1 and given in left invariant
     coordinates, `vectorfield` at continuous `index` trilinearly, via repeated 
@@ -59,9 +55,9 @@ def vectorfield_trilinear_interpolate_LI(
     """
     r = ti.math.fract(index)
     f = ti.math.floor(index, ti.i32)
-    f = sanitize_index_SE2(f, vectorfield)
+    f = sanitize_index(f, vectorfield)
     c = ti.math.ceil(index, ti.i32)
-    c = sanitize_index_SE2(c, vectorfield)
+    c = sanitize_index(c, vectorfield)
 
     u000, v000, w000 = vectorfield[f[0], f[1], f[2]]
     u001, v001, w001 = vectorfield[f[0], f[1], c[2]]
@@ -112,9 +108,9 @@ def vectorfield_trilinear_interpolate_static(
     """
     r = ti.math.fract(index)
     f = ti.math.floor(index, ti.i32)
-    f = sanitize_index_SE2(f, vectorfield)
+    f = sanitize_index(f, vectorfield)
     c = ti.math.ceil(index, ti.i32)
-    c = sanitize_index_SE2(c, vectorfield)
+    c = sanitize_index(c, vectorfield)
 
     u000, v000, w000 = vectorfield[f[0], f[1], f[2]]
     u001, v001, w001 = vectorfield[f[0], f[1], c[2]]
