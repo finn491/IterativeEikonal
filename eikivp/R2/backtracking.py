@@ -15,7 +15,7 @@ from eikivp.R2.interpolate import (
     vectorfield_bilinear_interpolate,
     scalar_bilinear_interpolate
 )
-from eikivp.R2.metric import (
+from eikivp.R2.utils import (
     align_to_real_axis_point,
     align_to_real_axis_scalar_field,
     align_to_real_axis_vector_field,
@@ -23,7 +23,8 @@ from eikivp.R2.metric import (
 from eikivp.utils import sparse_to_dense
 
 
-def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, ys, G_np=None, dt=None, β=0., n_max=10000):
+def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, ys, G_np=None, dt=None, β=0.,
+                           n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -37,9 +38,9 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, y
         `cost_np`: np.ndarray of cost function throughout domain, taking values
           between 0 and 1.
       Optional:
-        `G_np`: np.ndarray(shape=(2, 2), dtype=[float]) of matrix of left 
-          invariant metric tensor field with respect to standard basis. Defaults
-          to standard Euclidean metric.
+        `G_np`: np.ndarray(shape=(2,), dtype=[float]) of constants of the
+          diagonal metric tensor with respect to standard basis. Defaults to
+          standard Euclidean metric.
         `dt`: Step size, taking values greater than 0. Defaults to the minimum
           of `cost_np`.
         `β`: Momentum parameter in gradient descent, taking values between 0 and 
@@ -61,8 +62,8 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, y
 
     # Set hyperparameters
     if G_np is None:
-        G_np = np.identity(2)
-    G = ti.Matrix(G_np, ti.f32)
+        G_np = np.ones(2)
+    G = ti.Vector(G_np, ti.f32)
     if dt is None:
         # It would make sense to also include G somehow, but I am not sure how.
         dt = cost_np.min()
@@ -95,7 +96,7 @@ def geodesic_back_tracking_backend(
     grad_W: ti.template(),
     source_point: ti.types.vector(2, ti.f32),
     target_point: ti.types.vector(2, ti.f32),
-    G: ti.types.matrix(2, 2, ti.f32),
+    G: ti.types.vector(2, ti.f32),
     cost: ti.template(),
     dt: ti.f32,
     n_max: ti.i32,
@@ -118,8 +119,8 @@ def geodesic_back_tracking_backend(
           source point in `W_np`.
         `target_point`: ti.types.vector(n=2, dtype=[float]) describing index of 
           target point in `W_np`.
-        `G`: ti.types.matrix(n=2, m=2, dtype=[float]) of constants of metric 
-          tensor with respect to standard basis.
+        `G`: ti.types.vector(n=2, dtype=[float]) of constants of the diagonal
+          metric tensor with respect to standard basis.
         `cost`: ti.field(dtype=[float]) of cost function, taking values between
           0 and 1.
         `n_max`: Maximum number of points in geodesic, taking positive integral
@@ -170,10 +171,8 @@ def get_next_point(
         Next point in the gradient descent.
     """
     new_point = ti.Vector([0., 0.], dt=ti.f32)
-    # new_point[0] = point[0] + dt * gradient_at_point[1] # Because arrays are
-    # new_point[1] = point[1] - dt * gradient_at_point[0] # indexed stupidly.
-    new_point[0] = point[0] - dt * gradient_at_point[0] # Because arrays are
-    new_point[1] = point[1] - dt * gradient_at_point[1] # indexed stupidly.
+    new_point[0] = point[0] - dt * gradient_at_point[0]
+    new_point[1] = point[1] - dt * gradient_at_point[1]
     return new_point
 
 def convert_continuous_indices_to_real_space_R2(γ_ci_np, xs_np, ys_np):
