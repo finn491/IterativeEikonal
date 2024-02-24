@@ -2,9 +2,9 @@
     distancemap
     ============
 
-    Provides methods to compute the distance map on R^2 with respect to various
-    metrics, by solving the Eikonal PDE using the iterative Initial Value 
-    Problem (IVP) technique described in Bekkers et al. "A PDE approach to 
+    Provides methods to compute the distance map on R^2 with a data-driven left
+    invariant metric, by solving the Eikonal PDE using the iterative Initial
+    Value Problem (IVP) technique described in Bekkers et al. "A PDE approach to 
     Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015). The primary methods
     are:
       1. `eikonal_solver`: solve the Eikonal PDE with respect to some 

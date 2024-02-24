@@ -21,13 +21,9 @@
       respect to the left invariant frame, in the left static frame.
       9. `vectorfield_LI_to_static`: compute the components of a vectorfield,
       given with respect to the left invariant, in the static frame.
-    
-    Additionally, we have numerous functions to reorder arrays to align either
-    with the standard array indexing conventions or with the real axes.
 """
 
 import taichi as ti
-import numpy as np
 
 # Metric Inversion
 

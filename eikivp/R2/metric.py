@@ -12,7 +12,6 @@
 """
 
 import taichi as ti
-import numpy as np
 
 # Metric Inversion
 
