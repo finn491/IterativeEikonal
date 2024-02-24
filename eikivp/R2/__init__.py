@@ -17,6 +17,8 @@
       2. interpolate: interpolate scalar and vector fields between grid points
       with bilinear interpolation.
       3. metric: compute the norm of vectors given some data-driven metric.
+      4. utils: index safely into arrays and align the data in arrays with real
+      axes or standard array indexing conventions.
 """
 
 # Access entire backend

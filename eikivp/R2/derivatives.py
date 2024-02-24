@@ -12,10 +12,8 @@
 """
 
 import taichi as ti
-from eikivp.utils import (
-    sanitize_index_R2,
-    select_upwind_derivative
-)
+from eikivp.utils import select_upwind_derivative
+from eikivp.R2.utils import sanitize_index
 
 
 @ti.func
@@ -42,16 +40,14 @@ def derivatives(
         `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
     """
-    # I_dx = ti.Vector([0, 1], dt=ti.i32)
-    # I_dy = ti.Vector([-1, 0], dt=ti.i32)
     I_dx = ti.Vector([1, 0], dt=ti.i32)
     I_dy = ti.Vector([0, 1], dt=ti.i32)
     for I in ti.grouped(u):
         # We do not need to interpolate because we always end up on the grid.
-        I_dx_forward = sanitize_index_R2(I + I_dx, u)
-        I_dx_backward = sanitize_index_R2(I - I_dx, u)
-        I_dy_forward = sanitize_index_R2(I + I_dy, u)
-        I_dy_backward = sanitize_index_R2(I - I_dy, u)
+        I_dx_forward = sanitize_index(I + I_dx, u)
+        I_dx_backward = sanitize_index(I - I_dx, u)
+        I_dy_forward = sanitize_index(I + I_dy, u)
+        I_dy_backward = sanitize_index(I - I_dy, u)
         dx_forward[I] = (u[I_dx_forward] - u[I]) / dxy
         dx_backward[I] = (u[I] - u[I_dx_backward]) / dxy
         dy_forward[I] = (u[I_dy_forward] - u[I]) / dxy
@@ -123,5 +119,3 @@ def upwind_derivatives(
     for I in ti.grouped(u):
         upwind_dx[I] = select_upwind_derivative(dx_forward[I], dx_backward[I])
         upwind_dy[I] = select_upwind_derivative(dy_forward[I], dy_backward[I])
-
-
