@@ -3,13 +3,13 @@
     ===========
 
     Provides tools to interpolate vector fields, normalised to 1 with respect to
-    a Riemannian metric, on SE(2). The primary methods are:
-      1. `vectorfield_bilinear_interpolate_LI`: interpolate a vector field, with
-      norm 1, given with respect to the left invariant frame, bilinearly at some
-      point in the domain. This method seems not to work properly.
-      2. `vectorfield_bilinear_interpolate_LI`: interpolate a vector field, with
-      norm 1, given with respect to the static frame, bilinearly at some point
-      in the domain.
+    a sub-Riemannian metric, on SE(2). The primary methods are:
+      1. `vectorfield_trilinear_interpolate_LI`: interpolate a vector field,
+      with norm 1, given with respect to the left invariant frame, trilinearly
+      at some point in the domain.
+      2. `vectorfield_trilinear_interpolate_static`: interpolate a vector field,
+      with norm 1, given with respect to the static frame, trilinearly at some
+      point in the domain.
 """
 
 import taichi as ti

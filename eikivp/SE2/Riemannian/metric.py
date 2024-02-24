@@ -2,18 +2,20 @@
     metric
     ======
 
-    Provides tools to deal with Riemannian metrics SE(2). The primary methods
+    Provides tools to deal with Riemannian metrics on SE(2). The primary methods
     are:
       1. `invert_metric`: compute the matrix defining the dual metric from the
       matrix defining the primal metric.
       2. `normalise_LI`: normalise a vector, given with respect to the left
-      invariant frame, to norm 1 with respect to some data-driven metric.
+      invariant frame, to norm 1 with respect to some data-driven Riemannian
+      metric.
       3. `norm_LI`: compute the norm of a vector, given with respect to the left
-      invariant frame, with respect to some data-driven metric.
+      invariant frame, with respect to some data-driven Riemannian metric.
       4. `normalise_static`: normalise a vector, given with respect to the
-      static frame, to norm 1 with respect to some data-driven metric.
+      static frame, to norm 1 with respect to some data-driven Riemannian
+      metric.
       5. `norm_static`: compute the norm of a vector, given with respect to the
-      static frame, with respect to some data-driven metric.
+      static frame, with respect to some data-driven Riemannian metric.
       6. `vector_static_to_LI`: compute the components of a vector, given with
       respect to the static frame, in the left invariant frame.
       7. `vectorfield_static_to_LI`: compute the components of a vectorfield,

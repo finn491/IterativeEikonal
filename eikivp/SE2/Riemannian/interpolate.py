@@ -7,7 +7,7 @@
       1. `vectorfield_trilinear_interpolate_LI`: interpolate a vector field,
       with norm 1, given with respect to the left invariant frame, trilinearly
       at some point in the domain.
-      2. `vectorfield_trilinear_interpolate_LI`: interpolate a vector field,
+      2. `vectorfield_trilinear_interpolate_static`: interpolate a vector field,
       with norm 1, given with respect to the static frame, trilinearly at some
       point in the domain.
 """
