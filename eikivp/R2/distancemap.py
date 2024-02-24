@@ -55,10 +55,10 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
           `cost_np`. Defaults to `None`. If `target_point` is provided, the
           algorithm will terminate when the Hamiltonian has converged at
           `target_point`; otherwise it will terminate when the Hamiltonian has
-          converged throughout the domain. 
-        `G_np`: np.ndarray(shape=(2, 2), dtype=[float]) of matrix of left 
-          invariant metric tensor field with respect to standard basis. Defaults
-          to standard Euclidean metric.
+          converged throughout the domain.
+        `G_np`: np.ndarray(shape=(2,), dtype=[float]) of constants of the
+          diagonal metric tensor with respect to standard basis. Defaults to
+          standard Euclidean metric.
         `dxy`: Spatial step size, taking values greater than 0. Defaults to 1.
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
@@ -99,12 +99,12 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
 
     # Set hyperparameters
     if G_np is None:
-        G_np = np.identity(2)
-    G_inv = ti.Matrix(invert_metric(G_np), ti.f32)
+        G_np = np.ones(2)
+    G_inv = ti.Vector(invert_metric(G_np), ti.f32)
     # Heuristic, so that W does not become negative.
-    # The sqrt(4) comes from the fact that the norm of the gradient consists of
-    # 4 terms.
-    ε = dε * dxy / np.sqrt(4 * G_inv.max()) #  * cost_np.min()
+    # The sqrt(2) comes from the fact that the norm of the gradient consists of
+    # 2 terms.
+    ε = dε * dxy / np.sqrt(2 * G_inv.max()) #  * cost_np.min()
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
     N_check = int(n_max / n_check)
@@ -112,7 +112,6 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
     # Initialise Taichi objects
     cost = get_padded_cost(cost_np)
     W = get_padded_cost(W_init_np, pad_value=initial_condition)
-    # W = get_initial_W(shape, initial_condition=100.)
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
     
@@ -154,7 +153,7 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
 def step_W(
     W: ti.template(),
     cost: ti.template(),
-    G_inv: ti.types.matrix(2, 2, ti.f32),
+    G_inv: ti.types.vector(2, ti.f32),
     dx_forward: ti.template(),
     dx_backward: ti.template(),
     dy_forward: ti.template(),
@@ -175,8 +174,8 @@ def step_W(
     Args:
       Static:
         `cost`: ti.field(dtype=[float], shape=shape) of cost function.
-        `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
-          inverse metric tensor with respect to standard basis.
+        `G_inv`: ti.types.vector(n=2, dtype=[float]) of constants of the inverse
+          of the diagonal metric tensor with respect to standard basis.
         `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives.
         `dxy`: Spatial step size, taking values greater than 0.
         `ε`: "Time" step size, taking values greater than 0.
@@ -192,9 +191,8 @@ def step_W(
     upwind_derivatives(W, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W)
     for I in ti.grouped(W):
         dW_dt[I] = (1 - (ti.math.sqrt(
-            1 * G_inv[0, 0] * dx_W[I] * dx_W[I] +
-            2 * G_inv[0, 1] * dx_W[I] * dy_W[I] + # Metric tensor is symmetric.
-            1 * G_inv[1, 1] * dy_W[I] * dy_W[I]
+            G_inv[0] * dx_W[I]**2 +
+            G_inv[1] * dy_W[I]**2
         ) / cost[I])) * cost[I]
         W[I] += dW_dt[I] * ε
 
@@ -202,7 +200,7 @@ def step_W(
 def distance_gradient_field(
     W: ti.template(),
     cost: ti.template(),
-    G_inv: ti.types.matrix(2, 2, ti.f32),
+    G_inv: ti.types.vector(2, ti.f32),
     dxy: ti.f32,
     dx_forward: ti.template(),
     dx_backward: ti.template(),
@@ -222,8 +220,8 @@ def distance_gradient_field(
       Static:
         `W`: ti.field(dtype=[float], shape=shape) of approximate distance map.
         `cost`: ti.field(dtype=[float], shape=shape) of cost function.
-        `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
-          inverse metric tensor with respect to standard basis.
+        `G_inv`: ti.types.vector(n=2, dtype=[float]) of constants of the inverse
+          of the diagonal metric tensor with respect to standard basis.
         `dxy`: Spatial step size, taking values greater than 0.
       Mutated:
         `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
@@ -240,8 +238,8 @@ def distance_gradient_field(
     upwind_derivatives(W, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W)
     for I in ti.grouped(dx_W):
         grad_W[I] = ti.Vector([
-            G_inv[0, 0] * dx_W[I] + G_inv[0, 1] * dy_W[I], 
-            G_inv[1, 0] * dx_W[I] + G_inv[1, 1] * dy_W[I]
+            G_inv[0] * dx_W[I], 
+            G_inv[1] * dy_W[I]
         ]) / cost[I]**2
 
 
@@ -265,10 +263,10 @@ def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=N
           `domain_shape`. Defaults to `None`. If `target_point` is provided, the
           algorithm will terminate when the Hamiltonian has converged at
           `target_point`; otherwise it will terminate when the Hamiltonian has
-          converged throughout the domain. 
-        `G_np`: np.ndarray(shape=(2, 2), dtype=[float]) of matrix of left 
-          invariant metric tensor field with respect to standard basis. Defaults
-          to standard Euclidean metric.
+          converged throughout the domain.
+        `G_np`: np.ndarray(shape=(2,), dtype=[float]) of constants of the
+          diagonal metric tensor with respect to standard basis. Defaults to
+          standard Euclidean metric.
         `dxy`: Spatial step size, taking values greater than 0. Defaults to 1.
         `n_max`: Maximum number of iterations, taking positive values. Defaults 
           to 1e5.
@@ -295,12 +293,12 @@ def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=N
 
     # Set hyperparameters
     if G_np is None:
-        G_np = np.identity(2)
-    G_inv = ti.Matrix(invert_metric(G_np), ti.f32)
+        G_np = np.ones(2)
+    G_inv = ti.Vector(invert_metric(G_np), ti.f32)
     # Heuristic, so that W does not become negative.
-    # The sqrt(4) comes from the fact that the norm of the gradient consists of
-    # 4 terms.
-    ε = dε * dxy / np.sqrt(4 * G_inv.max())
+    # The sqrt(2) comes from the fact that the norm of the gradient consists of
+    # 2 terms.
+    ε = dε * dxy / np.sqrt(2 * G_inv.max())
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
     N_check = int(n_max / n_check)
@@ -347,7 +345,7 @@ def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=N
 @ti.kernel
 def step_W_uniform(
     W: ti.template(),
-    G_inv: ti.types.matrix(2, 2, ti.f32),
+    G_inv: ti.types.vector(2, ti.f32),
     dx_forward: ti.template(),
     dx_backward: ti.template(),
     dy_forward: ti.template(),
@@ -367,8 +365,8 @@ def step_W_uniform(
 
     Args:
       Static:
-        `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
-          inverse metric tensor with respect to standard basis.
+        `G_inv`: ti.types.vector(n=2, dtype=[float]) of constants of the inverse
+          of the diagonal metric tensor with respect to standard basis.
         `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives.
         `dxy`: Spatial step size, taking values greater than 0.
         `ε`: "Time" step size, taking values greater than 0.
@@ -384,16 +382,15 @@ def step_W_uniform(
     upwind_derivatives(W, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W)
     for I in ti.grouped(W):
         dW_dt[I] = 1 - ti.math.sqrt(
-            1 * G_inv[0, 0] * dx_W[I] * dx_W[I] +
-            2 * G_inv[0, 1] * dx_W[I] * dy_W[I] + # Metric tensor is symmetric.
-            1 * G_inv[1, 1] * dy_W[I] * dy_W[I]
+            G_inv[0] * dx_W[I]**2 +
+            G_inv[1] * dy_W[I]**2
         )
         W[I] += dW_dt[I] * ε
 
 @ti.kernel
 def distance_gradient_field_uniform(
     W: ti.template(),
-    G_inv: ti.types.matrix(2, 2, ti.f32),
+    G_inv: ti.types.vector(2, ti.f32),
     dxy: ti.f32,
     dx_forward: ti.template(),
     dx_backward: ti.template(),
@@ -412,8 +409,8 @@ def distance_gradient_field_uniform(
     Args:
       Static:
         `W`: ti.field(dtype=[float], shape=shape) of approximate distance map.
-        `G_inv`: ti.types.matrix(n=3, m=3, dtype=[float]) of constants of 
-          inverse metric tensor with respect to standard basis.
+        `G_inv`: ti.types.vector(n=2, dtype=[float]) of constants of the inverse
+          of the diagonal metric tensor with respect to standard basis.
         `dxy`: Spatial step size, taking values greater than 0.
       Mutated:
         `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
@@ -430,6 +427,6 @@ def distance_gradient_field_uniform(
     upwind_derivatives(W, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W)
     for I in ti.grouped(dx_W):
         grad_W[I] = ti.Vector([
-            G_inv[0, 0] * dx_W[I] + G_inv[0, 1] * dy_W[I], 
-            G_inv[1, 0] * dx_W[I] + G_inv[1, 1] * dy_W[I]
+            G_inv[0] * dx_W[I], 
+            G_inv[1] * dy_W[I]
         ])
