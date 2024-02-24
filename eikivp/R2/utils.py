@@ -33,6 +33,59 @@ def sanitize_index(
         ti.math.clamp(index[1], 0, shape[1] - 1),
     ], dt=ti.i32)
 
+# Distance Map
+
+def get_boundary_conditions(source_point):
+    """
+    Determine the boundary conditions from `source_point`, giving the boundary
+    points and boundary values as TaiChi objects.
+    """
+    i_0, j_0 = source_point
+    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1]], dtype=int) # Account for padding.
+    boundaryvalues_np = np.array([0.], dtype=float)
+    boundarypoints = ti.Vector.field(n=2, dtype=ti.i32, shape=1)
+    boundarypoints.from_numpy(boundarypoints_np)
+    boundaryvalues = ti.field(shape=1, dtype=ti.f32)
+    boundaryvalues.from_numpy(boundaryvalues_np)
+    return boundarypoints, boundaryvalues
+
+@ti.kernel
+def field_abs_max(
+    scalar_field: ti.template()
+) -> ti.f32:
+    """
+    @taichi.kernel
+
+    Find the largest absolute value in `scalar_field`.
+
+    Args:
+        static: ti.field(dtype=[float], shape=shape) of 2D scalar field.
+
+    Returns:
+        Largest absolute value in `scalar_field`.
+    """
+    value = ti.abs(scalar_field[0, 0])
+    for I in ti.grouped(scalar_field):
+        value = ti.atomic_max(value, ti.abs(scalar_field[I]))
+    return value
+
+def check_convergence(dW_dt, tol=1e-3, target_point=None):
+    """
+    Check whether the IVP method has converged by comparing the Hamiltonian
+    `dW_dt` to tolerance `tol`. If `target_point` is provided, only check
+    convergence at `target_point`; otherwise check throughout the domain.
+    """
+    is_converged = False
+    if target_point is None:
+        error = field_abs_max(dW_dt)
+        print(error)
+        is_converged = error < tol
+    else:
+        error = ti.abs(dW_dt[target_point[1], target_point[0]])
+        print(error)
+        is_converged = error < tol
+    return is_converged
+
 # Coordinate Transforms
 
 def coordinate_real_to_array(x, y, x_min, y_max, dxy):
@@ -232,24 +285,3 @@ def align_to_standard_array_axis_vector_field(vector_field):
     vector_field_transposed = np.transpose(vector_field, axes=(1, 0, 2))
     vector_field_aligned = np.flip(vector_field_transposed, axis=0)
     return vector_field_aligned
-
-# Apparently shouldn't do this...
-# @ti.func
-# def vector_standard_to_array(
-#     vector_standard: ti.types.vector(2, ti.f32),
-#     dxy: ti.f32
-# ) -> ti.types.vector(2, ti.f32):
-#     """
-#     @taichi.func
-
-#     Change the coordinates of the vector represented by `vector_standard` from 
-#     the standard frame to the frame of array indices, given that the spatial
-#     resolution is `dxy`.
-
-#     Args:
-#       Static:
-#         `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in LI
-#           coordinates.
-#         `dxy`: Spatial resolution, taking values greater than 0.
-#     """
-#     return vector_standard / dxy

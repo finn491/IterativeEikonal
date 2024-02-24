@@ -5,24 +5,25 @@
     Provides methods to compute the distance map on R^2 with respect to various
     metrics, by solving the Eikonal PDE using the iterative Initial Value 
     Problem (IVP) technique described in Bekkers et al. "A PDE approach to 
-    Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015). The primary method
-    is:
+    Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015). The primary methods
+    are:
       1. `eikonal_solver`: solve the Eikonal PDE with respect to some 
-      data-driven left invariant metric, defined by a matrix giving the
-      underlying left invariant metric and a cost function. Currently, the 
-      method gives incorrect results when the underlying metric is not diagonal
-      (with respect to the left invariant frame). This is likely caused by the
-      upwind derivatives that are used.
-    This method has a uniform cost variant, found by appending to the
-    method name.
+      data-driven left invariant metric, defined by the diagonal components of
+      the underlying left invariant metric, with respect to the standard basis
+      {dx, dy}, and a cost function.
+      2. `eikonal_solver_uniform`: solve the Eikonal PDE with respect to some 
+      left invariant metric, defined by its diagonal components, with respect to
+      the standard basis {dx, dy}.
 """
 
 import numpy as np
 import taichi as ti
 from tqdm import tqdm
 from eikivp.R2.derivatives import upwind_derivatives
-from eikivp.R2.metric import (
-    invert_metric,
+from eikivp.R2.metric import invert_metric
+from eikivp.R2.utils import (
+    get_boundary_conditions,
+    check_convergence,
     align_to_real_axis_point,
     align_to_real_axis_scalar_field,
     align_to_standard_array_axis_scalar_field,
@@ -89,7 +90,7 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
                                           n_max=n_max_initialisation, n_check=n_check_initialisation, tol=tol, dε=dε,
                                           initial_condition=initial_condition)
     
-    print("Solving Eikonal PDE data-driven left invariant metric.")
+    print("Solving Eikonal PDE with data-driven left invariant metric.")
     # Align with (x, y)-frame
     W_init_np = align_to_real_axis_scalar_field(W_init_np)
     cost_np = align_to_real_axis_scalar_field(cost_np)
@@ -432,53 +433,3 @@ def distance_gradient_field_uniform(
             G_inv[0, 0] * dx_W[I] + G_inv[0, 1] * dy_W[I], 
             G_inv[1, 0] * dx_W[I] + G_inv[1, 1] * dy_W[I]
         ])
-
-
-# Helper functions
-        
-def get_boundary_conditions(source_point):
-    """
-    Determine the boundary conditions from `source_point`, giving the boundary
-    points and boundary values as TaiChi objects.
-    """
-    i_0, j_0 = source_point
-    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1]], dtype=int) # Account for padding.
-    boundaryvalues_np = np.array([0.], dtype=float)
-    boundarypoints = ti.Vector.field(n=2, dtype=ti.i32, shape=1)
-    boundarypoints.from_numpy(boundarypoints_np)
-    boundaryvalues = ti.field(shape=1, dtype=ti.f32)
-    boundaryvalues.from_numpy(boundaryvalues_np)
-    return boundarypoints, boundaryvalues
-
-@ti.kernel
-def field_abs_max(
-    scalar_field: ti.template()
-) -> ti.f32:
-    """
-    @taichi.kernel
-
-    Find the largest absolute value in `scalar_field`.
-
-    Args:
-        static: ti.field(dtype=[float], shape=shape) of 2D scalar field.
-
-    Returns:
-        Largest absolute value in `scalar_field`.
-    """
-    value = ti.abs(scalar_field[0, 0])
-    for I in ti.grouped(scalar_field):
-        value = ti.atomic_min(value, ti.abs(scalar_field[I]))
-    return value
-
-def check_convergence(dW_dt, tol=1e-3, target_point=None):
-    """
-    Check whether the IVP method has converged by comparing the Hamiltonian
-    `dW_dt` to tolerance `tol`. If `target_point` is provided, only check
-    convergence at `target_point`; otherwise check throughout the domain.
-    """
-    is_converged = False
-    if target_point is None:
-        is_converged = field_abs_max(dW_dt) < tol
-    else:
-        is_converged = ti.abs(dW_dt[target_point[1], target_point[0]]) < tol
-    return is_converged
