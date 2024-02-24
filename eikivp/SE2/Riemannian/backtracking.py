@@ -3,14 +3,10 @@
     ============
 
     Provides methods to compute the geodesic, with respect to some distance map,
-    connecting two points in SE(2). The primary methods are:
+    connecting two points in SE(2). The primary method is:
       1. `geodesic_back_tracking`: compute the geodesic using gradient descent.
       The gradient must be provided; it is computed along with the distance map
       by the corresponding methods in the distancemap module.
-      2. TODO `geodesic_back_tracking_plus`: compute the geodesic using gradient
-      descent when the distance map was computed using the plus controller. The
-      gradient must be provided; it is computed along with the distance map by
-      the corresponding methods in the distancemap module.
 """
 
 import taichi as ti
@@ -28,7 +24,8 @@ from eikivp.SE2.utils import (
 )
 from eikivp.utils import sparse_to_dense
 
-def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np, ys_np, θs_np, G_np, dt=None, β=0., n_max=10000):
+def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np, ys_np, θs_np, G_np, dt=None, β=0.,
+                           n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 

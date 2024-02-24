@@ -2,32 +2,18 @@
     distancemap
     ============
 
-    Provides methods to compute the distance map on SE(2) with respect to various
-    metrics, by solving the Eikonal PDE using the iterative Initial Value 
+    Provides methods to compute the distance map on SE(2) with respect to a
+    data-driven left invariant Riemannian metric, by solving the Eikonal PDE using the iterative Initial Value 
     Problem (IVP) technique described in Bekkers et al. "A PDE approach to 
     Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015). The primary methods
     are:
       1. `eikonal_solver`: solve the Eikonal PDE with respect to some 
-      data-driven left invariant metric, defined by a matrix giving the
-      underlying left invariant metric and a cost function. Currently, the 
-      method gives incorrect results when the underlying metric is not diagonal
-      (with respect to the left invariant frame). This is likely caused by the
-      upwind derivatives that are used.
-      2. `eikonal_solver_sub_Riemannian`: solve the Eikonal PDE with respect to
-      some data-driven left invariant sub-Riemannian metric, defined by a 
-      stiffness parameter ξ a cost function. The stiffness parameter ξ fixes the
-      relative cost of moving in the A1-direction compared to the A3-direction
-      (it corresponds to β in the paper by Bekkers et al.); motion in the 
-      A2-direction is inhibited.
-      3. `eikonal_solver_plus`: solve the Eikonal PDE with respect to some
-      data-driven left invariant plus controller, defined by a stiffness 
-      parameter ξ, a plus softness ε, and a cost function. The stiffness 
-      parameter ξ fixes the relative cost of moving in the A1-direction compared
-      to the A3-direction (it corresponds to β in the paper by Bekkers et al.);
-      the plus softness ε restricts the motion in the reverse A1-direction; 
-      motion in the A2-direction is inhibited.
-    Each of these methods has a uniform cost variant, found by appending to the
-    method name.
+      data-driven left invariant Riemannian metric, defined by the diagonal
+      components of the underlying left invariant metric, with respect to the
+      left invariant basis {A1, A2, A3}, and a cost function.
+      2. `eikonal_solver_uniform`: solve the Eikonal PDE with respect to some 
+      left invariant Riemannian metric, defined by its diagonal components, with
+      respect to the left invariant basis {A1, A2, A3}.
 """
 
 import numpy as np
