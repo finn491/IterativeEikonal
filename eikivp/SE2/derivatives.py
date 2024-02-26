@@ -2,7 +2,7 @@
     derivatives
     ===========
 
-    Provides a variety of derivative operators on R^2, namely:
+    Provides a variety of derivative operators on SE(2), namely:
       1. `derivatives`: computes the forward and backward finite difference
       approximations of the A1-, A2, and A3-derivatives.
       2. `abs_derivatives`: computes the absolute value of the upwind

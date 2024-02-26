@@ -24,11 +24,7 @@ from eikivp.SE2.derivatives import (
 )
 from eikivp.SE2.utils import (
     get_boundary_conditions,
-    check_convergence,
-    align_to_real_axis_point,
-    align_to_real_axis_scalar_field,
-    align_to_standard_array_axis_scalar_field,
-    align_to_standard_array_axis_vector_field
+    check_convergence
 )
 from eikivp.SE2.Riemannian.metric import (
     invert_metric
@@ -98,12 +94,6 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, target_point=N
                                           initial_condition=initial_condition)
     
     print("Solving Eikonal PDE data-driven left invariant metric.")
-    # Align with (x, y, θ)-frame
-    W_init_np = align_to_real_axis_scalar_field(W_init_np)
-    cost_np = align_to_real_axis_scalar_field(cost_np)
-    shape = cost_np.shape
-    source_point = align_to_real_axis_point(source_point, shape)
-    θs_np = align_to_real_axis_scalar_field(θs_np)
 
     # Set hyperparameters
     G_inv = ti.Vector(invert_metric(G_np), ti.f32)
@@ -154,11 +144,9 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, target_point=N
     distance_gradient_field(W, cost, G_inv, dxy, dθ, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward, 
                             A3_backward, A1_W, A2_W, A3_W, grad_W)
 
-    # Align with (I, J, K)-frame
+    # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
-    W_np = align_to_standard_array_axis_scalar_field(W_np)
-    grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
     return unpad_array(W_np, pad_shape=(1, 1, 0)), unpad_array(grad_W_np, pad_shape=(1, 1, 0, 0))
 
@@ -317,11 +305,6 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dxy, dθ, θs_np, t
           invariant metric tensor field described by `G_np`.
         np.ndarray of upwind gradient field of (approximate) distance map.
     """
-    # Align with (x, y, θ)-frame
-    shape = (domain_shape[1], domain_shape[0], domain_shape[2])
-    source_point = align_to_real_axis_point(source_point, shape)
-    θs_np = align_to_real_axis_scalar_field(θs_np)
-
     # Set hyperparameters.
     G_inv = ti.Vector(invert_metric(G_np), ti.f32)
     # Heuristic, so that W does not become negative.
@@ -335,7 +318,7 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dxy, dθ, θs_np, t
     N_check = int(n_max / n_check)
 
     # Initialise Taichi objects
-    W = get_initial_W(shape, initial_condition=initial_condition, pad_shape=((1,), (1,), (0,)))
+    W = get_initial_W(domain_shape, initial_condition=initial_condition, pad_shape=((1,), (1,), (0,)))
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
@@ -372,11 +355,9 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dxy, dθ, θs_np, t
     distance_gradient_field_uniform(W, G_inv, dxy, dθ, θs, A1_forward, A1_backward, A2_forward, A2_backward, A3_forward,
                                     A3_backward, A1_W, A2_W, A3_W, grad_W)
 
-    # Align with (I, J, K)-frame
+    # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
-    W_np = align_to_standard_array_axis_scalar_field(W_np)
-    grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
     return unpad_array(W_np, pad_shape=(1, 1, 0)), unpad_array(grad_W_np, pad_shape=(1, 1, 0, 0))
 

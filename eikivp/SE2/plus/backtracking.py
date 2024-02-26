@@ -16,10 +16,7 @@ from eikivp.SE2.plus.interpolate import (
 )
 from eikivp.SE2.utils import (
     get_next_point,
-    convert_continuous_indices_to_real_space_SE2,
-    align_to_real_axis_point,
-    align_to_real_axis_scalar_field,
-    align_to_real_axis_vector_field,
+    convert_continuous_indices_to_real_space,
     vector_LI_to_static
 )
 from eikivp.utils import sparse_to_dense
@@ -58,17 +55,8 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
     Returns:
         np.ndarray of geodesic connecting `target_point` to `source_point`.
     """
-    # Align with (x, y, θ)-frame
-    grad_W_np = align_to_real_axis_vector_field(grad_W_np)
-    shape = grad_W_np.shape[0:-1]
-    cost_np = align_to_real_axis_scalar_field(cost_np)
-    source_point = align_to_real_axis_point(source_point, shape)
-    target_point = align_to_real_axis_point(target_point, shape)
-    xs_np = align_to_real_axis_scalar_field(xs_np)
-    ys_np = align_to_real_axis_scalar_field(ys_np)
-    θs_np = align_to_real_axis_scalar_field(θs_np)
-
     # Set hyperparameters
+    shape = grad_W_np.shape[0:-1]
     if dt is None:
         # It would make sense to also include ξ somehow, but I am not sure how.
         dt = cost_np.min()
@@ -94,8 +82,8 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
     sparse_to_dense(γ, γ_dense)
     γ_ci = γ_dense.to_numpy()
 
-    # Align with (I, J, K)-frame
-    γ_np = convert_continuous_indices_to_real_space_SE2(γ_ci, xs_np, ys_np, θs_np)
+    # Cleanup
+    γ_np = convert_continuous_indices_to_real_space(γ_ci, xs_np, ys_np, θs_np)
     return γ_np
 
 @ti.kernel
