@@ -87,8 +87,6 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
                                           initial_condition=initial_condition)
     
     print("Solving Eikonal PDE with data-driven left invariant metric.")
-    # Align with (x, y)-frame
-    shape = cost_np.shape
 
     # Set hyperparameters
     if G_np is None:
@@ -133,7 +131,7 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
     distance_gradient_field(W, cost, G_inv, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
 
-    # Align with (I, J)-frame
+    # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
 
@@ -278,9 +276,6 @@ def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=N
           left invariant metric tensor field described by `G_np` and `cost_np`.
         np.ndarray of upwind gradient field of (approximate) distance map.
     """
-    # Align with (x, y)-frame
-    shape = domain_shape
-
     # Set hyperparameters
     if G_np is None:
         G_np = np.ones(2)
@@ -294,7 +289,7 @@ def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=N
     N_check = int(n_max / n_check)
 
     # Initialise Taichi objects
-    W = get_initial_W(shape, initial_condition=initial_condition)
+    W = get_initial_W(domain_shape, initial_condition=initial_condition)
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
     
@@ -323,7 +318,7 @@ def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=N
     # Compute gradient field: note that ||grad W|| = 1 by Eikonal PDE.
     distance_gradient_field_uniform(W, G_inv, dxy, dx_forward, dx_backward, dy_forward, dy_backward, dx_W, dy_W, grad_W)
 
-    # Align with (I, J)-frame
+    # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
 
