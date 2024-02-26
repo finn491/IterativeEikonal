@@ -15,11 +15,6 @@ from eikivp.R2.interpolate import (
     vectorfield_bilinear_interpolate,
     scalar_bilinear_interpolate
 )
-from eikivp.R2.utils import (
-    align_to_real_axis_point,
-    align_to_real_axis_scalar_field,
-    align_to_real_axis_vector_field,
-)
 from eikivp.utils import sparse_to_dense
 
 
@@ -51,10 +46,8 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, y
     Returns:
         np.ndarray of geodesic connecting `target_point` to `source_point`.
     """
-    # Align with (x, y)-frame
-    shape = grad_W_np.shape[0:-1]
-
     # Set hyperparameters
+    shape = grad_W_np.shape[0:-1]
     if G_np is None:
         G_np = np.ones(2)
     G = ti.Vector(G_np, ti.f32)
@@ -81,7 +74,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, y
     sparse_to_dense(γ, γ_dense)
     γ_ci = γ_dense.to_numpy()
 
-    # Align with (I, J)-frame
+    # Cleanup
     γ_np = convert_continuous_indices_to_real_space_R2(γ_ci, xs, ys)
     return γ_np
 
@@ -133,7 +126,6 @@ def geodesic_back_tracking_backend(
     γ.append(point)
     tol = 2.
     n = 0
-    # gradient_at_point = vectorfield_bilinear_interpolate(grad_W, target_point, G)
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
         gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point, G, cost)
         new_point = get_next_point(point, gradient_at_point, dt)
