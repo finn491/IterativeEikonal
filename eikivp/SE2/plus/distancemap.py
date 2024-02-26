@@ -32,11 +32,7 @@ from eikivp.SE2.derivatives import (
 )
 from eikivp.SE2.utils import (
     get_boundary_conditions,
-    check_convergence,
-    align_to_real_axis_point,
-    align_to_real_axis_scalar_field,
-    align_to_standard_array_axis_scalar_field,
-    align_to_standard_array_axis_vector_field
+    check_convergence
 )
 from eikivp.utils import (
     get_initial_W,
@@ -116,14 +112,6 @@ def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, plus_softness=0.
                                           initial_condition=initial_condition)
     
     print("Solving Eikonal PDE data-driven left invariant metric.")
-    # Align with (x, y, θ)-frame
-    W_init_np = align_to_real_axis_scalar_field(W_init_np)
-    cost_np = align_to_real_axis_scalar_field(cost_np)
-    shape = cost_np.shape
-    source_point = align_to_real_axis_point(source_point, shape)
-    if target_point is not None:
-        target_point = align_to_real_axis_point(target_point, shape)
-    θs_np = align_to_real_axis_scalar_field(θs_np)
 
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
@@ -170,11 +158,9 @@ def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, plus_softness=0.
     distance_gradient_field(W, cost, ξ, plus_softness, dxy, dθ, θs, A1_forward, A1_backward, A3_forward, A3_backward,
                             A1_W, A3_W, grad_W)
 
-    # Align with (I, J, K)-frame
+    # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
-    W_np = align_to_standard_array_axis_scalar_field(W_np)
-    grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
     return unpad_array(W_np, pad_shape=(1, 1, 0)), unpad_array(grad_W_np, pad_shape=(1, 1, 0, 0))
 
@@ -353,13 +339,6 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, plu
           F(p, v)^2 = ξ^2 (v^1)_+^2 + (v^3)^2,
         where (x)_+ := max{x, 0} is the positive part of x.
     """
-    # Align with (x, y, θ)-frame
-    shape = (domain_shape[1], domain_shape[0], domain_shape[2])
-    source_point = align_to_real_axis_point(source_point, shape)
-    if target_point is not None:
-        target_point = align_to_real_axis_point(target_point, shape)
-    θs_np = align_to_real_axis_scalar_field(θs_np)
-
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
     # The sqrt(2) comes from the fact that the norm of the gradient consists of
@@ -371,7 +350,7 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, plu
     N_check = int(n_max / n_check)
 
     # Initialise Taichi objects
-    W = get_initial_W(shape, initial_condition=initial_condition, pad_shape=((1,), (1,), (0,)))
+    W = get_initial_W(domain_shape, initial_condition=initial_condition, pad_shape=((1,), (1,), (0,)))
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
@@ -405,11 +384,9 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, plu
     distance_gradient_field_uniform(W, ξ, plus_softness, dxy, dθ, θs, A1_forward, A1_backward, A3_forward, A3_backward,
                                     A1_W, A3_W, grad_W)
 
-    # Align with (I, J, K)-frame
+    # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
-    W_np = align_to_standard_array_axis_scalar_field(W_np)
-    grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
     return unpad_array(W_np, pad_shape=(1, 1, 0)), unpad_array(grad_W_np, pad_shape=(1, 1, 0, 0))
 

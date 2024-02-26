@@ -56,7 +56,9 @@ def plot_image_array(image_array, x_min, x_max, y_min, y_max, cmap="gray", figsi
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
 
-    ax.imshow(image_array, cmap=cmap, extent=(x_min, x_max, y_min, y_max))
+    image_array_aligned = align_to_standard_array_axis_scalar_field(image_array)
+
+    ax.imshow(image_array_aligned, cmap=cmap, extent=(x_min, x_max, y_min, y_max))
     return fig, ax
 
 def plot_contour(distance, xs, ys, levels=None, linestyles=None, figsize=(12, 10), fig=None, ax=None, x_min=None, 

@@ -20,7 +20,8 @@ def sanitize_index(
     """
     @taichi.func
     
-    Make sure the `index` is inside the shape of `input`. Copied from Gijs Bellaard.
+    Make sure the `index` is inside the shape of `input`. Copied from Gijs
+    Bellaard.
 
     Args:
         `index`: ti.types.vector(n=3, dtype=ti.i32) index.
@@ -125,8 +126,8 @@ def get_boundary_conditions(source_point):
     Determine the boundary conditions from `source_point`, giving the boundary
     points and boundary values as TaiChi objects.
     """
-    i_0, j_0, θ_0 = source_point
-    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1, θ_0]], dtype=int) # Account for padding.
+    i_0, j_0, k_0 = source_point
+    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1, k_0]], dtype=int) # Account for padding.
     boundaryvalues_np = np.array([0.], dtype=float)
     boundarypoints = ti.Vector.field(n=3, dtype=ti.i32, shape=1)
     boundarypoints.from_numpy(boundarypoints_np)
@@ -201,7 +202,7 @@ def get_next_point(
     new_point[2] = point[2] - dt * gradient_at_point[2]
     return new_point
 
-def convert_continuous_indices_to_real_space_SE2(γ_ci_np, xs_np, ys_np, θs_np):
+def convert_continuous_indices_to_real_space(γ_ci_np, xs_np, ys_np, θs_np):
     """
     Convert the continuous indices in the geodesic `γ_ci_np` to the 
     corresponding real space coordinates described by `xs_np`, `ys_np`, and
@@ -218,12 +219,12 @@ def convert_continuous_indices_to_real_space_SE2(γ_ci_np, xs_np, ys_np, θs_np)
     θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
     θs.from_numpy(θs_np)
 
-    continuous_indices_to_real_SE2(γ_ci, xs, ys, θs, γ)
+    continuous_indices_to_real(γ_ci, xs, ys, θs, γ)
 
     return γ.to_numpy()
 
 @ti.kernel
-def continuous_indices_to_real_SE2(
+def continuous_indices_to_real(
     γ_ci: ti.template(),
     xs: ti.template(),
     ys: ti.template(),
@@ -345,7 +346,7 @@ def vector_static_to_LI(
     ], dt=ti.f32)
 
 
-def coordinate_real_to_array(x, y, θ, x_min, y_max, θ_min, dxy, dθ):
+def coordinate_real_to_array(x, y, θ, x_min, y_min, θ_min, dxy, dθ):
     """
     Compute the array indices (I, J, K) of the point defined by real coordinates 
     (`x`, `y`, `θ`). Can broadcast over entire arrays of real coordinates.
@@ -355,19 +356,19 @@ def coordinate_real_to_array(x, y, θ, x_min, y_max, θ_min, dxy, dθ):
         `y`: y-coordinate of the point.
         `θ`: θ-coordinate of the point.
         `x_min`: minimum value of x-coordinates in rectangular domain.
-        `y_max`: maximum value of y-coordinates in rectangular domain.
+        `y_min`: minimum value of y-coordinates in rectangular domain.
         `θ_min`: minimum value of θ-coordinates in rectangular domain.
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
           taking values greater than 0.
         `dθ`: orientational resolution, taking values greater than 0.
     """
-    J = np.rint((x - x_min) / dxy).astype(int)
-    I = np.rint((y_max - y) / dxy).astype(int)
+    I = np.rint((x - x_min) / dxy).astype(int)
+    J = np.rint((y - y_min) / dxy).astype(int)
     K = np.rint((θ - θ_min) / dθ).astype(int)
     return I, J, K
 
 
-def coordinate_array_to_real(I, J, K, x_min, y_max, θ_min, dxy, dθ):
+def coordinate_array_to_real(I, J, K, x_min, y_min, θ_min, dxy, dθ):
     """
     Compute the real coordinates (x, y, θ) of the point defined by array indices 
     (`I`, `J`, `K`). Can broadcast over entire arrays of array indices.
@@ -378,11 +379,13 @@ def coordinate_array_to_real(I, J, K, x_min, y_max, θ_min, dxy, dθ):
         `K`: K index of the point.
         `x_min`: minimum value of x-coordinates in rectangular domain.
         `y_min`: minimum value of y-coordinates in rectangular domain.
+        `θ_min`: minimum value of θ-coordinates in rectangular domain.
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
           taking values greater than 0.
+        `dθ`: orientational resolution, taking values greater than 0.
     """
-    x = x_min + J * dxy
-    y = y_max - I * dxy
+    x = x_min + I * dxy
+    y = y_min + J * dxy
     θ = θ_min + K * dθ
     return x, y, θ
 
@@ -438,7 +441,6 @@ def align_to_real_axis_scalar_field(field):
                  J ->                          J ->  
     """
     field_flipped = np.flip(field, axis=0)
-    # field_aligned = np.transpose(field_flipped, axes=(1, 0, 2))
     field_aligned = field_flipped.swapaxes(1, 0)
     return field_aligned
 
@@ -465,7 +467,6 @@ def align_to_real_axis_vector_field(vector_field):
                  J ->                          J ->  
     """
     vector_field_flipped = np.flip(vector_field, axis=0)
-    # vector_field_aligned = np.transpose(vector_field_flipped, axes=(1, 0, 2, 3))
     vector_field_aligned = vector_field_flipped.swapaxes(1, 0)
     return vector_field_aligned
 
@@ -548,34 +549,6 @@ def align_to_standard_array_axis_vector_field(vector_field):
                  y ->                          x ->
                  J ->                          J ->  
     """
-    # vector_field_transposed = np.transpose(vector_field, axes=(1, 0, 2, 3))
     vector_field_transposed = vector_field.swapaxes(1, 0)
     vector_field_aligned = np.flip(vector_field_transposed, axis=0)
     return vector_field_aligned
-
-# Apparently shouldn't do this...
-# @ti.func
-# def vector_standard_to_array(
-#     vector_standard: ti.types.vector(3, ti.f32),
-#     dxy: ti.f32,
-#     dθ: ti.f32
-# ) -> ti.types.vector(3, ti.f32):
-#     """
-#     @taichi.func
-
-#     Change the coordinates of the vector represented by `vector_standard` from 
-#     the standard frame to the frame of array indices, given that the spatial and
-#     angular resolutions are `dxy` and `dθ`, respectively.
-
-#     Args:
-#       Static:
-#         `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in LI
-#           coordinates.
-#         `dxy`: Spatial resolution, taking values greater than 0.
-#         `dθ`: Angular resolution, taking values greater than 0.
-#     """
-#     return ti.Vector([
-#         vector_standard[0] / dxy,
-#         vector_standard[1] / dxy,
-#         vector_standard[2] / dθ
-#     ])
