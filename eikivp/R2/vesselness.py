@@ -31,18 +31,6 @@ def rc_vessel_enhancement(image, σ, α=0.2, γ=0.75, ε=0.2):
         np.ndarray of the vesselness of `image`, taking values between 0 and 1.
     """
     # Calculate Hessian derivatives.
-    # Apparently, higher order Gaussian derivatives in Scipy are not very
-    # accurate.
-    # if σ > 2:
-    #     Lxx = sp.ndimage.gaussian_filter(image, sigma=(σ, σ), order=(0, 2))
-    #     Lxy = sp.ndimage.gaussian_filter(image, sigma=(σ, σ), order=(1, 1))
-    #     Lyy = sp.ndimage.gaussian_filter(image, sigma=(σ, σ), order=(2, 0))
-    # else: # Is this equivalent to what goes on in RcVesselEnhancement?
-    #     Lxx = sp.ndimage.gaussian_filter(image, sigma=σ, order=(0, 2))
-    #     Lxy = sp.ndimage.gaussian_filter(image, sigma=σ, order=(1, 1))
-    #     Lyy = sp.ndimage.gaussian_filter(image, sigma=σ, order=(2, 0))
-    # DIPlib provides more accurate Gaussian derivatives, but maybe we want our
-    # own implementation. Note that DIPlib flips the order of dimensions.
     Lxx = np.array(dip.Gauss(image, (σ, σ), (2, 0)))
     Lxy = np.array(dip.Gauss(image, (σ, σ), (1, 1)))
     Lyy = np.array(dip.Gauss(image, (σ, σ), (0, 2)))
@@ -86,13 +74,3 @@ def multiscale_frangi_filter(image, σs, α=0.3, γ=0.75, ε=0.3):
         vesselnesses.append(rc_vessel_enhancement(image, σ, α=α, γ=γ, ε=ε))
     vesselness = np.maximum.reduce(vesselnesses)
     return vesselness
-
-# Does not work as well as the one based on the Mathematica implementation.
-# def multiscale_frangi_filter(image, α, ε, σs):
-#     """
-#     Compute Frangi filter of vessels in `image` at scales in `σs`. Wrapper for
-#     scikit-image function `skimage.filters.frangi()`.
-#     """
-#     # Compute vesselness at each scale σ in σs, and select the maximum at
-#     # each point.
-#     return skimage.filters.frangi(image, sigmas=σs, alpha=α, beta=ε, gamma=3/4)
