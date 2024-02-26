@@ -23,11 +23,7 @@ from eikivp.R2.derivatives import upwind_derivatives
 from eikivp.R2.metric import invert_metric
 from eikivp.R2.utils import (
     get_boundary_conditions,
-    check_convergence,
-    align_to_real_axis_point,
-    align_to_real_axis_scalar_field,
-    align_to_standard_array_axis_scalar_field,
-    align_to_standard_array_axis_vector_field
+    check_convergence
 )
 from eikivp.utils import (
     get_initial_W,
@@ -92,10 +88,7 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
     
     print("Solving Eikonal PDE with data-driven left invariant metric.")
     # Align with (x, y)-frame
-    W_init_np = align_to_real_axis_scalar_field(W_init_np)
-    cost_np = align_to_real_axis_scalar_field(cost_np)
     shape = cost_np.shape
-    source_point = align_to_real_axis_point(source_point, shape)
 
     # Set hyperparameters
     if G_np is None:
@@ -143,8 +136,6 @@ def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., 
     # Align with (I, J)-frame
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
-    W_np = align_to_standard_array_axis_scalar_field(W_np)
-    grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
     return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 0))
 
@@ -288,8 +279,7 @@ def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=N
         np.ndarray of upwind gradient field of (approximate) distance map.
     """
     # Align with (x, y)-frame
-    shape = (domain_shape[1], domain_shape[0])
-    source_point = align_to_real_axis_point(source_point, shape)
+    shape = domain_shape
 
     # Set hyperparameters
     if G_np is None:
@@ -336,8 +326,6 @@ def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=N
     # Align with (I, J)-frame
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
-    W_np = align_to_standard_array_axis_scalar_field(W_np)
-    grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
     return unpad_array(W_np), unpad_array(grad_W_np, pad_shape=(1, 1, 0))
 

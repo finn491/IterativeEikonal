@@ -88,7 +88,7 @@ def check_convergence(dW_dt, tol=1e-3, target_point=None):
 
 # Coordinate Transforms
 
-def coordinate_real_to_array(x, y, x_min, y_max, dxy):
+def coordinate_real_to_array(x, y, x_min, y_min, dxy):
     """
     Compute the array indices (I, J) of the point defined by real coordinates 
     (`x`, `y`). Can broadcast over entire arrays of real coordinates.
@@ -101,12 +101,12 @@ def coordinate_real_to_array(x, y, x_min, y_max, dxy):
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
           taking values greater than 0.
     """
-    J = np.rint((x - x_min) / dxy).astype(int)
-    I = np.rint((y_max - y) / dxy).astype(int)
+    I = np.rint((x - x_min) / dxy).astype(int)
+    J = np.rint((y - y_min) / dxy).astype(int)
     return I, J
 
 
-def coordinate_array_to_real(I, J, x_min, y_max, dxy):
+def coordinate_array_to_real(I, J, x_min, y_min, dxy):
     """
     Compute the real coordinates (x, y) of the point defined by array indices 
     (`I`, `J`). Can broadcast over entire arrays of array indices.
@@ -119,8 +119,8 @@ def coordinate_array_to_real(I, J, x_min, y_max, dxy):
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
           taking values greater than 0.
     """
-    x = x_min + J * dxy
-    y = y_max - I * dxy
+    x = x_min + I * dxy
+    y = y_min + J * dxy
     return x, y
 
 def align_to_real_axis_point(point, shape):

@@ -52,13 +52,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, y
         np.ndarray of geodesic connecting `target_point` to `source_point`.
     """
     # Align with (x, y)-frame
-    grad_W_np = align_to_real_axis_vector_field(grad_W_np)
     shape = grad_W_np.shape[0:-1]
-    cost_np = align_to_real_axis_scalar_field(cost_np)
-    source_point = align_to_real_axis_point(source_point, shape)
-    target_point = align_to_real_axis_point(target_point, shape)
-    xs = align_to_real_axis_scalar_field(xs)
-    ys = align_to_real_axis_scalar_field(ys)
 
     # Set hyperparameters
     if G_np is None:
