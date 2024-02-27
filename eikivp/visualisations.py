@@ -12,6 +12,7 @@ from eikivp.R2.utils import (
     align_to_standard_array_axis_scalar_field,
     align_to_standard_array_axis_vector_field
 )
+from eikivp.SO3.utils import align_to_standard_array_axis_scalar_field as align_to_standard_array_axis_scalar_field_SO3
 
 
 def convert_array_to_image(image_array):
@@ -61,6 +62,20 @@ def plot_image_array(image_array, x_min, x_max, y_min, y_max, cmap="gray", figsi
     ax.imshow(image_array_aligned, cmap=cmap, extent=(x_min, x_max, y_min, y_max))
     return fig, ax
 
+def plot_image_array_SO3(image_array, α_min, α_max, β_min, β_max, cmap="gray", figsize=(10, 10), fig=None, ax=None):
+    """Plot `image_array` as a heatmap."""
+    if fig is None and ax is None:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize)
+        ax.set_xlabel("$β$")
+        ax.set_ylabel("$α$")
+        ax.set_xlim(β_max, β_min)
+        ax.set_ylim(α_min, α_max)
+
+    image_array_aligned = align_to_standard_array_axis_scalar_field_SO3(np.expand_dims(image_array, axis=2)).squeeze(-1)
+
+    ax.imshow(image_array_aligned, cmap=cmap, extent=(β_max, β_min, α_min, α_max))
+    return fig, ax
+
 def plot_contour(distance, xs, ys, levels=None, linestyles=None, figsize=(12, 10), fig=None, ax=None, x_min=None, 
                  x_max=None, y_min=None, y_max=None):
     """Plot the contours of the two-dimensional array `distance`."""
@@ -80,6 +95,27 @@ def plot_contour(distance, xs, ys, levels=None, linestyles=None, figsize=(12, 10
     distance_aligned = align_to_standard_array_axis_scalar_field(distance)
     
     contour = ax.contour(xs_aligned, ys_aligned, distance_aligned, levels=levels, linestyles=linestyles)
+    return fig, ax, contour
+
+def plot_contour_SO3(distance, αs, βs, levels=None, linestyles=None, figsize=(12, 10), fig=None, ax=None, α_min=None,
+                     α_max=None, β_min=None, β_max=None):
+    """Plot the contours of the two-dimensional array `distance`."""
+    if fig is None and ax is None:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize)
+        ax.set_xlabel("$β$")
+        ax.set_ylabel("$α$")
+        α_min = overwrite_default(α_min, αs[0, 0])
+        α_max = overwrite_default(α_max, αs[-1, -1])
+        β_min = overwrite_default(β_min, βs[0, 0])
+        β_max = overwrite_default(β_max, βs[-1, -1])
+        ax.set_xlim(β_max, β_min)
+        ax.set_ylim(α_min, α_max)
+
+    αs_aligned = align_to_standard_array_axis_scalar_field_SO3(αs)
+    ys_aligned = align_to_standard_array_axis_scalar_field_SO3(βs)
+    distance_aligned = align_to_standard_array_axis_scalar_field_SO3(np.expand_dims(distance, axis=2)).squeeze(-1)
+    
+    contour = ax.contour(αs_aligned, ys_aligned, distance_aligned, levels=levels, linestyles=linestyles)
     return fig, ax, contour
 
 def plot_isosurface(verts, faces, x_min, x_max, y_min, y_max, θ_min, θ_max, dxy, dθ, alpha=0.5, label=None,

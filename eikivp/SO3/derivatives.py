@@ -204,8 +204,6 @@ def derivative_B1(
         sinφ = ti.math.sin(φ)
         I_B1 = ti.Vector([cosφ / dαβ, sinφ/cosα / dαβ, sinφ*tanα / dφ], dt=ti.f32) * h
 
-        # Pretty sure this is wrong: I_B* is always in both a spatial and
-        # orientational direction, so we should somehow include both step sizes.
         B1_forward[I] = (scalar_trilinear_interpolate(u, I + I_B1) - u[I]) / h
         B1_backward[I] = (u[I] - scalar_trilinear_interpolate(u, I - I_B1)) / h
 
@@ -250,8 +248,6 @@ def derivative_B2(
         sinφ = ti.math.sin(φ)
         I_B2 = ti.Vector([-sinφ / dαβ, cosφ/cosα / dαβ, cosφ*tanα / dφ], dt=ti.f32) * h
 
-        # Pretty sure this is wrong: I_B* is always in both a spatial and
-        # orientational direction, so we should somehow include both step sizes.
         B2_forward[I] = (scalar_trilinear_interpolate(u, I + I_B2) - u[I]) / h
         B2_backward[I] = (u[I] - scalar_trilinear_interpolate(u, I - I_B2)) / h
 
@@ -282,8 +278,6 @@ def derivative_B3(
     for I in ti.grouped(B3_forward):
         I_B3 = ti.Vector([0., 0., 1.], dt=ti.f32)
 
-        # Pretty sure this is wrong: I_B* is always in both a spatial and
-        # orientational direction, so we should somehow include both step sizes.
         B3_forward[I] = (scalar_trilinear_interpolate(u, I + I_B3) - u[I]) / dφ
         B3_backward[I] = (u[I] - scalar_trilinear_interpolate(u, I - I_B3)) / dφ
 

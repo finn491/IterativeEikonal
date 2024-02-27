@@ -22,6 +22,7 @@ from eikivp.utils import linear_interpolate
 
 # Safe Indexing
 
+# Do we also want to ensure that α and β remain in the correct domain?
 @ti.func
 def sanitize_index(
     index: ti.types.vector(3, ti.i32),
@@ -58,14 +59,14 @@ def trilinear_interpolate(
     v100: ti.f32, 
     v101: ti.f32, 
     v110: ti.f32, 
-    v111: ti.f32,
+    v111: ti.f32, 
     r: ti.types.vector(3, ti.i32)
 ) -> ti.f32:
     """
     @taichi.func
 
     Interpolate value of the points `v***` depending on the distance `r`, via 
-    repeated linear interpolation (x, y, θ). Adapted from Gijs Bellaard.
+    repeated linear interpolation (α, β, φ). Adapted from Gijs Bellaard.
 
     Args:
         `v***`: values at points between which we want to interpolate, taking 
@@ -98,7 +99,7 @@ def scalar_trilinear_interpolate(
     @taichi.func
 
     Interpolate value of `input` at continuous `index` trilinearly, via repeated
-    linear interpolation (x, y, θ). Copied from Gijs Bellaard.
+    linear interpolation (α, β, φ). Copied from Gijs Bellaard.
 
     Args:
         `input`: ti.field(dtype=[float]) in which we want to interpolate.
@@ -212,52 +213,53 @@ def get_next_point(
     new_point[2] = point[2] - dt * gradient_at_point[2]
     return new_point
 
-def convert_continuous_indices_to_real_space(γ_ci_np, xs_np, ys_np, θs_np):
+def convert_continuous_indices_to_real_space(γ_ci_np, αs_np, βs_np, φs_np):
     """
     Convert the continuous indices in the geodesic `γ_ci_np` to the 
-    corresponding real space coordinates described by `xs_np`, `ys_np`, and
-    `θs_np`.
+    corresponding real space coordinates described by `αs_np`, `βs_np`, and
+    `φs_np`.
     """
     γ_ci = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_ci_np.shape[0])
     γ_ci.from_numpy(γ_ci_np)
     γ = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_ci.shape)
 
-    xs = ti.field(dtype=ti.f32, shape=xs_np.shape)
-    xs.from_numpy(xs_np)
-    ys = ti.field(dtype=ti.f32, shape=ys_np.shape)
-    ys.from_numpy(ys_np)
-    θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
-    θs.from_numpy(θs_np)
+    αs = ti.field(dtype=ti.f32, shape=αs_np.shape)
+    αs.from_numpy(αs_np)
+    βs = ti.field(dtype=ti.f32, shape=βs_np.shape)
+    βs.from_numpy(βs_np)
+    φs = ti.field(dtype=ti.f32, shape=φs_np.shape)
+    φs.from_numpy(φs_np)
 
-    continuous_indices_to_real(γ_ci, xs, ys, θs, γ)
+    continuous_indices_to_real(γ_ci, αs, βs, φs, γ)
 
     return γ.to_numpy()
 
 @ti.kernel
 def continuous_indices_to_real(
     γ_ci: ti.template(),
-    xs: ti.template(),
-    ys: ti.template(),
-    θs: ti.template(),
+    αs: ti.template(),
+    βs: ti.template(),
+    φs: ti.template(),
     γ: ti.template()
 ):
     """
     @taichi.kernel
 
-    Interpolate the real space coordinates described by `xs`, `ys`, and `θs` at 
+    Interpolate the real space coordinates described by `αs`, `βs`, and `φs` at 
     the continuous indices in `γ_ci`.
     """
     for I in ti.grouped(γ_ci):
-        γ[I][0] = scalar_trilinear_interpolate(xs, γ_ci[I])
-        γ[I][1] = scalar_trilinear_interpolate(ys, γ_ci[I])
-        γ[I][2] = scalar_trilinear_interpolate(θs, γ_ci[I])
+        γ[I][0] = scalar_trilinear_interpolate(αs, γ_ci[I])
+        γ[I][1] = scalar_trilinear_interpolate(βs, γ_ci[I])
+        γ[I][2] = scalar_trilinear_interpolate(φs, γ_ci[I])
 
 # Coordinate Transforms
 
 @ti.func
 def vectorfield_LI_to_static(
     vectorfield_LI: ti.template(),
-    θs: ti.template(),
+    αs: ti.template(),
+    φs: ti.template(),
     vectorfield_static: ti.template()
 ):
     """
@@ -270,47 +272,56 @@ def vectorfield_LI_to_static(
       Static:
         `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in LI
           coordinates.
-        `θs`: angle coordinate at each grid point.
+        `αs`: α-coordinate at each grid point.
+        `φs`: angle coordinate at each grid point.
       Mutated:
         vectorfield_static`: ti.Vector.field(n=3, dtype=[float]) represented in
           static coordinates.
     """
     for I in ti.grouped(vectorfield_LI):
-        vectorfield_static[I] = vector_LI_to_static(vectorfield_LI[I], θs[I])
+        vectorfield_static[I] = vector_LI_to_static(vectorfield_LI[I], αs[I], φs[I])
 
 @ti.func
 def vector_LI_to_static(
     vector_LI: ti.types.vector(3, ti.f32),
-    θ: ti.f32
+    α: ti.f32,
+    φ: ti.f32
 ) -> ti.types.vector(3, ti.f32):
     """
     @taichi.func
 
     Change the coordinates of the vector represented by `vector_LI` from the 
     left invariant to the static frame, given that the angle coordinate of the 
-    point on the manifold corresponding to this vector is θ.
+    point on the manifold corresponding to this vector is φ.
 
     Args:
       Static:
         `vector_LI`: ti.Vector(n=3, dtype=[float]) represented in LI
-          coordinates.
-        `θ`: angle coordinate of corresponding point on the manifold.
+        coordinates.
+        `α`: α-coordinate of corresponding point on the manifold.
+        `φ`: angle coordinate of corresponding point on the manifold.
     """
     
-    # A1 = [cos(θ),sin(θ),0]
-    # A2 = [-sin(θ),cos(θ),0]
-    # A3 = [0,0,1]
+    # B1 = [cos(φ),sin(φ)/cos(α),sin(φ)tan(α)]
+    # B2 = [-sin(φ),cos(φ)/cos(α),cos(φ)tan(α)]
+    # B3 = [0,0,1]
+
+    cosα = ti.math.cos(α)
+    tanα = ti.math.sin(α)
+    cosφ = ti.math.cos(φ)
+    sinφ = ti.math.sin(φ)
 
     return ti.Vector([
-        ti.math.cos(θ) * vector_LI[0] - ti.math.sin(θ) * vector_LI[1],
-        ti.math.sin(θ) * vector_LI[0] + ti.math.cos(θ) * vector_LI[1],
-        vector_LI[2]
+        vector_LI[0] * cosφ - vector_LI[1] * sinφ,
+        vector_LI[0] * sinφ / cosα + vector_LI[1] * cosφ / cosα,
+        vector_LI[0] * sinφ * tanα + vector_LI[1] * cosφ * tanα + vector_LI[2]
     ], dt=ti.f32)
 
 @ti.func
 def vectorfield_static_to_LI(
     vectorfield_static: ti.template(),
-    θs: ti.template(),
+    αs: ti.template(),
+    φs: ti.template(),
     vectorfield_LI: ti.template()
 ):
     """
@@ -323,18 +334,20 @@ def vectorfield_static_to_LI(
       Static:
         `vectorfield_static`: ti.Vector.field(n=3, dtype=[float]) represented in
           static coordinates.
-        `θs`: angle coordinate at each grid point.
+        `αs`: α-coordinate at each grid point.
+        `φs`: angle coordinate at each grid point.
       Mutated:
         vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in
           LI coordinates.
     """
     for I in ti.grouped(vectorfield_static):
-        vectorfield_static[I] = vector_static_to_LI(vectorfield_LI[I], θs[I])
+        vectorfield_static[I] = vector_static_to_LI(vectorfield_LI[I], αs[I], φs[I])
 
 @ti.func
 def vector_static_to_LI(
     vector_static: ti.types.vector(3, ti.f32),
-    θ: ti.f32
+    α: ti.f32,
+    φ: ti.f32
 ) -> ti.types.vector(3, ti.f32):
     """
     @taichi.func
@@ -347,62 +360,68 @@ def vector_static_to_LI(
       Static:
         `vector_static`: ti.Vector(n=3, dtype=[float]) represented in static
         coordinates.
-        `θ`: angle coordinate of corresponding point on the manifold.
+        `α`: α-coordinate of corresponding point on the manifold.
+        `φ`: angle coordinate of corresponding point on the manifold.
     """
 
-    # A1 = [cos(θ),sin(θ),0]
-    # A2 = [-sin(θ),cos(θ),0]
-    # A3 = [0,0,1]
+    # B1 = [cos(φ),sin(φ)/cos(α),sin(φ)tan(α)]
+    # B2 = [-sin(φ),cos(φ)/cos(α),cos(φ)tan(α)]
+    # B3 = [0,0,1]
+
+    cosα = ti.math.cos(α)
+    sinα = ti.math.sin(α)
+    cosφ = ti.math.cos(φ)
+    sinφ = ti.math.sin(φ)
 
     return ti.Vector([
-        ti.math.cos(θ) * vector_static[0] + ti.math.sin(θ) * vector_static[1],
-        -ti.math.sin(θ) * vector_static[0] + ti.math.cos(θ) * vector_static[1],
-        vector_static[2]
+        vector_static[0] * cosφ + vector_static[1] * sinφ * cosα,
+        -vector_static[0] * sinφ + vector_static[1] * cosφ * cosα,
+        -vector_static[1] * sinα + vector_static[2]
     ], dt=ti.f32)
 
 
-def coordinate_real_to_array(x, y, θ, x_min, y_min, θ_min, dxy, dθ):
+def coordinate_real_to_array(α, β, φ, α_min, β_min, φ_min, dαβ, dφ):
     """
     Compute the array indices (I, J, K) of the point defined by real coordinates 
-    (`x`, `y`, `θ`). Can broadcast over entire arrays of real coordinates.
+    (`α`, `β`, `φ`). Can broadcast over entire arrays of real coordinates.
 
     Args:
-        `x`: x-coordinate of the point.
-        `y`: y-coordinate of the point.
+        `α`: α-coordinate of the point.
+        `β`: β-coordinate of the point.
         `θ`: θ-coordinate of the point.
-        `x_min`: minimum value of x-coordinates in rectangular domain.
-        `y_min`: minimum value of y-coordinates in rectangular domain.
-        `θ_min`: minimum value of θ-coordinates in rectangular domain.
-        `dxy`: spatial resolution, which is equal in the x- and y-directions,
+        `α_min`: minimum value of α-coordinates in rectangular domain.
+        `β_min`: minimum value of β-coordinates in rectangular domain.
+        `φ_min`: minimum value of φ-coordinates in rectangular domain.
+        `dαβ`: spatial resolution, which is equal in the α- and β-directions,
           taking values greater than 0.
-        `dθ`: orientational resolution, taking values greater than 0.
+        `dφ`: orientational resolution, taking values greater than 0.
     """
-    I = np.rint((x - x_min) / dxy).astype(int)
-    J = np.rint((y - y_min) / dxy).astype(int)
-    K = np.rint((θ - θ_min) / dθ).astype(int)
+    I = np.rint((α - α_min) / dαβ).astype(int)
+    J = np.rint((β - β_min) / dαβ).astype(int)
+    K = np.rint((φ - φ_min) / dφ).astype(int)
     return I, J, K
 
 
-def coordinate_array_to_real(I, J, K, x_min, y_min, θ_min, dxy, dθ):
+def coordinate_array_to_real(I, J, K, α_min, β_min, φ_min, dαβ, dφ):
     """
-    Compute the real coordinates (x, y, θ) of the point defined by array indices 
+    Compute the real coordinates (α, β, φ) of the point defined by array indices 
     (`I`, `J`, `K`). Can broadcast over entire arrays of array indices.
 
     Args:
         `I`: I index of the point.
         `J`: J index of the point.
         `K`: K index of the point.
-        `x_min`: minimum value of x-coordinates in rectangular domain.
-        `y_min`: minimum value of y-coordinates in rectangular domain.
-        `θ_min`: minimum value of θ-coordinates in rectangular domain.
-        `dxy`: spatial resolution, which is equal in the x- and y-directions,
+        `α_min`: minimum value of α-coordinates in rectangular domain.
+        `β_min`: minimum value of β-coordinates in rectangular domain.
+        `φ_min`: minimum value of φ-coordinates in rectangular domain.
+        `dαβ`: spatial resolution, which is equal in the α- and β-directions,
           taking values greater than 0.
-        `dθ`: orientational resolution, taking values greater than 0.
+        `dφ`: orientational resolution, taking values greater than 0.
     """
-    x = x_min + I * dxy
-    y = y_min + J * dxy
-    θ = θ_min + K * dθ
-    return x, y, θ
+    α = α_min + I * dαβ
+    β = β_min + J * dαβ
+    φ = φ_min + K * dφ
+    return α, β, φ
 
 def align_to_real_axis_point(point, shape):
     """
@@ -415,23 +434,22 @@ def align_to_real_axis_point(point, shape):
         `point`: Tuple[int, int, int] describing point with respect to standard
           array indexing convention.
         `shape`: shape of array, aligned to real axes, in which we want to
-          index. Note that `0 <= point[0] <= shape[1] - 1`, 
-          `0 <= point[1] <= shape[0] - 1`, and `0 <= point[2] <= shape[2] - 1`.
+          index. Note that `0 <= point[0] <= shape[0] - 1`, 
+          `0 <= point[1] <= shape[1] - 1`, and `0 <= point[2] <= shape[2] - 1`.
 
     Notes:
-        Alignment is achieved by first flipping and subsequently transposing the
-        array.
+        Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
         
                standard                  real axes aligned
-            I ^ ------                    I x ------
+            I ^ ------                    I α ------
             | | |    |        =>          | | |    |
-            v y ------                    v v ------
-                 x ->                          y ->
+            v α ------                    v v ------
+                 <- β                          β ->
                  J ->                          J ->  
     """
-    return point[1], shape[1] - 1 - point[0], point[2]
+    return shape[0] - 1 - point[0], shape[1] - 1 - point[1], point[2]
 
 def align_to_real_axis_scalar_field(field):
     """
@@ -443,20 +461,18 @@ def align_to_real_axis_scalar_field(field):
           convention.
 
     Notes:
-        Alignment is achieved by first flipping and subsequently transposing the
-        array.
+        Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
         
                standard                  real axes aligned
-            I ^ ------                    I x ------
+            I ^ ------                    I α ------
             | | |    |        =>          | | |    |
-            v y ------                    v v ------
-                 x ->                          y ->
+            v α ------                    v v ------
+                 <- β                          β ->
                  J ->                          J ->  
     """
-    field_flipped = np.flip(field, axis=0)
-    field_aligned = field_flipped.swapaxes(1, 0)
+    field_aligned = np.flip(np.flip(field, axis=0), axis=1)
     return field_aligned
 
 def align_to_real_axis_vector_field(vector_field):
@@ -469,20 +485,18 @@ def align_to_real_axis_vector_field(vector_field):
           standard array convention.
 
     Notes:
-        Alignment is achieved by first flipping and subsequently transposing the
-        array.
+        Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
         
                standard                  real axes aligned
-            I ^ ------                    I x ------
+            I ^ ------                    I α ------
             | | |    |        =>          | | |    |
-            v y ------                    v v ------
-                 x ->                          y ->
-                 J ->                          J ->  
+            v α ------                    v v ------
+                 <- β                          β ->
+                 J ->                          J ->   
     """
-    vector_field_flipped = np.flip(vector_field, axis=0)
-    vector_field_aligned = vector_field_flipped.swapaxes(1, 0)
+    vector_field_aligned = np.flip(np.flip(vector_field, axis=0), axis=1)
     return vector_field_aligned
 
 def align_to_standard_array_axis_point(point, shape):
@@ -496,23 +510,22 @@ def align_to_standard_array_axis_point(point, shape):
         `point`: Tuple[int, int] describing point with respect to arrays aligned
           with real axes.
         `shape`: shape of array, with respect to standard array convention, in 
-          which we want to index. Note that `0 <= point[0] <= shape[1] - 1`, 
-          `0 <= point[1] <= shape[0] - 1`, and `0 <= point[2] <= shape[2] - 1`.
+          which we want to index. Note that `0 <= point[0] <= shape[0] - 1`, 
+          `0 <= point[1] <= shape[1] - 1`, and `0 <= point[2] <= shape[2] - 1`.
 
     Notes:
-        Alignment is achieved by first transposing and subsequently flipping the
-        array.
+        Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
         
            real axes aligned                 standard
-            I x ------                    I ^ ------
+            I α ------                    I ^ ------
             | | |    |        =>          | | |    |
-            v v ------                    v y ------
-                 y ->                          x ->
-                 J ->                          J ->  
+            v v ------                    v α ------
+                 β ->                          <- β
+                 J ->                          J -> 
     """
-    return point[1], shape[1] - 1 - point[0], point[2]
+    return shape[0] - 1 - point[0], shape[1] - 1 - point[1], point[2]
 
 def align_to_standard_array_axis_scalar_field(field):
     """
@@ -525,21 +538,18 @@ def align_to_standard_array_axis_scalar_field(field):
           arrays aligned with real axes.
 
     Notes:
-        Alignment is achieved by first flipping and subsequently transposing the
-        array.
+        Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
         
            real axes aligned                 standard
-            I x ------                    I ^ ------
+            I α ------                    I ^ ------
             | | |    |        =>          | | |    |
-            v v ------                    v y ------
-                 y ->                          x ->
-                 J ->                          J ->  
+            v v ------                    v α ------
+                 β ->                          <- β
+                 J ->                          J -> 
     """
-    # field_transposed = np.transpose(field, axes=(1, 0, 2))
-    field_transposed = field.swapaxes(1, 0)
-    field_aligned = np.flip(field_transposed, axis=0)
+    field_aligned = np.flip(np.flip(field, axis=1), axis=0)
     return field_aligned
 
 def align_to_standard_array_axis_vector_field(vector_field):
@@ -552,18 +562,16 @@ def align_to_standard_array_axis_vector_field(vector_field):
           to arrays aligned with real axes.
 
     Notes:
-        Alignment is achieved by first flipping and subsequently transposing the
-        array.
+        Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
         
            real axes aligned                 standard
-            I x ------                    I ^ ------
+            I α ------                    I ^ ------
             | | |    |        =>          | | |    |
-            v v ------                    v y ------
-                 y ->                          x ->
-                 J ->                          J ->  
+            v v ------                    v α ------
+                 β ->                          <- β
+                 J ->                          J -> 
     """
-    vector_field_transposed = vector_field.swapaxes(1, 0)
-    vector_field_aligned = np.flip(vector_field_transposed, axis=0)
+    vector_field_aligned = np.flip(np.flip(vector_field, axis=1), axis=0)
     return vector_field_aligned

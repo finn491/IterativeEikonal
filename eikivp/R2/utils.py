@@ -135,7 +135,7 @@ def align_to_real_axis_point(point, shape):
           indexing convention.
         `shape`: shape of array, aligned to real axes, in which we want to
           index. Note that `0 <= point[0] <= shape[1] - 1` and 
-          `0 <= point[1] <= shape[0]`.
+          `0 <= point[1] <= shape[0] - 1`.
 
     Notes:
         Alignment is achieved by first flipping and subsequently transposing the
@@ -216,7 +216,7 @@ def align_to_standard_array_axis_point(point, shape):
           with real axes.
         `shape`: shape of array, with respect to standard array convention, in 
           which we want to index. Note that `0 <= point[0] <= shape[1] - 1` and 
-          `0 <= point[1] <= shape[0]`.
+          `0 <= point[1] <= shape[0] - 1`.
 
     Notes:
         Alignment is achieved by first transposing and subsequently flipping the
