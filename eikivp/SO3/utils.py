@@ -301,10 +301,16 @@ def vector_LI_to_static(
         `α`: α-coordinate of corresponding point on the manifold.
         `φ`: angle coordinate of corresponding point on the manifold.
     """
-    
+    # Find coordinates w.r.t. static frame by plugging vector into corresponding
+    # dual basis vectors.
+
     # B1 = [cos(φ),sin(φ)/cos(α),sin(φ)tan(α)]
     # B2 = [-sin(φ),cos(φ)/cos(α),cos(φ)tan(α)]
     # B3 = [0,0,1]
+
+    # ν1 = [cos(φ),sin(φ)cos(α),0]
+    # ν2 = [-sin(φ),cos(φ)cos(α),0]
+    # ν3 = [0,-sin(α),1]
 
     cosα = ti.math.cos(α)
     tanα = ti.math.sin(α)
@@ -363,10 +369,16 @@ def vector_static_to_LI(
         `α`: α-coordinate of corresponding point on the manifold.
         `φ`: angle coordinate of corresponding point on the manifold.
     """
+    # Find coordinates w.r.t. left invariant frame by plugging vector into
+    # corresponding dual basis vectors.
 
     # B1 = [cos(φ),sin(φ)/cos(α),sin(φ)tan(α)]
     # B2 = [-sin(φ),cos(φ)/cos(α),cos(φ)tan(α)]
     # B3 = [0,0,1]
+
+    # ν1 = [cos(φ),sin(φ)cos(α),0]
+    # ν2 = [-sin(φ),cos(φ)cos(α),0]
+    # ν3 = [0,-sin(α),1]
 
     cosα = ti.math.cos(α)
     sinα = ti.math.sin(α)
