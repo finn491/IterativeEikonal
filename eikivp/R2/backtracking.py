@@ -126,8 +126,10 @@ def geodesic_back_tracking_backend(
     γ.append(point)
     tol = 2.
     n = 0
+    gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point, G, cost)
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
-        gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point, G, cost)
+        gradient_at_point_next = vectorfield_bilinear_interpolate(grad_W, point, G, cost)
+        gradient_at_point = β * gradient_at_point + (1 - β) * gradient_at_point_next
         new_point = get_next_point(point, gradient_at_point, dt)
         γ.append(new_point)
         point = new_point

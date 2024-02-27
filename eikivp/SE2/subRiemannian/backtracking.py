@@ -42,7 +42,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
         `ys_np`: y-coordinate at every point in the grid on which `cost` is
           sampled.
         `θs_np`: Orientation coordinate at every point in the grid on which
-          `cost` is sampled.
+          `cost_np` is sampled.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
       Optional:
@@ -135,10 +135,14 @@ def geodesic_back_tracking_backend(
     γ.append(point)
     tol = 2 
     n = 0
+    gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, ξ, cost)
+    θ = scalar_trilinear_interpolate(θs, point)
+    gradient_at_point = vector_LI_to_static(gradient_at_point_LI, θ)
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
         gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, ξ, cost)
         θ = scalar_trilinear_interpolate(θs, point)
-        gradient_at_point = vector_LI_to_static(gradient_at_point_LI, θ)
+        gradient_at_point_next = vector_LI_to_static(gradient_at_point_LI, θ)
+        gradient_at_point = β * gradient_at_point + (1 - β) * gradient_at_point_next
         new_point = get_next_point(point, gradient_at_point, dt)
         γ.append(new_point)
         point = new_point
