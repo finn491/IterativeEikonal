@@ -10,17 +10,18 @@
 """
 
 import taichi as ti
-from eikivp.SE2.Riemannian.interpolate import (
+from eikivp.SO3.Riemannian.interpolate import (
     vectorfield_trilinear_interpolate_LI,
     scalar_trilinear_interpolate
 )
-from eikivp.SE2.utils import (
+from eikivp.SO3.utils import (
     get_next_point,
     convert_continuous_indices_to_real_space,
     vector_LI_to_static
 )
+from eikivp.utils import sparse_to_dense
 
-def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np, ys_np, θs_np, G_np, dt=None, β=0.,
+def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, αs_np, βs_np, φs_np, G_np, dt=None, β=0.,
                            n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
@@ -34,12 +35,12 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
         `target_point`: Tuple[int] describing index of target point in `W_np`.
         `cost_np`: np.ndarray of cost function throughout domain, taking values
           between 0 and 1.
-        `xs_np`: x-coordinate at every point in the grid on which `cost_np` is
+        `αs_np`: α-coordinate at every point in the grid on which `cost_np` is
           sampled.
-        `ys_np`: y-coordinate at every point in the grid on which `cost_np` is
+        `βs_np`: β-coordinate at every point in the grid on which `cost_np` is
           sampled.
-        `θs_np`: Orientation coordinate at every point in the grid on which
-          `cost` is sampled.
+        `φs_np`: Orientation coordinate at every point in the grid on which
+          `cost_np` is sampled.
         `G_np`: np.ndarray(shape=(3,), dtype=[float]) of constants of the
           diagonal metric tensor with respect to left invariant basis.
       Optional:
@@ -66,18 +67,20 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs_np
     cost.from_numpy(cost_np)
     source_point = ti.Vector(source_point, dt=ti.f32)
     target_point = ti.Vector(target_point, dt=ti.f32)
-    θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
-    θs.from_numpy(θs_np)
+    αs = ti.field(dtype=ti.f32, shape=αs_np.shape)
+    αs.from_numpy(αs_np)
+    φs = ti.field(dtype=ti.f32, shape=φs_np.shape)
+    φs.from_numpy(φs_np)
 
     # Perform backtracking
     γ = ti.Vector.field(n=3, dtype=ti.f32, shape=n_max)
 
-    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, θs, G, cost, dt, n_max, β, γ)
+    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, αs, φs, G, cost, dt, n_max, β, γ)
     print(f"Geodesic consists of {γ_len} points.")
     γ_ci = γ.to_numpy()[:γ_len]
 
-    # Cleanup
-    γ_np = convert_continuous_indices_to_real_space(γ_ci, xs_np, ys_np, θs_np)
+    # Align with (I, J, K)-frame
+    γ_np = convert_continuous_indices_to_real_space(γ_ci, αs_np, βs_np, φs_np)
     return γ_np
 
 @ti.kernel
@@ -85,7 +88,8 @@ def geodesic_back_tracking_backend(
     grad_W: ti.template(),
     source_point: ti.types.vector(3, ti.f32),
     target_point: ti.types.vector(3, ti.f32),
-    θs: ti.template(),
+    αs: ti.template(),
+    φs: ti.template(),
     G: ti.types.vector(3, ti.f32),
     cost: ti.template(),
     dt: ti.f32,
@@ -109,7 +113,8 @@ def geodesic_back_tracking_backend(
           source point in `W_np`.
         `target_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
           target point in `W_np`.
-        `θs`: angle coordinate at each grid point.
+        `αs`: α-coordinate at each grid point.
+        `φs`: angle coordinate at each grid point.
         `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
           tensor with respect to left invariant basis.
         `cost`: ti.field(dtype=[float]) of cost function, taking values between
@@ -130,13 +135,14 @@ def geodesic_back_tracking_backend(
     γ[0] = point
     tol = 2.
     n = 1
-    gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, G, cost)
-    θ = scalar_trilinear_interpolate(θs, point)
-    gradient_at_point = vector_LI_to_static(gradient_at_point_LI, θ)
-    while (ti.math.length(point - source_point) >= tol) and (n < n_max - 1):
+    α = scalar_trilinear_interpolate(αs, point)
+    φ = scalar_trilinear_interpolate(φs, point)
+    gradient_at_point = vector_LI_to_static(gradient_at_point_LI, α, φ)
+    while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
         gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, G, cost)
-        θ = scalar_trilinear_interpolate(θs, point)
-        gradient_at_point_next = vector_LI_to_static(gradient_at_point_LI, θ)
+        α = scalar_trilinear_interpolate(αs, point)
+        φ = scalar_trilinear_interpolate(φs, point)
+        gradient_at_point_next = vector_LI_to_static(gradient_at_point_LI, α, φ)
         gradient_at_point = β * gradient_at_point + (1 - β) * gradient_at_point_next
         new_point = get_next_point(point, gradient_at_point, dt)
         γ[n] = new_point
