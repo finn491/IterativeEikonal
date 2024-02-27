@@ -56,7 +56,7 @@ def eikonal_solver(cost_np, source_point, G_np, dxy, dθ, θs_np, target_point=N
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
         `θs_np`: Orientation coordinate at every point in the grid on which
-          `cost` is sampled.
+          `cost_np` is sampled.
       Optional:
         `target_point`: Tuple[int] describing index of target point in
           `cost_np`. Defaults to `None`. If `target_point` is provided, the
@@ -280,7 +280,7 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dxy, dθ, θs_np, t
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
         `θs_np`: Orientation coordinate at every point in the grid on which
-          `cost` is sampled.
+          `cost_np` is sampled.
       Optional:
         `target_point`: Tuple[int] describing index of target point in
           `domain_shape`. Defaults to `None`. If `target_point` is provided, the
