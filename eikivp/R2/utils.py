@@ -81,7 +81,7 @@ def check_convergence(dW_dt, tol=1e-3, target_point=None):
         print(error)
         is_converged = error < tol
     else:
-        error = ti.abs(dW_dt[target_point[1], target_point[0]])
+        error = ti.abs(dW_dt[target_point])
         print(error)
         is_converged = error < tol
     return is_converged

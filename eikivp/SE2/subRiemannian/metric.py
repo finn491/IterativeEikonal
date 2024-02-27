@@ -14,14 +14,6 @@
       metric.
       4. `norm_static`: compute the norm of a vector, given with respect to the
       static frame, with respect to some data-driven sub-Riemannian metric.
-      5. `vector_static_to_LI`: compute the components of a vector, given with
-      respect to the static frame, in the left invariant frame.
-      6. `vectorfield_static_to_LI`: compute the components of a vectorfield,
-      given with respect to the static frame, in the left invariant frame.
-      7. `vector_LI_to_static`: compute the components of a vector, given with
-      respect to the left invariant frame, in the left static frame.
-      8. `vectorfield_LI_to_static`: compute the components of a vectorfield,
-      given with respect to the left invariant, in the static frame.
 """
 
 import taichi as ti

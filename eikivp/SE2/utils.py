@@ -4,6 +4,16 @@
 
     Provides miscellaneous computational utilities that can be used with all
     controllers on SE(2).
+
+    TODO: improve documentation
+      1. `vector_static_to_LI`: compute the components of a vector, given with
+      respect to the static frame, in the left invariant frame.
+      2. `vectorfield_static_to_LI`: compute the components of a vectorfield,
+      given with respect to the static frame, in the left invariant frame.
+      3. `vector_LI_to_static`: compute the components of a vector, given with
+      respect to the left invariant frame, in the left static frame.
+      4. `vectorfield_LI_to_static`: compute the components of a vectorfield,
+      given with respect to the left invariant, in the static frame.
 """
 
 import numpy as np
@@ -167,7 +177,7 @@ def check_convergence(dW_dt, tol=1e-3, target_point=None):
         print(error)
         is_converged = error < tol
     else:
-        error = ti.abs(dW_dt[target_point[1], target_point[0], target_point[2]])
+        error = ti.abs(dW_dt[target_point])
         print(error)
         is_converged = error < tol
     return is_converged
@@ -282,7 +292,7 @@ def vector_LI_to_static(
 
     Args:
       Static:
-        `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in LI
+        `vector_LI`: ti.Vector(n=3, dtype=[float]) represented in LI
           coordinates.
         `θ`: angle coordinate of corresponding point on the manifold.
     """
@@ -319,7 +329,7 @@ def vectorfield_static_to_LI(
           LI coordinates.
     """
     for I in ti.grouped(vectorfield_static):
-        vectorfield_static[I] = vector_LI_to_static(vectorfield_LI[I], θs[I])
+        vectorfield_static[I] = vector_static_to_LI(vectorfield_LI[I], θs[I])
 
 @ti.func
 def vector_static_to_LI(
@@ -335,10 +345,15 @@ def vector_static_to_LI(
 
     Args:
       Static:
-        `vectorfield_static`: ti.Vector.field(n=3, dtype=[float]) represented in 
-          static coordinates.
+        `vector_static`: ti.Vector(n=3, dtype=[float]) represented in static
+        coordinates.
         `θ`: angle coordinate of corresponding point on the manifold.
     """
+
+    # A1 = [cos(θ),sin(θ),0]
+    # A2 = [-sin(θ),cos(θ),0]
+    # A3 = [0,0,1]
+
     return ti.Vector([
         ti.math.cos(θ) * vector_static[0] + ti.math.sin(θ) * vector_static[1],
         -ti.math.sin(θ) * vector_static[0] + ti.math.cos(θ) * vector_static[1],

@@ -62,7 +62,7 @@ def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, plus_softness=0.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
         `θs_np`: Orientation coordinate at every point in the grid on which
-          `cost` is sampled.
+          `cost_np` is sampled.
       Optional:
         `plus_softness`: Strength of the plus controller, taking values between
           0 and 1. As `plus_softness` is decreased, motion in the reverse A1
@@ -302,7 +302,7 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, plu
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
         `θs_np`: Orientation coordinate at every point in the grid on which
-          `cost` is sampled.
+          `cost_np` is sampled.
       Optional:
         `plus_softness`: Strength of the plus controller, taking values between
           0 and 1. As `plus_softness` is decreased, motion in the reverse A1
