@@ -1,16 +1,20 @@
 # EikIVP
-Solve Eikonal PDEs on $\mathbb{R}^2$, $SE(2)$, and (soon:tm:) $SO(3)$ using the iterative method described in Bekkers et al. (2015) "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in $SE(2)$" [[1]](#1). 
+Solve Eikonal PDEs on $`\mathbb{R}^2`$, $`SE(2)`$, and (soon:tm:) $`SO(3)`$ using the iterative method described in Bekkers et al. (2015) "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in $`SE(2)`$" [[1]](#1). 
 
 The viscosity solutions of the Eikonal equation is the geodesic distance map. We therefore can solve the Eikonal equation to determine the distance between two points, and find the geodesic connecting the two points (by gradient descent).
 
 In short, we relax the Boundary Value Problem (BVP)
-$$\begin{equation} \begin{dcases} \Vert \nabla_C W(p) \Vert_C = 1, & p \neq e, \\
-W(p) = 0, & p = e, \end{dcases} \end{equation}$$
+```math
+\begin{equation} \begin{dcases} \Vert \nabla_C W(p) \Vert_C = 1, & p \neq e, \\
+W(p) = 0, & p = e, \end{dcases} \end{equation}
+```
 to a sequence of Initial Value Problem (IVP)
-$$\begin{equation} \begin{dcases} \partial_t W_{n + 1}(p, t) = 1 - \Vert \nabla_C W_{n + 1}(p, t) \Vert_C = 1, & t \in [0, 1], \\
+```math
+\begin{equation} \begin{dcases} \partial_t W_{n + 1}(p, t) = 1 - \Vert \nabla_C W_{n + 1}(p, t) \Vert_C = 1, & t \in [0, 1], \\
 W_{n + 1}(p, 0) = W_n(p, 1), & p \neq e, \\
-W_{n + 1}(p, 0) = 0, & p = e. \end{dcases} \end{equation}$$
-If we discretise in "time" sufficiently finely, and take sufficiently many steps, then the solution of the iterative IVP method (2) will in fact be the viscosity solution of the original BVP (1). The subscript $C$ in the equations above indicates that the operations are data-driven.
+W_{n + 1}(p, 0) = 0, & p = e. \end{dcases} \end{equation}
+```
+If we discretise in "time" sufficiently finely, and take sufficiently many steps, then the solution of the iterative IVP method (2) will in fact be the viscosity solution of the original BVP (1). The subscript $`C`$ in the equations above indicates that the operations are data-driven.
 
 ## Installation
 

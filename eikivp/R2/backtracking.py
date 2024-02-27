@@ -15,7 +15,6 @@ from eikivp.R2.interpolate import (
     vectorfield_bilinear_interpolate,
     scalar_bilinear_interpolate
 )
-from eikivp.utils import sparse_to_dense
 
 
 def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, ys, G_np=None, dt=None, β=0.,
@@ -64,15 +63,11 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, xs, y
     target_point = ti.Vector(target_point, dt=ti.f32)
 
     # Perform backtracking
-    γ_list = ti.root.dynamic(ti.i, n_max)
-    γ = ti.Vector.field(n=2, dtype=ti.f32)
-    γ_list.place(γ)
+    γ = ti.Vector.field(n=2, dtype=ti.f32, shape=n_max)
 
     γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, G, cost, dt, n_max, β, γ)
-    γ_dense = ti.Vector.field(n=2, dtype=ti.f32, shape=γ_len)
     print(f"Geodesic consists of {γ_len} points.")
-    sparse_to_dense(γ, γ_dense)
-    γ_ci = γ_dense.to_numpy()
+    γ_ci = γ.to_numpy()[:γ_len]
 
     # Cleanup
     γ_np = convert_continuous_indices_to_real_space_R2(γ_ci, xs, ys)
@@ -123,19 +118,19 @@ def geodesic_back_tracking_backend(
         Number of points in the geodesic.
     """
     point = target_point
-    γ.append(point)
+    γ[0] = point
     tol = 2.
-    n = 0
+    n = 1
     gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point, G, cost)
-    while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
+    while (ti.math.length(point - source_point) >= tol) and (n < n_max - 1):
         gradient_at_point_next = vectorfield_bilinear_interpolate(grad_W, point, G, cost)
         gradient_at_point = β * gradient_at_point + (1 - β) * gradient_at_point_next
         new_point = get_next_point(point, gradient_at_point, dt)
-        γ.append(new_point)
+        γ[n] = new_point
         point = new_point
         n += 1
-    γ.append(source_point)
-    return γ.length()
+    γ[n] = source_point
+    return n + 1
 
 @ti.func
 def get_next_point(
