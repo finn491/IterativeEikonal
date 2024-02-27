@@ -176,26 +176,3 @@ def high_pass_filter(image_array, σs):
     image_array_unnormalised = image_array - low_frequencies
     image_array_filtered = image_rescale(image_array_unnormalised)
     return image_array_filtered
-
-# TaiChi Stuff
-
-@ti.kernel
-def sparse_to_dense(
-    sparse_thing: ti.template(),
-    dense_thing: ti.template()
-):
-    """
-    @taichi.func
-
-    Convert a sparse TaiChi object on an SNode into a dense object.
-
-    Args:
-      Static:
-        `sparse_thing`: Sparse TaiChi object.
-      Mutated:
-        `dense_thing`: Preinitialised dense TaiChi object of correct size, which
-          is updated in place.
-    """
-    for I in ti.grouped(sparse_thing):
-        dense_thing[I] = sparse_thing[I]
-    sparse_thing.deactivate()
