@@ -74,7 +74,8 @@ def normalise_static(
     vec: ti.types.vector(3, ti.f32),
     ξ: ti.f32,
     cost: ti.f32,
-    θ: ti.f32
+    α: ti.f32,
+    φ: ti.f32
 ) -> ti.types.vector(3, ti.f32):
     """
     @taichi.func
@@ -87,19 +88,21 @@ def normalise_static(
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
-        `θ`: angle coordinate of corresponding point on the manifold.
+        `α`: α-coordinate of corresponding point on the manifold.
+        `φ`: angle coordinate of corresponding point on the manifold.
 
     Returns:
         ti.types.vector(n=3, dtype=[float]) of normalisation of `vec`.
     """
-    return vec / norm_static(vec, ξ, cost, θ)
+    return vec / norm_static(vec, ξ, cost, α, φ)
 
 @ti.func
 def norm_static(
     vec: ti.types.vector(3, ti.f32),
     ξ: ti.f32,
     cost: ti.f32,
-    θ: ti.f32
+    α: ti.f32,
+    φ: ti.f32
 ) -> ti.f32:
     """
     @taichi.func
@@ -112,15 +115,21 @@ def norm_static(
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
-        `θ`: angle coordinate of corresponding point on the manifold.
+        `α`: α-coordinate of corresponding point on the manifold.
+        `φ`: angle coordinate of corresponding point on the manifold.
 
     Returns:
         Norm of `vec`.
     """
+
+    cosα = ti.math.cos(α)
+    sinα = ti.math.sin(α)
+    cosφ = ti.math.cos(φ)
+    sinφ = ti.math.sin(φ)
+
     a_1, a_2, a_3 = vec[0], vec[1], vec[2]
-    c_1 = a_1 * ti.math.cos(θ) + a_2 * ti.math.sin(θ)
-    c_2 = -a_1 * ti.math.sin(θ) + a_2 * ti.math.cos(θ)
-    c_3 = a_3
+    c_1 = a_1 * cosφ + a_2 * sinφ * cosα
+    c_3 = -a_2 * sinα + a_3
     return ti.math.sqrt(
             c_1**2 * ξ**2 +
             c_3**2
