@@ -10,7 +10,7 @@
 """
 
 import taichi as ti
-from eikivp.SO3.subRiemannian.interpolate import (
+from eikivp.SO3.plus.interpolate import (
     vectorfield_trilinear_interpolate_LI,
     scalar_trilinear_interpolate
 )
@@ -19,8 +19,6 @@ from eikivp.SO3.utils import (
     convert_continuous_indices_to_real_space,
     vector_LI_to_static
 )
-
-# Sub-Riemannian backtracking
 
 def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, αs_np, βs_np, φs_np, ξ, dt=None, β=0.,
                            n_max=10000):
@@ -57,7 +55,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, αs_n
     # Set hyperparameters
     shape = grad_W_np.shape[0:-1]
     if dt is None:
-        # It would make sense to also include G somehow, but I am not sure how.
+        # It would make sense to also include ξ somehow, but I am not sure how.
         dt = cost_np.min()
 
     # Initialise Taichi objects
