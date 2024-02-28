@@ -110,6 +110,7 @@ def geodesic_back_tracking_backend(
           source point in `W_np`.
         `target_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
           target point in `W_np`.
+        `θs`: angle coordinate at each grid point.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `cost`: ti.field(dtype=[float]) of cost function, taking values between

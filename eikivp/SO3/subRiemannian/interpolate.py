@@ -3,7 +3,7 @@
     ===========
 
     Provides tools to interpolate vector fields, normalised to 1 with respect to
-    a Riemannian metric, on SO(3). The primary methods are:
+    a sub-Riemannian metric, on SE(2). The primary methods are:
       1. `vectorfield_trilinear_interpolate_LI`: interpolate a vector field,
       with norm 1, given with respect to the left invariant frame, trilinearly
       at some point in the domain.
@@ -13,12 +13,12 @@
 """
 
 import taichi as ti
-from eikivp.SO3.utils import (
+from eikivp.SE2.utils import (
     trilinear_interpolate,
     scalar_trilinear_interpolate,
     sanitize_index
 )
-from eikivp.SO3.Riemannian.metric import (
+from eikivp.SE2.subRiemannian.metric import (
     normalise_LI,
     normalise_static
 )
@@ -29,7 +29,7 @@ from eikivp.SO3.Riemannian.metric import (
 def vectorfield_trilinear_interpolate_LI(
     vectorfield: ti.template(),
     index: ti.template(),
-    G: ti.types.vector(3, ti.f32),
+    ξ: ti.f32,
     cost_field: ti.template()
 ) -> ti.types.vector(3, ti.f32):
     """
@@ -44,8 +44,8 @@ def vectorfield_trilinear_interpolate_LI(
           interpolate.
         `index`: ti.types.vector(n=3, dtype=[float]) continuous index at which 
           we want to interpolate.
-        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
           between 0 and 1.
 
@@ -74,7 +74,7 @@ def vectorfield_trilinear_interpolate_LI(
 
     cost = scalar_trilinear_interpolate(cost_field, index)
 
-    return normalise_LI(ti.Vector([u, v, w]), G, cost)
+    return normalise_LI(ti.Vector([u, v, w]), ξ, cost)
 
 @ti.func
 def vectorfield_trilinear_interpolate_static(
@@ -82,12 +82,11 @@ def vectorfield_trilinear_interpolate_static(
     index: ti.template(),
     αs: ti.template(),
     φs: ti.template(),
-    G: ti.types.vector(3, ti.f32),
+    ξ: ti.f32,
     cost_field: ti.template()
 ) -> ti.types.vector(3, ti.f32):
     """
     @taichi.func
-
 
     Interpolate vector field, normalised to 1 and given in static
     coordinates, `vectorfield` at continuous `index` trilinearly, via repeated 
@@ -100,8 +99,8 @@ def vectorfield_trilinear_interpolate_static(
           we want to interpolate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
-          tensor with respect to left invariant basis.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
         `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
           between 0 and 1.
 
@@ -133,4 +132,4 @@ def vectorfield_trilinear_interpolate_static(
 
     cost = scalar_trilinear_interpolate(cost_field, index)
 
-    return normalise_static(ti.Vector([u, v, w]), G, cost, α, φ)
+    return normalise_static(ti.Vector([u, v, w]), ξ, cost, α, φ)
