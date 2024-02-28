@@ -13,6 +13,7 @@ from eikivp.R2.utils import (
     align_to_standard_array_axis_vector_field
 )
 from eikivp.SO3.utils import align_to_standard_array_axis_scalar_field as align_to_standard_array_axis_scalar_field_SO3
+from eikivp.SO3.utils import align_to_standard_array_axis_vector_field as align_to_standard_array_axis_vector_field_SO3
 
 
 def convert_array_to_image(image_array):
@@ -112,10 +113,10 @@ def plot_contour_SO3(distance, αs, βs, levels=None, linestyles=None, figsize=(
         ax.set_ylim(α_min, α_max)
 
     αs_aligned = align_to_standard_array_axis_scalar_field_SO3(αs)
-    ys_aligned = align_to_standard_array_axis_scalar_field_SO3(βs)
+    βs_aligned = align_to_standard_array_axis_scalar_field_SO3(βs)
     distance_aligned = align_to_standard_array_axis_scalar_field_SO3(np.expand_dims(distance, axis=2)).squeeze(-1)
     
-    contour = ax.contour(αs_aligned, ys_aligned, distance_aligned, levels=levels, linestyles=linestyles)
+    contour = ax.contour(βs_aligned, αs_aligned, distance_aligned, levels=levels, linestyles=linestyles)
     return fig, ax, contour
 
 def plot_isosurface(verts, faces, x_min, x_max, y_min, y_max, θ_min, θ_max, dxy, dθ, alpha=0.5, label=None,
@@ -131,10 +132,31 @@ def plot_isosurface(verts, faces, x_min, x_max, y_min, y_max, θ_min, θ_max, dx
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
         ax.set_zlim(θ_min, θ_max)
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_zlabel("θ")
-    ax.plot_trisurf(x_min + verts[:, 1] * dxy, y_max - verts[:, 0] * dxy, faces, θ_min + verts[:, 2] * dθ, alpha=alpha, label=label)
+        ax.set_xlabel("$x$")
+        ax.set_ylabel("$y$")
+        ax.set_zlabel("$θ$")
+    ax.plot_trisurf(x_min + verts[:, 1] * dxy, y_max - verts[:, 0] * dxy, faces, θ_min + verts[:, 2] * dθ, alpha=alpha,
+                    label=label)
+    return fig, ax
+
+def plot_isosurface_SO3(verts, faces, α_min, α_max, β_min, β_max, φ_min, φ_max, dα, dβ, dφ, alpha=0.5, label=None,
+                    figsize=(10, 10), fig=None, ax=None):
+    """Plot the isosurface given by `verts` and `faces`."""
+    if fig is None and ax is None:
+        fig = plt.figure(figsize=figsize)
+        fig.canvas.toolbar_visible = False
+        fig.canvas.header_visible = False
+        fig.canvas.footer_visible = False
+        fig.canvas.resizable = False
+        ax = fig.add_subplot(111, projection="3d")
+        ax.set_xlim(β_max, β_min)
+        ax.set_ylim(α_min, α_max)
+        ax.set_zlim(φ_min, φ_max)
+        ax.set_xlabel("$β$")
+        ax.set_ylabel("$α$")
+        ax.set_zlabel("$φ$")
+    ax.plot_trisurf(β_min + verts[:, 0] * dβ, α_min + verts[:, 1] * dα, faces, φ_min + verts[:, 2] * dφ, alpha=alpha,
+                    label=label)
     return fig, ax
 
 def overwrite_default(passed_value, default_value):
@@ -188,4 +210,38 @@ def plot_scalar_field(scalar_field, xs, ys, levels=None, figsize=(12, 10), fig=N
     scalar_field_aligned = align_to_standard_array_axis_scalar_field(scalar_field)
 
     contour = ax.contourf(xs_aligned, ys_aligned, scalar_field_aligned, levels=levels)
+    return fig, ax, contour
+
+def plot_vector_field_SO3(vector_field, αs, βs, color="red", figsize=(10, 10), fig=None, ax=None, α_min=None,
+                          α_max=None, β_min=None, β_max=None):
+    """Streamplot of `vector_field`."""
+    if fig is None and ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.set_xlabel("$β$")
+        ax.set_ylabel("$α$")
+        α_min = overwrite_default(α_min, αs[0, 0])
+        α_max = overwrite_default(α_max, αs[-1, -1])
+        β_min = overwrite_default(β_min, βs[0, 0])
+        β_max = overwrite_default(β_max, βs[-1, -1])
+        ax.set_xlim(β_max, β_min)
+        ax.set_ylim(α_min, α_max)
+
+    ax.streamplot(βs, αs, vector_field[..., 1], vector_field[..., 0], color=color)
+    return fig, ax
+
+def plot_scalar_field_SO3(scalar_field, αs, βs, levels=None, figsize=(12, 10), fig=None, ax=None, α_min=None,
+                          α_max=None, β_min=None, β_max=None):
+    """Plot two-dimensional `scalar_field` using coloured in contours."""
+    if fig is None and ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.set_xlabel("$β$")
+        ax.set_ylabel("$α$")
+        α_min = overwrite_default(α_min, αs[0, 0])
+        α_max = overwrite_default(α_max, αs[-1, -1])
+        β_min = overwrite_default(β_min, βs[0, 0])
+        β_max = overwrite_default(β_max, βs[-1, -1])
+        ax.set_xlim(β_max, β_min)
+        ax.set_ylim(α_min, α_max)
+
+    contour = ax.contourf(βs, αs, scalar_field, levels=levels)
     return fig, ax, contour
