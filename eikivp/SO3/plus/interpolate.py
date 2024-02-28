@@ -3,10 +3,10 @@
     ===========
 
     Provides tools to interpolate vector fields, normalised to 1 with respect to
-    a sub-Riemannian metric, on SO(3). The primary methods are:
+    a Finsler function, on SO(3). The primary methods are:
       1. `vectorfield_trilinear_interpolate_LI`: interpolate a vector field,
       with norm 1, given with respect to the left invariant frame, trilinearly
-      at some point in the domain.
+      at some point in the domain. This method seems not to work properly.
       2. `vectorfield_trilinear_interpolate_static`: interpolate a vector field,
       with norm 1, given with respect to the static frame, trilinearly at some
       point in the domain.
@@ -18,7 +18,7 @@ from eikivp.SO3.utils import (
     scalar_trilinear_interpolate,
     sanitize_index
 )
-from eikivp.SO3.subRiemannian.metric import (
+from eikivp.SO3.plus.metric import (
     normalise_LI,
     normalise_static
 )
@@ -90,7 +90,7 @@ def vectorfield_trilinear_interpolate_static(
 
     Interpolate vector field, normalised to 1 and given in static
     coordinates, `vectorfield` at continuous `index` trilinearly, via repeated 
-    linear interpolation (α, β, φ).
+    linear interpolation (x, y, θ).
 
     Args:
         `vectorfield`: ti.Vector.field(n=3, dtype=[float]) in which we want to 
@@ -99,7 +99,7 @@ def vectorfield_trilinear_interpolate_static(
           we want to interpolate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+        `ξ`: Stiffness of moving in the B1 direction compared to the B3
           direction, taking values greater than 0.
         `cost_field`: ti.field(dtype=[float]) of cost function, taking values 
           between 0 and 1.

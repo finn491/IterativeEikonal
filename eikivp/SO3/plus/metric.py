@@ -2,18 +2,17 @@
     metric
     ======
 
-    Provides tools to deal with sub-Riemannian metrics on SO(3). The primary
-    methods are:
+    Provides tools to deal with Finsler functions on SO(3). The primary methods
+    are:
       1. `normalise_LI`: normalise a vector, given with respect to the left
-      invariant frame, to norm 1 with respect to some data-driven sub-Riemannian
-      metric.
+      invariant frame, to norm 1 with respect to some data-driven Finsler
+      function.
       2. `norm_LI`: compute the norm of a vector, given with respect to the left
-      invariant frame, with respect to some data-driven sub-Riemannian metric.
+      invariant frame, with respect to some data-driven Finsler function.
       3. `normalise_static`: normalise a vector, given with respect to the
-      static frame, to norm 1 with respect to some data-driven sub-Riemannian
-      metric.
+      static frame, to norm 1 with respect to some data-driven Finsler function.
       4. `norm_static`: compute the norm of a vector, given with respect to the
-      static frame, with respect to some data-driven sub-Riemannian metric.
+      static frame, with respect to some data-driven Finsler function.
 """
 
 import taichi as ti
@@ -30,11 +29,11 @@ def normalise_LI(
     @taichi.func
 
     Normalise `vec`, represented in left invariant coordinates, to 1 with 
-    respect to the left invariant sub-Riemannian metric tensor defined by `ξ`.
+    respect to the left invariant Finsler function defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+        `ξ`: Stiffness of moving in the B1 direction compared to the B3
           direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
 
@@ -53,7 +52,7 @@ def norm_LI(
     @taichi.func
 
     Compute the norm of `vec` represented in left invariant coordinates with
-    respect to the left invariant sub-Riemannian metric tensor defined by `ξ`.
+    respect to the left invariant Finsler function defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
@@ -81,15 +80,14 @@ def normalise_static(
     @taichi.func
 
     Normalise `vec`, represented in static coordinates, to 1 with respect to the 
-    left invariant sub-Riemannian metric tensor defined by `ξ`.
+    left invariant Finsler function defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
-        `α`: α-coordinate of corresponding point on the manifold.
-        `φ`: angle coordinate of corresponding point on the manifold.
+        `θ`: angle coordinate of corresponding point on the manifold.
 
     Returns:
         ti.types.vector(n=3, dtype=[float]) of normalisation of `vec`.
@@ -108,15 +106,14 @@ def norm_static(
     @taichi.func
 
     Compute the norm of `vec` represented in static coordinates with respect to 
-    the left invariant sub-Riemannian metric tensor defined by `ξ`.
+    the left invariant Finsler function defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
         `ξ`: Stiffness of moving in the B1 direction compared to the B3
           direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
-        `α`: α-coordinate of corresponding point on the manifold.
-        `φ`: angle coordinate of corresponding point on the manifold.
+        `θ`: angle coordinate of corresponding point on the manifold.
 
     Returns:
         Norm of `vec`.
