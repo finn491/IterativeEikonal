@@ -392,7 +392,7 @@ def vector_static_to_LI(
     ], dt=ti.f32)
 
 
-def coordinate_real_to_array(α, β, φ, α_min, β_min, φ_min, dαβ, dφ):
+def coordinate_real_to_array(α, β, φ, α_min, β_min, φ_min, dα, dβ, dφ):
     """
     Compute the array indices (I, J, K) of the point defined by real coordinates 
     (`α`, `β`, `φ`). Can broadcast over entire arrays of real coordinates.
@@ -404,17 +404,19 @@ def coordinate_real_to_array(α, β, φ, α_min, β_min, φ_min, dαβ, dφ):
         `α_min`: minimum value of α-coordinates in rectangular domain.
         `β_min`: minimum value of β-coordinates in rectangular domain.
         `φ_min`: minimum value of φ-coordinates in rectangular domain.
-        `dαβ`: spatial resolution, which is equal in the α- and β-directions,
-          taking values greater than 0.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
         `dφ`: orientational resolution, taking values greater than 0.
     """
-    I = np.rint((α - α_min) / dαβ).astype(int)
-    J = np.rint((β - β_min) / dαβ).astype(int)
+    I = np.rint((α - α_min) / dα).astype(int)
+    J = np.rint((β - β_min) / dβ).astype(int)
     K = np.rint((φ - φ_min) / dφ).astype(int)
     return I, J, K
 
 
-def coordinate_array_to_real(I, J, K, α_min, β_min, φ_min, dαβ, dφ):
+def coordinate_array_to_real(I, J, K, α_min, β_min, φ_min, dα, dβ, dφ):
     """
     Compute the real coordinates (α, β, φ) of the point defined by array indices 
     (`I`, `J`, `K`). Can broadcast over entire arrays of array indices.
@@ -426,12 +428,14 @@ def coordinate_array_to_real(I, J, K, α_min, β_min, φ_min, dαβ, dφ):
         `α_min`: minimum value of α-coordinates in rectangular domain.
         `β_min`: minimum value of β-coordinates in rectangular domain.
         `φ_min`: minimum value of φ-coordinates in rectangular domain.
-        `dαβ`: spatial resolution, which is equal in the α- and β-directions,
-          taking values greater than 0.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
         `dφ`: orientational resolution, taking values greater than 0.
     """
-    α = α_min + I * dαβ
-    β = β_min + J * dαβ
+    α = α_min + I * dα
+    β = β_min + J * dβ
     φ = φ_min + K * dφ
     return α, β, φ
 

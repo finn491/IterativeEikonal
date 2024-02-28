@@ -19,7 +19,6 @@ from eikivp.SO3.utils import (
     convert_continuous_indices_to_real_space,
     vector_LI_to_static
 )
-from eikivp.utils import sparse_to_dense
 
 def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, αs_np, βs_np, φs_np, G_np, dt=None, β=0.,
                            n_max=10000):

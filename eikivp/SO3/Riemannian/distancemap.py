@@ -42,7 +42,7 @@ from eikivp.utils import (
 
 # Data-driven left invariant
 
-def eikonal_solver(cost_np, source_point, G_np, dαβ, dφ, αs_np, φs_np, target_point=None, n_max=1e5,
+def eikonal_solver(cost_np, source_point, G_np, dα, dβ, dφ, αs_np, φs_np, target_point=None, n_max=1e5,
                    n_max_initialisation=1e4, n_check=None, n_check_initialisation=None, tol=1e-3, dε=1.,
                    initial_condition=100.):
     """
@@ -58,7 +58,10 @@ def eikonal_solver(cost_np, source_point, G_np, dαβ, dφ, αs_np, φs_np, targ
           `cost_np`.
         `G_np`: np.ndarray(shape=(3,), dtype=[float]) of constants of the
           diagonal metric tensor with respect to left invariant basis.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
         `αs_np`: α-coordinate at every point in the grid on which `cost_np` is
@@ -97,7 +100,7 @@ def eikonal_solver(cost_np, source_point, G_np, dαβ, dφ, αs_np, φs_np, targ
     """
     # First compute for uniform cost to get initial W
     print("Solving Eikonal PDE with left invariant metric to compute initialisation.")
-    W_init_np, _ = eikonal_solver_uniform(cost_np.shape, source_point, G_np, dαβ, dφ, αs_np, φs_np,
+    W_init_np, _ = eikonal_solver_uniform(cost_np.shape, source_point, G_np, dα, dβ, dφ, αs_np, φs_np,
                                           target_point=target_point, n_max=n_max_initialisation,
                                           n_check=n_check_initialisation, tol=tol, dε=dε,
                                           initial_condition=initial_condition)
@@ -109,7 +112,7 @@ def eikonal_solver(cost_np, source_point, G_np, dαβ, dφ, αs_np, φs_np, targ
     # Heuristic, so that W does not become negative.
     # The sqrt(3) comes from the fact that the norm of the gradient consists of
     # 3 terms.
-    ε = dε * (min(dαβ, dφ) / G_inv.max()) / np.sqrt(3) # * cost_np.min() 
+    ε = dε * (min(dα, dβ, dφ) / G_inv.max()) / np.sqrt(3) # * cost_np.min() 
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
     N_check = int(n_max / n_check)
@@ -141,7 +144,7 @@ def eikonal_solver(cost_np, source_point, G_np, dαβ, dφ, αs_np, φs_np, targ
     is_converged = False
     for n in range(N_check):
         for _ in tqdm(range(int(n_check))):
-            step_W(W, cost, G_inv, dαβ, dφ, αs_np, φs_np, ε, B1_forward, B1_backward, B2_forward, B2_backward,
+            step_W(W, cost, G_inv, dα, dβ, dφ, αs_np, φs_np, ε, B1_forward, B1_backward, B2_forward, B2_backward,
                    B3_forward, B3_backward, B1_W, B2_W, B3_W, dW_dt)
             apply_boundary_conditions(W, boundarypoints, boundaryvalues)
         is_converged = check_convergence(dW_dt, tol=tol, target_point=target_point)
@@ -152,7 +155,7 @@ def eikonal_solver(cost_np, source_point, G_np, dαβ, dφ, αs_np, φs_np, targ
         print(f"Hamiltonian did not converge to tolerance {tol}!")
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    distance_gradient_field(W, cost, G_inv, dαβ, dφ, αs_np, φs_np, B1_forward, B1_backward, B2_forward, B2_backward,
+    distance_gradient_field(W, cost, G_inv, dα, dβ, dφ, αs_np, φs_np, B1_forward, B1_backward, B2_forward, B2_backward,
                             B3_forward, B3_backward, B1_W, B2_W, B3_W, grad_W)
 
     # Cleanup
@@ -166,7 +169,8 @@ def step_W(
     W: ti.template(),
     cost: ti.template(),
     G_inv: ti.types.vector(3, ti.f32),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -194,7 +198,8 @@ def step_W(
         `cost`: ti.field(dtype=[float], shape=shape) of cost function.
         `G_inv`: ti.types.vector(n=3, dtype=[float]) of constants of the inverse
           of the diagonal metric tensor with respect to left invariant basis.
-        `dαβ`: Spatial step size, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: Orientational step size, taking values greater than 0.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -210,7 +215,7 @@ def step_W(
         `dW_dt`: ti.field(dtype=[float], shape=shape) of error of the distance 
           map with respect to the Eikonal PDE, which is updated in place.
     """
-    upwind_derivatives(W, dαβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward,
+    upwind_derivatives(W, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward,
                        B1_W, B2_W, B3_W)
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
@@ -226,7 +231,8 @@ def distance_gradient_field(
     W: ti.template(),
     cost: ti.template(),
     G_inv: ti.types.vector(3, ti.f32),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -253,7 +259,8 @@ def distance_gradient_field(
         `cost`: ti.field(dtype=[float], shape=shape) of cost function.
         `G_inv`: ti.types.vector(n=3, dtype=[float]) of constants of the
           diagonal metric tensor with respect to left invariant basis.
-        `dαβ`: Spatial step size, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: Orientational step size, taking values greater than 0.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -266,7 +273,7 @@ def distance_gradient_field(
         `grad_W`: ti.field(dtype=[float], shape=shape) of upwind derivatives of 
           approximate distance map, which is updated inplace.
     """
-    upwind_derivatives(W, dαβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward,
+    upwind_derivatives(W, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward,
                        B1_W, B2_W, B3_W)
     for I in ti.grouped(B1_W):
         grad_W[I] = ti.Vector([
@@ -277,7 +284,7 @@ def distance_gradient_field(
 
 # Left invariant
 
-def eikonal_solver_uniform(domain_shape, source_point, G_np, dαβ, dφ, αs_np, φs_np, target_point=None, n_max=1e5,
+def eikonal_solver_uniform(domain_shape, source_point, G_np, dα, dβ, dφ, αs_np, φs_np, target_point=None, n_max=1e5,
                            n_check=None, tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
@@ -292,7 +299,10 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dαβ, dφ, αs_np,
           `domain_shape`.
         `G_np`: np.ndarray(shape=(3,), dtype=[float]) of constants of the 
           diagonal metric tensor with respect to left invariant basis.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
         `αs_np`: α-coordinate at every point in the grid on which `cost_np` is
@@ -333,7 +343,7 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dαβ, dφ, αs_np,
     # Heuristic, so that W does not become negative.
     # The sqrt(3) comes from the fact that the norm of the gradient consists of
     # 3 terms.
-    ε = dε * (min(dαβ, dφ) / G_inv.max()) / np.sqrt(3) # * cost_np.min()
+    ε = dε * (min(dα, dβ, dφ) / G_inv.max()) / np.sqrt(3) # * cost_np.min()
     if n_check is None: # Only check convergence at n_max
         n_check = n_max
     N_check = int(n_max / n_check)
@@ -364,7 +374,7 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dαβ, dφ, αs_np,
     is_converged = False
     for n in range(N_check):
         for _ in tqdm(range(int(n_check))):
-            step_W_uniform(W, G_inv, dαβ, dφ, αs_np, φs_np, ε, B1_forward, B1_backward, B2_forward, B2_backward,
+            step_W_uniform(W, G_inv, dα, dβ, dφ, αs_np, φs_np, ε, B1_forward, B1_backward, B2_forward, B2_backward,
                            B3_forward, B3_backward, B1_W, B2_W, B3_W, dW_dt)
             apply_boundary_conditions(W, boundarypoints, boundaryvalues)
         is_converged = check_convergence(dW_dt, tol=tol, target_point=target_point)
@@ -375,7 +385,7 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dαβ, dφ, αs_np,
         print(f"Hamiltonian did not converge to tolerance {tol}!")
 
     # Compute gradient field: note that ||grad W|| = 1 by Eikonal PDE.
-    distance_gradient_field_uniform(W, G_inv, dαβ, dφ, αs_np, φs_np, B1_forward, B1_backward, B2_forward, B2_backward,
+    distance_gradient_field_uniform(W, G_inv, dα, dβ, dφ, αs_np, φs_np, B1_forward, B1_backward, B2_forward, B2_backward,
                                     B3_forward, B3_backward, B1_W, B2_W, B3_W, grad_W)
 
     # Align with (I, J, K)-frame
@@ -390,7 +400,8 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dαβ, dφ, αs_np,
 def step_W_uniform(
     W: ti.template(),
     G_inv: ti.types.vector(3, ti.f32),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -417,7 +428,8 @@ def step_W_uniform(
       Static:
         `G_inv`: ti.types.vector(n=3, dtype=[float]) of constants of the
           diagonal metric tensor with respect to left invariant basis.
-        `dαβ`: Spatial step size, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: Orientational step size, taking values greater than 0.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -433,7 +445,7 @@ def step_W_uniform(
         `dW_dt`: ti.field(dtype=[float], shape=shape) of error of the distance 
           map with respect to the Eikonal PDE, which is updated in place.
     """
-    upwind_derivatives(W, dαβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward,
+    upwind_derivatives(W, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward,
                        B1_W, B2_W, B3_W)
     for I in ti.grouped(W):
         # It seems like TaiChi does not allow negative exponents.
@@ -448,7 +460,8 @@ def step_W_uniform(
 def distance_gradient_field_uniform(
     W: ti.template(),
     G_inv: ti.types.vector(3, ti.f32),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -473,7 +486,8 @@ def distance_gradient_field_uniform(
         `W`: ti.field(dtype=[float], shape=shape) of approximate distance map.
         `G_inv`: ti.types.vector(n=3, dtype=[float]) of constants of the inverse
           of the diagonal metric tensor with respect to left invariant basis.
-        `dαβ`: Spatial step size, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: Orientational step size, taking values greater than 0.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -486,7 +500,7 @@ def distance_gradient_field_uniform(
         `grad_W`: ti.field(dtype=[float], shape=shape) of upwind derivatives of 
           approximate distance map, which is updated inplace.
     """
-    upwind_derivatives(W, dαβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward,
+    upwind_derivatives(W, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward,
                        B1_W, B2_W, B3_W)
     for I in ti.grouped(B1_W):
         grad_W[I] = ti.Vector([
