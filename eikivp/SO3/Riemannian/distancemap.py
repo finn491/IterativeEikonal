@@ -155,7 +155,7 @@ def eikonal_solver(cost_np, source_point, G_np, dα, dβ, dφ, αs_np, φs_np, t
         print(f"Hamiltonian did not converge to tolerance {tol}!")
 
     # Compute gradient field: note that ||grad_cost W|| = 1 by Eikonal PDE.
-    distance_gradient_field(W, cost, G_inv, dα, dβ, dφ, αs_np, φs_np, B1_forward, B1_backward, B2_forward, B2_backward,
+    distance_gradient_field(W, cost, G_inv, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward,
                             B3_forward, B3_backward, B1_W, B2_W, B3_W, grad_W)
 
     # Cleanup
@@ -333,11 +333,6 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dα, dβ, dφ, αs_
           invariant metric tensor field described by `G_np`.
         np.ndarray of upwind gradient field of (approximate) distance map.
     """
-    # Align with (x, y, θ)-frame
-    shape = (domain_shape[1], domain_shape[0], domain_shape[2])
-    source_point = align_to_real_axis_point(source_point, shape)
-    θs_np = align_to_real_axis_scalar_field(θs_np)
-
     # Set hyperparameters.
     G_inv = ti.Vector(invert_metric(G_np), ti.f32)
     # Heuristic, so that W does not become negative.
@@ -349,7 +344,7 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dα, dβ, dφ, αs_
     N_check = int(n_max / n_check)
 
     # Initialise Taichi objects
-    W = get_initial_W(shape, initial_condition=initial_condition, pad_shape=((1,), (1,), (0,)))
+    W = get_initial_W(domain_shape, initial_condition=initial_condition, pad_shape=((1,), (1,), (0,)))
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
@@ -374,7 +369,7 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dα, dβ, dφ, αs_
     is_converged = False
     for n in range(N_check):
         for _ in tqdm(range(int(n_check))):
-            step_W_uniform(W, G_inv, dα, dβ, dφ, αs_np, φs_np, ε, B1_forward, B1_backward, B2_forward, B2_backward,
+            step_W_uniform(W, G_inv, dα, dβ, dφ, αs, φs, ε, B1_forward, B1_backward, B2_forward, B2_backward,
                            B3_forward, B3_backward, B1_W, B2_W, B3_W, dW_dt)
             apply_boundary_conditions(W, boundarypoints, boundaryvalues)
         is_converged = check_convergence(dW_dt, tol=tol, target_point=target_point)
@@ -385,14 +380,12 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dα, dβ, dφ, αs_
         print(f"Hamiltonian did not converge to tolerance {tol}!")
 
     # Compute gradient field: note that ||grad W|| = 1 by Eikonal PDE.
-    distance_gradient_field_uniform(W, G_inv, dα, dβ, dφ, αs_np, φs_np, B1_forward, B1_backward, B2_forward, B2_backward,
+    distance_gradient_field_uniform(W, G_inv, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward,
                                     B3_forward, B3_backward, B1_W, B2_W, B3_W, grad_W)
 
-    # Align with (I, J, K)-frame
+    # Cleanup
     W_np = W.to_numpy()
     grad_W_np = grad_W.to_numpy()
-    W_np = align_to_standard_array_axis_scalar_field(W_np)
-    grad_W_np = align_to_standard_array_axis_vector_field(grad_W_np)
 
     return unpad_array(W_np, pad_shape=(1, 1, 0)), unpad_array(grad_W_np, pad_shape=(1, 1, 0, 0))
 
