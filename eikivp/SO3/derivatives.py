@@ -23,7 +23,8 @@ from eikivp.SO3.utils import scalar_trilinear_interpolate
 @ti.func
 def derivatives(
     u: ti.template(),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -47,14 +48,15 @@ def derivatives(
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
         `B*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
     """
-    h = ti.math.min(dαβ, dφ)
+    h = ti.math.min(dα, dβ, dφ)
     for I in ti.grouped(B1_forward):
         α = αs[I]
         φ = φs[I]
@@ -62,8 +64,8 @@ def derivatives(
         tanα = ti.math.tan(α)
         cosφ = ti.math.cos(φ)
         sinφ = ti.math.sin(φ)
-        I_B1 = ti.Vector([cosφ / dαβ, sinφ/cosα / dαβ, sinφ*tanα / dφ], dt=ti.f32) * h
-        I_B2 = ti.Vector([-sinφ / dαβ, cosφ/cosα / dαβ, cosφ*tanα / dφ], dt=ti.f32) * h
+        I_B1 = ti.Vector([cosφ / dα, sinφ/cosα / dβ, sinφ*tanα / dφ], dt=ti.f32) * h
+        I_B2 = ti.Vector([-sinφ / dα, cosφ/cosα / dβ, cosφ*tanα / dφ], dt=ti.f32) * h
         I_B3 = ti.Vector([0., 0., 1. / dφ], dt=ti.f32) * h
 
         B1_forward[I] = (scalar_trilinear_interpolate(u, I + I_B1) - u[I]) / h
@@ -77,7 +79,8 @@ def derivatives(
 @ti.func
 def abs_derivatives(
     u: ti.template(),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -103,7 +106,8 @@ def abs_derivatives(
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
@@ -112,7 +116,7 @@ def abs_derivatives(
         `abs_B*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
-    derivatives(u, dαβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward)
+    derivatives(u, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward)
     for I in ti.grouped(u):
         abs_B1[I] = ti.math.max(-B1_forward[I], B1_backward[I], 0)
         abs_B2[I] = ti.math.max(-B2_forward[I], B2_backward[I], 0)
@@ -122,7 +126,8 @@ def abs_derivatives(
 @ti.func
 def upwind_derivatives(
     u: ti.template(),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -147,7 +152,8 @@ def upwind_derivatives(
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
@@ -156,7 +162,7 @@ def upwind_derivatives(
         `upwind_B*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
-    derivatives( u, dαβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward)
+    derivatives(u, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward)
     for I in ti.grouped(u):
         upwind_A1[I] = select_upwind_derivative(B1_forward[I], B1_backward[I])
         upwind_A2[I] = select_upwind_derivative(B2_forward[I], B2_backward[I])
@@ -167,7 +173,8 @@ def upwind_derivatives(
 @ti.func
 def derivative_B1(
     u: ti.template(),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -187,14 +194,15 @@ def derivative_B1(
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
         `B1_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
     """
-    h = ti.math.min(dαβ, dφ)
+    h = ti.math.min(dα, dβ, dφ)
     for I in ti.grouped(B1_forward):
         α = αs[I]
         φ = φs[I]
@@ -202,7 +210,7 @@ def derivative_B1(
         tanα = ti.math.tan(α)
         cosφ = ti.math.cos(φ)
         sinφ = ti.math.sin(φ)
-        I_B1 = ti.Vector([cosφ / dαβ, sinφ/cosα / dαβ, sinφ*tanα / dφ], dt=ti.f32) * h
+        I_B1 = ti.Vector([cosφ / dα, sinφ/cosα / dβ, sinφ*tanα / dφ], dt=ti.f32) * h
 
         B1_forward[I] = (scalar_trilinear_interpolate(u, I + I_B1) - u[I]) / h
         B1_backward[I] = (u[I] - scalar_trilinear_interpolate(u, I - I_B1)) / h
@@ -211,7 +219,8 @@ def derivative_B1(
 @ti.func
 def derivative_B2(
     u: ti.template(),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -231,14 +240,15 @@ def derivative_B2(
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
         `B2_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
           updated in place.
     """
-    h = ti.math.min(dαβ, dφ)
+    h = ti.math.min(dα, dβ, dφ)
     for I in ti.grouped(B2_forward):
         α = αs[I]
         φ = φs[I]
@@ -246,7 +256,7 @@ def derivative_B2(
         tanα = ti.math.tan(α)
         cosφ = ti.math.cos(φ)
         sinφ = ti.math.sin(φ)
-        I_B2 = ti.Vector([-sinφ / dαβ, cosφ/cosα / dαβ, cosφ*tanα / dφ], dt=ti.f32) * h
+        I_B2 = ti.Vector([-sinφ / dα, cosφ/cosα / dβ, cosφ*tanα / dφ], dt=ti.f32) * h
 
         B2_forward[I] = (scalar_trilinear_interpolate(u, I + I_B2) - u[I]) / h
         B2_backward[I] = (u[I] - scalar_trilinear_interpolate(u, I - I_B2)) / h
@@ -285,7 +295,8 @@ def derivative_B3(
 @ti.func
 def abs_B1(
     u: ti.template(),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -305,7 +316,8 @@ def abs_B1(
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
@@ -314,7 +326,7 @@ def abs_B1(
         `abs_B1_u`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
-    derivative_B1(u, dαβ, dφ, αs, φs, B1_forward, B1_backward)
+    derivative_B1(u, dα, dβ, dφ, αs, φs, B1_forward, B1_backward)
     for I in ti.grouped(u):
         abs_B1_u[I] = ti.math.max(-B1_forward[I], B1_backward[I], 0)
 
@@ -322,7 +334,8 @@ def abs_B1(
 @ti.func
 def abs_B2(
     u: ti.template(),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -342,7 +355,8 @@ def abs_B2(
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
@@ -351,7 +365,7 @@ def abs_B2(
         `abs_B2_u`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
           which are updated in place.
     """
-    derivative_B2(u, dαβ, dφ, αs, φs, B2_forward, B2_backward)
+    derivative_B2(u, dα, dβ, dφ, αs, φs, B2_forward, B2_backward)
     for I in ti.grouped(u):
         abs_B2_u[I] = ti.math.max(-B2_forward[I], B2_backward[I], 0)
 
@@ -390,7 +404,8 @@ def abs_A3(
 @ti.func
 def upwind_B1(
     u: ti.template(),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -409,7 +424,8 @@ def upwind_B1(
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
@@ -418,7 +434,7 @@ def upwind_B1(
         `upwind_B1_u`: ti.field(dtype=[float], shape=shape) of upwind 
           derivatives, which are updated in place.
     """
-    derivative_B1(u, dαβ, dφ, αs, φs, B1_forward, B1_backward)
+    derivative_B1(u, dα, dβ, dφ, αs, φs, B1_forward, B1_backward)
     for I in ti.grouped(u):
         upwind_B1_u[I] = select_upwind_derivative(B1_forward[I], B1_backward[I])
 
@@ -426,7 +442,8 @@ def upwind_B1(
 @ti.func
 def upwind_B2(
     u: ti.template(),
-    dαβ: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
     dφ: ti.f32,
     αs: ti.template(),
     φs: ti.template(),
@@ -445,7 +462,8 @@ def upwind_B2(
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
-        `dαβ`: step size in spatial directions, taking values greater than 0.
+        `dα`: step size in spatial α-direction, taking values greater than 0.
+        `dβ`: step size in spatial β-direction, taking values greater than 0.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
@@ -454,7 +472,7 @@ def upwind_B2(
         `upwind_B2_u`: ti.field(dtype=[float], shape=shape) of upwind 
           derivatives, which are updated in place.
     """
-    derivative_B2(u, dαβ, dφ, αs, φs, B2_forward, B2_backward)
+    derivative_B2(u, dα, dβ, dφ, αs, φs, B2_forward, B2_backward)
     for I in ti.grouped(u):
         upwind_B2_u[I] = select_upwind_derivative(B2_forward[I], B2_backward[I])
 
