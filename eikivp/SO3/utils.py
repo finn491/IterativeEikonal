@@ -591,3 +591,97 @@ def align_to_standard_array_axis_vector_field(vector_field):
     """
     vector_field_aligned = np.flip(np.flip(vector_field, axis=1), axis=0)
     return vector_field_aligned
+
+
+# Maps from SO(3) into SE(2)
+# Π_forward: SO(3) -> SE(2), (α, β, φ) |-> (x, y, θ)
+# To get the angle θ from φ, we consider what happens along geodesics:
+#   θ(t) = arg(dx_dt(t) + i dy_dt(t)).
+# We can now find that
+#   θ(t) = arg((dx_dα dα_dt(t) + dx_dβ dβ_dt(t)) + i (dy_dα dα_dt(t) + dy_dβ dβ_dt(t))).
+# On geodesics it holds that dα_dt = cos(φ) and dβ_dt = sin(φ) / cos(α);
+# to find the other derivatives we simply need to differentiate
+# π_forward: S2 -> R2, (α, β) |-> (x, y), which can be derived from relatively
+# straightforward geometric arguments.
+
+@ti.func
+def Π_forward(
+    α: ti.f32,
+    β: ti.f32,
+    φ: ti.f32,
+    a: ti.f32,
+    c: ti.f32
+) -> ti.types.vector(3, ti.f32):
+    """
+    @taichi.func
+    
+    Map coordinates in SO(3) into SE(2), by projecting down from the sphere onto
+    a plane.
+    
+    Args:
+        `α`: α-coordinate.
+        `β`: β-coordinate.
+        `φ`: φ-coordinate.
+        `a`: Distance between nodal point of projection and centre of sphere.
+        `c`: Distance between projection plane and centre of sphere reflected
+          around nodal point.
+
+    Returns:
+        ti.types.vector(n=3, dtype=[float]) of coordinates in SE(2).
+    """
+    # π_forward: S2 -> R2
+    cosα = ti.math.cos(α)
+    sinα = ti.math.sin(α)
+    cosβ = ti.math.cos(β)
+    sinβ = ti.math.sin(β)
+
+    x = (a + c) * sinα / (a + cosα * cosβ)
+    y = (a + c) * cosα * sinβ / (a + cosα * cosβ)
+
+    # Partial derivatives, up to proportionality constant
+    # (a + c) / (a + cosα * cosβ)**2, which does not influence the angle
+    dπ_forward_x_dα = a * cosα + cosβ
+    dπ_forward_x_dβ = cosα * sinα * sinβ
+    dπ_forward_y_dα = -a * sinα * sinβ
+    dπ_forward_y_dβ = a * cosα * cosβ + cosα**2
+    
+    # Combine into Π_forward: SO(3) -> SE(2)
+    cosφ = ti.math.cos(φ)
+    sinφ = ti.math.sin(φ)
+
+    dα = cosφ
+    dβ = sinφ / cosα
+
+    θ = ti.math.atan2( # y, x
+        dπ_forward_y_dα * dα + dπ_forward_y_dβ * dβ,
+        dπ_forward_x_dα * dα + dπ_forward_x_dβ * dβ
+    )
+
+    return ti.Vector([x, y, θ], dt=ti.f32)
+
+# For the backward map which we don't need for interpolation.
+# @ti.func
+# def p_overline(
+#     x: ti.f32,
+#     y: ti.f32,
+#     a: ti.f32,
+#     c: ti.f32
+# ) -> ti.f32:
+#     """"""
+#     return (
+#         a * (a + c) * ti.math.sqrt((x**2 + y**2) * (1 - a**2) + (a + c)**2) / 
+#         ((x**2 + y**2) + (a + c)**2)
+#     )
+
+# @ti.func
+# def p_1(
+#     x: ti.f32,
+#     y: ti.f32,
+#     a: ti.f32,
+#     c: ti.f32
+# ) -> ti.f32:
+#     """"""
+#     return (
+#         ((a + c) * ti.math.sqrt((x**2 + y**2) * (1 - a**2) + (a + c)**2) - a * (x**2 + y**2)) /
+#         ((x**2 + y**2) + (a + c)**2)
+#     )
