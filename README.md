@@ -74,7 +74,7 @@ where $`g_i`$ are constants. We always set $`g_3 = 1`$, and allow $`g_1 =: \xi^2
 The implementation for $`SE(2)`$ equipped with a sub-Riemannian metric can be found in `eikivp/SE2/subRiemannian`.
 
 #### Plus controller
-In this case, we see $`SE(2`)$ as a Finslerian manifold. We again restrict the tangent spaces to be spanned by $`\mathcal{A}_1`$ and $`\mathcal{A}_3`$. Now, the car additionally is not allowed to move backwards [[3]](#3): this means motion in the negative $`\mathcal{A}_1`$ direction is restricted. Since Finslerian manifolds need not have a metric tensor corresponding to the Finsler function, and therefore also typically do not have a gradient $`\nabla`$, we need to reformulate the Eikonal PDE as follows:
+In this case, we see $`SE(2)`$ as a Finslerian manifold. We again restrict the tangent spaces to be spanned by $`\mathcal{A}_1`$ and $`\mathcal{A}_3`$. Now, the car additionally is not allowed to move backwards [[3]](#3): this means motion in the negative $`\mathcal{A}_1`$ direction is restricted. Since Finslerian manifolds need not have a metric tensor corresponding to the Finsler function, and therefore also typically do not have a gradient $`\nabla`$, we need to reformulate the Eikonal PDE as follows:
 ```math
 \begin{equation} \begin{dcases} (\mathcal{F}^C)^*(p, \mathrm{d}W(p)) = 1, & p \neq e, \\
 W(p) = 0, & p = e, \end{dcases} \end{equation}
@@ -90,7 +90,57 @@ where $`g_i`$ are constants and $`(\cdot)_+`$ denotes taking the positive part. 
 The implementation for $`SE(2)`$ equipped with a Finsler function can be found in `eikivp/SE2/plus`.
 
 ### $`SO(3)`$
-__TODO__
+We interpret $`SO(3)`$ as a smooth manifold.* We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`SO(3)`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
+
+The implementation for $`SO(3)`$ can be found in `eikivp/SO3`.
+
+__Image of what SO(3) looks like with our choice of coordinates?__
+
+*_As in the previous section, we are in fact actually dealing with the homogeneous space of $`SO(3)`$, i.e. the homogeneous space of two-dimensional positions and orientations on the sphere, which is a smooth manifold, whereas $`SO(3)`$ is the Lie group of translations and rotations acting thereon. Once again the Lie group and the homogeneous space become isomorphic upon choosing a reference position and orientation; we therefore write $`SO(3)`$ for both._
+
+#### Riemannian
+In this case, we see $`SO(3)`$ as a Riemannian manifold. The Eikonal PDE is then solved with respect to metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:
+```math
+\begin{align*}\mathcal{G}^C|_{\alpha, \beta, \phi} & = C^2(\alpha, \beta, \phi) \mathcal{G}|_{\alpha, \beta, \phi} = C^2(\alpha, \beta, \phi) g_i \nu^i|_{\alpha, \beta, \phi} \otimes \nu^i|_{\alpha, \beta, \phi} \\
+& = C^2(\alpha, \beta, \phi) (g_1 \nu^1|_{\alpha, \beta, \phi} \otimes \nu^1|_{\alpha, \beta, \phi} + g_2 \nu^2|_{\alpha, \beta, \phi} \otimes \nu^2|_{\alpha, \beta, \phi} + g_3 \nu^3|_{\alpha, \beta, \phi} \otimes \nu^3|_{\alpha, \beta, \phi}),\end{align*}
+```
+where $`g_i`$ are constants. Here $\nu^i$ is the dual of $`\mathcal{B}_i`$, where $`\{\mathcal{B}_i\}`$ is the standard left invariant basis, given by
+```math
+\begin{align*} \mathcal{B}_1|_{\alpha, \beta, \phi} & = \cos(\phi) \partial_{\alpha}|_{\alpha, \beta, \phi} + \frac{\sin(\phi)}{\cos(\alpha)} \partial_{\beta}|_{\alpha, \beta, \phi} + \sin(\phi) \tan(\phi) \partial_{\phi}|_{\alpha, \beta, \phi}, \\
+\mathcal{B}_2|_{\alpha, \beta, \phi} & = -\sin(\phi) \partial_{\alpha}|_{\alpha, \beta, \phi} + \frac{\cos(\phi)}{\cos(\alpha)} \partial_{\beta}|_{\alpha, \beta, \phi} + \cos(\phi) \tan(\phi) \partial_{\phi}|_{\alpha, \beta, \phi}, \textrm{ and} \\
+\mathcal{B}_3|_{\alpha, \beta, \phi} & = -\sin(\alpha) \partial_{\beta}|_{\alpha, \beta, \phi} + \partial_{\phi}|_{\alpha, \beta, \phi}.
+\end{align*}
+```
+
+The implementation for $`SO(3)`$ equipped with a Riemannian metric can be found in `eikivp/SO3/Riemannian`.
+
+#### Sub-Riemannian
+In this case, we see $`SO(3)`$ as a sub-Riemannian manifold. Specifically, we restrict the tangent spaces to be spanned by $`\mathcal{B}_1`$ and $`\mathcal{B}_3`$. This corresponds to the Reeds-Shepp car model [[2]](#2)[[3]](#3): the "car" is only allowed to move straight forward or backward, or turn the wheel.
+
+The Eikonal PDE is then again solved with respect to a metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:
+```math
+\begin{align*}\mathcal{G}^C|_{\alpha, \beta, \phi} & = C^2(\alpha, \beta, \phi) \mathcal{G}|_{\alpha, \beta, \phi} = C^2(\alpha, \beta, \phi) g_i \nu^i|_{\alpha, \beta, \phi} \otimes \nu^i|_{\alpha, \beta, \phi} \\
+& = C^2(\alpha, \beta, \phi) (g_1 \nu^1|_{\alpha, \beta, \phi} \otimes \nu^1|_{\alpha, \beta, \phi} + g_3 \nu^3|_{\alpha, \beta, \phi} \otimes \nu^3|_{\alpha, \beta, \phi}),\end{align*}
+```
+where $`g_i`$ are constants. We always set $`g_3 = 1`$, and allow $`g_1 =: \xi^2`$ to be provided by the user (you can simply rescale the problem to effectively change $`g_3`$).
+
+The implementation for $`SO(3)`$ equipped with a sub-Riemannian metric can be found in `eikivp/SO3/subRiemannian`.
+
+#### Plus controller
+In this case, we see $`SO(3)`$ as a Finslerian manifold. We again restrict the tangent spaces to be spanned by $`\mathcal{B}_1`$ and $`\mathcal{B}_3`$. Now, the car additionally is not allowed to move backwards [[3]](#3): this means motion in the negative $`\mathcal{B}_1`$ direction is restricted. Since Finslerian manifolds need not have a metric tensor corresponding to the Finsler function, and therefore also typically do not have a gradient $`\nabla`$, we need to reformulate the Eikonal PDE as follows:
+```math
+\begin{equation} \begin{dcases} (\mathcal{F}^C)^*(p, \mathrm{d}W(p)) = 1, & p \neq e, \\
+W(p) = 0, & p = e, \end{dcases} \end{equation}
+```
+where $`\mathcal{F}^C`$ is the data-driven Finsler function, $`\cdot^*`$ denotes taking the dual, and $`\mathrm{d}W`$ is the differential of $`W`$. The IVP formulation can be likewise recast to work with Finslerian manifolds.
+
+The Eikonal PDE is now solved with respect to a Finsler function that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven Finsler functions are so-called "plus controllers", which can be written as the product of a diagonal Finsler function that is left invariant under translations with some cost function:
+```math
+\begin{align*}(\mathcal{F}^C|_{\alpha, \beta, \phi})^2 & = C^2(\alpha, \beta, \phi) \mathcal{F}^2|_{\alpha, \beta, \phi} = C^2(\alpha, \beta, \phi) (g_1 (\nu^1|_{\alpha, \beta, \phi})_+ \otimes (\nu^1|_{\alpha, \beta, \phi})_+ + g_3 \nu^3|_{\alpha, \beta, \phi} \otimes \nu^3|_{\alpha, \beta, \phi}),\end{align*}
+```
+where $`g_i`$ are constants and $`(\cdot)_+`$ denotes taking the positive part. We always set $`g_3 = 1`$, and allow $`g_1 =: \xi^2`$ to be provided by the user (you can simply rescale the problem to effectively change $`g_3`$).
+
+The implementation for $`SO(3)`$ equipped with a Finsler function can be found in `eikivp/SO3/plus`.
 
 ## References
 <a id="1">[1]</a> 
