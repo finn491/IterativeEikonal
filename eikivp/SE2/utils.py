@@ -382,6 +382,34 @@ def coordinate_real_to_array(x, y, θ, x_min, y_min, θ_min, dxy, dθ):
     K = np.rint((θ - θ_min) / dθ).astype(int)
     return I, J, K
 
+@ti.func
+def coordinate_real_to_array_ti(
+    point: ti.types.vector(3, ti.f32),
+    x_min: ti.f32,
+    y_min: ti.f32,
+    θ_min: ti.f32,
+    dxy: ti.f32,
+    dθ: ti.f32
+) -> ti.types.vector(3, ti.f32):
+    """
+    Compute the array indices (I, J, K) of the point defined by real coordinates 
+    (`x`, `y`, `θ`). Can broadcast over entire arrays of real coordinates.
+
+    Args:
+        `x`: x-coordinate of the point.
+        `y`: y-coordinate of the point.
+        `θ`: θ-coordinate of the point.
+        `x_min`: minimum value of x-coordinates in rectangular domain.
+        `y_min`: minimum value of y-coordinates in rectangular domain.
+        `θ_min`: minimum value of θ-coordinates in rectangular domain.
+        `dxy`: spatial resolution, which is equal in the x- and y-directions,
+          taking values greater than 0.
+        `dθ`: orientational resolution, taking values greater than 0.
+    """
+    I = (point[0] - x_min) / dxy
+    J = (point[1] - y_min) / dxy
+    K = (point[2] - θ_min) / dθ
+    return ti.Vector([I, J, K], dt=ti.f32)
 
 def coordinate_array_to_real(I, J, K, x_min, y_min, θ_min, dxy, dθ):
     """

@@ -138,7 +138,7 @@ def geodesic_back_tracking_backend(
     α = scalar_trilinear_interpolate(αs, point)
     φ = scalar_trilinear_interpolate(φs, point)
     gradient_at_point = vector_LI_to_static(gradient_at_point_LI, α, φ)
-    while (ti.math.length(point - source_point) >= tol) and (n < n_max - 2):
+    while (ti.math.length(point - source_point) >= tol) and (n < n_max - 1):
         gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point, G, cost)
         α = scalar_trilinear_interpolate(αs, point)
         φ = scalar_trilinear_interpolate(φs, point)
