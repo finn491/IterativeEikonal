@@ -7,7 +7,7 @@
       approximations of the x- and y-derivatives.
       2. `abs_derivatives`: computes the absolute value of the upwind
       approximations of the x- and y-derivatives.
-      2. `upwind_derivatives`: computes the the upwind approximations of the x-
+      3. `upwind_derivatives`: computes the the upwind approximations of the x-
       and y-derivatives.
 """
 

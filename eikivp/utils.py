@@ -2,8 +2,8 @@
     utils
     =====
 
-    Provides miscellaneous computational utilities that can be used both on R^2
-    and SE(2).
+    Provides miscellaneous computational utilities that can be used on R^2,
+    SE(2), and SO(3).
 """
 
 import numpy as np

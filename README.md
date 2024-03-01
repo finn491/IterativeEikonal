@@ -1,5 +1,5 @@
 # EikIVP
-Solve Eikonal PDEs on $`\mathbb{R}^2`$, $`SE(2)`$, and (soon:tm:) $`SO(3)`$ using the iterative method described in Bekkers et al. (2015) "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in $`SE(2)`$" [[1]](#1). 
+Solve Eikonal PDEs on $`\mathbb{R}^2`$, $`SE(2)`$, and $`SO(3)`$ using the iterative method described in Bekkers et al. (2015) "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in $`SE(2)`$" [[1]](#1). 
 
 The viscosity solutions of the Eikonal equation is the geodesic distance map. We therefore can solve the Eikonal equation to determine the distance between two points, and find the geodesic connecting the two points (by gradient descent).
 
