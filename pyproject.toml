@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eikivp"
-version = "0.1.0"
+version = "0.2.0"
 description = "Solve Eikonal PDE with an IVP approach"
 authors = [
     {name = "F.M. Sherry", email = "f.m.sherry@tue.nl"}

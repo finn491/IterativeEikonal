@@ -3,7 +3,7 @@
     ======
 
     The Python package *eikivp* contains methods to solve the Eikonal PDE on
-    R^2, SE(2), and (soon) SO(3) using the iterative Initial Value Problem (IVP)
+    R^2, SE(2), and SO(3) using the iterative Initial Value Problem (IVP)
     technique described in Bekkers et al. "A PDE approach to Data-Driven
     Sub-Riemannian Geodesics in SE(2)" (2015), and to find geodesics connecting
     points with respect to the distance map that solves the Eikonal PDE.
@@ -15,7 +15,7 @@
     (hopefully) track vessels.
 
     Summary: compute distance map and geodesics with respect to data-driven 
-    metric on R^2, SE(2), and (soon) SO(3).
+    metric on R^2, SE(2), and SO(3).
 """
 
 # Access entire backend

@@ -4,16 +4,6 @@
 
     Provides miscellaneous computational utilities that can be used with all
     controllers on SE(2).
-
-    TODO: improve documentation
-      1. `vector_static_to_LI`: compute the components of a vector, given with
-      respect to the static frame, in the left invariant frame.
-      2. `vectorfield_static_to_LI`: compute the components of a vectorfield,
-      given with respect to the static frame, in the left invariant frame.
-      3. `vector_LI_to_static`: compute the components of a vector, given with
-      respect to the left invariant frame, in the left static frame.
-      4. `vectorfield_LI_to_static`: compute the components of a vectorfield,
-      given with respect to the left invariant, in the static frame.
 """
 
 import numpy as np

@@ -2,7 +2,7 @@
     visualisations
     ==============
     
-    Provides methods to visualise 2D images using matplotlib.
+    Provides methods to visualise 2D and 3D images using matplotlib.
 """
 
 import numpy as np
@@ -13,7 +13,6 @@ from eikivp.R2.utils import (
     align_to_standard_array_axis_vector_field
 )
 from eikivp.SO3.utils import align_to_standard_array_axis_scalar_field as align_to_standard_array_axis_scalar_field_SO3
-from eikivp.SO3.utils import align_to_standard_array_axis_vector_field as align_to_standard_array_axis_vector_field_SO3
 
 
 def convert_array_to_image(image_array):

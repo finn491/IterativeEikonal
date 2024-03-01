@@ -122,7 +122,7 @@ def geodesic_back_tracking_backend(
         `*_target`: Indices of the target point.
       Mutated:
         `γ`: ti.Vector.field(n=2, dtype=[float]) of coordinates of points on the
-          geodesic. #SNode stuff#
+          geodesic.
 
     Returns:
         Number of points in the geodesic.
