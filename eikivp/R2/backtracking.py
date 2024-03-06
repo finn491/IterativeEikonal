@@ -11,10 +11,7 @@
 
 import numpy as np
 import taichi as ti
-from eikivp.R2.interpolate import (
-    vectorfield_bilinear_interpolate,
-    scalar_bilinear_interpolate
-)
+from eikivp.R2.interpolate import vectorfield_bilinear_interpolate
 from eikivp.R2.utils import (
     coordinate_array_to_real,
     coordinate_real_to_array_ti
@@ -56,7 +53,8 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
     G = ti.Vector(G_np, ti.f32)
     if dt is None:
         # It would make sense to also include G somehow, but I am not sure how.
-        dt = cost_np.min() * dxy # Step roughly 1 pixel at a time.
+        # dt = cost_np.min() * dxy # Step roughly 1 pixel at a time.
+        dt = cost_np[target_point] * dxy # Step roughly 1 pixel at a time.
 
     # Initialise Taichi objects
     grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=shape)
@@ -76,9 +74,6 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
                                            γ)
     print(f"Geodesic consists of {γ_len} points.")
     γ_np = γ.to_numpy()[:γ_len]
-
-    # Cleanup
-    # γ_np = convert_continuous_indices_to_real_space_R2(γ_ci, xs, ys)
     return γ_np
 
 @ti.kernel
@@ -134,13 +129,17 @@ def geodesic_back_tracking_backend(
     point_array = coordinate_real_to_array_ti(point, x_min, y_min, dxy)
     tol = 2. * dxy # Stop if we are within two pixels of the source.
     n = 1
+    # Get gradient using componentwise bilinear interpolation.
     gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point_array, G, cost)
     while (ti.math.length(point - source_point) >= tol) and (n < n_max - 1):
+        # Get gradient using componentwise bilinear interpolation.
         gradient_at_point_next = vectorfield_bilinear_interpolate(grad_W, point_array, G, cost)
+        # Take weighted average with previous gradients for momentum.
         gradient_at_point = β * gradient_at_point + (1 - β) * gradient_at_point_next
         new_point = get_next_point(point, gradient_at_point, dt)
         γ[n] = new_point
         point = new_point
+        # To get the gradient, we need the corresponding array indices.
         point_array = coordinate_real_to_array_ti(point, x_min, y_min, dxy)
         n += 1
     γ[n] = source_point
@@ -171,39 +170,3 @@ def get_next_point(
     new_point[0] = point[0] - dt * gradient_at_point[0]
     new_point[1] = point[1] - dt * gradient_at_point[1]
     return new_point
-
-# def convert_continuous_indices_to_real_space_R2(γ_ci_np, xs_np, ys_np):
-#     """
-#     Convert the continuous indices in the geodesic `γ_ci_np` to the 
-#     corresponding real space coordinates described by `xs_np` and `ys_np`.
-#     """
-#     γ_ci = ti.Vector.field(n=2, dtype=ti.f32, shape=γ_ci_np.shape[0])
-#     γ_ci.from_numpy(γ_ci_np)
-#     γ = ti.Vector.field(n=2, dtype=ti.f32, shape=γ_ci.shape)
-
-#     xs = ti.field(dtype=ti.f32, shape=xs_np.shape)
-#     xs.from_numpy(xs_np)
-#     ys = ti.field(dtype=ti.f32, shape=ys_np.shape)
-#     ys.from_numpy(ys_np)
-
-#     continuous_indices_to_real_R2(γ_ci, xs, ys, γ)
-
-#     return γ.to_numpy()
-
-
-# @ti.kernel
-# def continuous_indices_to_real_R2(
-#     γ_ci: ti.template(),
-#     xs: ti.template(),
-#     ys: ti.template(),
-#     γ: ti.template()
-# ):
-#     """
-#     @taichi.kernel
-
-#     Interpolate the real space coordinates described by `xs` and `ys` at the 
-#     continuous indices in `γ_ci`.
-#     """
-#     for I in ti.grouped(γ_ci):
-#         γ[I][0] = scalar_bilinear_interpolate(xs, γ_ci[I])
-#         γ[I][1] = scalar_bilinear_interpolate(ys, γ_ci[I])

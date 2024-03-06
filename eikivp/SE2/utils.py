@@ -382,8 +382,10 @@ def coordinate_real_to_array_ti(
     dθ: ti.f32
 ) -> ti.types.vector(3, ti.f32):
     """
+    @taichi.func
+    
     Compute the array indices (I, J, K) of the point defined by real coordinates 
-    (`x`, `y`, `θ`). Can broadcast over entire arrays of real coordinates.
+    `point`. Can broadcast over entire arrays of real coordinates.
 
     Args:
         `x`: x-coordinate of the point.

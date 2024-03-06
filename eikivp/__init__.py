@@ -240,7 +240,7 @@ def eikonal_solver_SE2_uniform(domain_shape, source_point, dxy, dθ, θs, contro
         raise ValueError(f"""Controller "{controller}" is not supported! Choose one of "Riemannian", "sub-Riemannian", or "plus".""")
     return W, grad_W
 
-def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, xs, ys, θs, controller="sub-Riemannian",
+def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, x_min, y_min, θ_min, dxy, dθ, θs, controller="sub-Riemannian",
                                G=None, ξ=None, dt=None, β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
@@ -294,17 +294,17 @@ def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, xs, ys,
     if controller == "Riemannian":
         if G is None:
             raise ValueError(f"When using the Riemannian controller you must pass the entire diagonal of the left invariant metric tensor G!")
-        γ = geodesic_back_tracking_SE2_Riemannian(grad_W, source_point, target_point, cost, xs, ys, θs, G, dt=dt, β=β,
+        γ = geodesic_back_tracking_SE2_Riemannian(grad_W, source_point, target_point, cost, x_min, y_min, θ_min, dxy, dθ, θs, G, dt=dt, β=β,
                                                   n_max=n_max)
     elif controller == "sub-Riemannian":
         if ξ is None:
             raise ValueError(f"When using the sub-Riemannian controller you must pass the the stiffness parameter ξ!")
-        γ = geodesic_back_tracking_SE2_sub_Riemannian(grad_W, source_point, target_point, cost, xs, ys, θs, ξ, dt=dt,
+        γ = geodesic_back_tracking_SE2_sub_Riemannian(grad_W, source_point, target_point, cost, x_min, y_min, θ_min, dxy, dθ, θs, ξ, dt=dt,
                                                       β=β, n_max=n_max)
     elif controller == "plus":
         if ξ is None:
             raise ValueError(f"When using the plus controller you must pass the the stiffness parameter ξ!")
-        γ = geodesic_back_tracking_SE2_plus(grad_W, source_point, target_point, cost, xs, ys, θs, ξ, dt=dt, β=β, 
+        γ = geodesic_back_tracking_SE2_plus(grad_W, source_point, target_point, cost, x_min, y_min, θ_min, dxy, dθ, θs, ξ, dt=dt, β=β, 
                                             n_max=n_max)
     else:
         raise ValueError(f"""Controller "{controller}" is not supported! Choose one of "Riemannian", "sub-Riemannian", or "plus".""")
