@@ -35,7 +35,8 @@ def normalise_LI(
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
         `ξ`: Stiffness of moving in the B1 direction compared to the B3
           direction, taking values greater than 0.
-        `cost`: cost function at point, taking values between 0 and 1.
+        `cost`: cost function at point, taking values between 0 and 1, with
+          shape [Nα, Nβ, Nφ].
 
     Returns:
         ti.types.vector(n=3, dtype=[float]) of normalisation of `vec`.
@@ -56,9 +57,10 @@ def norm_LI(
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+        `ξ`: Stiffness of moving in the B1 direction compared to the B3
           direction, taking values greater than 0.
-        `cost`: cost function at point, taking values between 0 and 1.
+        `cost`: cost function at point, taking values between 0 and 1, with
+          shape [Nα, Nβ, Nφ].
 
     Returns:
         Norm of `vec`.
@@ -84,9 +86,10 @@ def normalise_static(
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+        `ξ`: Stiffness of moving in the B1 direction compared to the B3
           direction, taking values greater than 0.
-        `cost`: cost function at point, taking values between 0 and 1.
+        `cost`: cost function at point, taking values between 0 and 1, with
+          shape [Nα, Nβ, Nφ].
         `θ`: angle coordinate of corresponding point on the manifold.
 
     Returns:
@@ -112,7 +115,8 @@ def norm_static(
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
         `ξ`: Stiffness of moving in the B1 direction compared to the B3
           direction, taking values greater than 0.
-        `cost`: cost function at point, taking values between 0 and 1.
+        `cost`: cost function at point, taking values between 0 and 1, with
+          shape [Nα, Nβ, Nφ].
         `θ`: angle coordinate of corresponding point on the manifold.
 
     Returns:

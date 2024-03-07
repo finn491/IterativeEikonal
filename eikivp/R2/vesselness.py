@@ -20,7 +20,8 @@ def rc_vessel_enhancement(image, σ, α=0.2, γ=0.75, ε=0.2):
     from "Code A - Vesselness in SE(2)".
 
     Args:
-        `image`: np.ndarray of a grayscale image, taking values between 0 and 1.
+        `image`: np.ndarray of a grayscale image, taking values between 0 and 1,
+          with shape [Nx, Ny].
         `σ`: Standard deviation of Gaussian derivatives, taking values greater 
           than 0.
         `α`: Anisotropy penalty, taking values between 0 and 1.

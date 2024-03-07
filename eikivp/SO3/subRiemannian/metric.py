@@ -34,7 +34,7 @@ def normalise_LI(
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+        `ξ`: Stiffness of moving in the B1 direction compared to the B3
           direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
 
@@ -57,7 +57,7 @@ def norm_LI(
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+        `ξ`: Stiffness of moving in the B1 direction compared to the B3
           direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
 
@@ -85,7 +85,7 @@ def normalise_static(
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
-        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+        `ξ`: Stiffness of moving in the B1 direction compared to the B3
           direction, taking values greater than 0.
         `cost`: cost function at point, taking values between 0 and 1.
         `α`: α-coordinate of corresponding point on the manifold.

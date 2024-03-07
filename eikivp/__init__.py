@@ -56,7 +56,7 @@ def eikonal_solver_SE2(cost, source_point, dxy, dθ, θs, controller="sub-Rieman
 
     Args:
         `cost`: np.ndarray of cost function throughout domain, taking values
-          between 0 and 1.
+          between 0 and 1, with shape `[Nx, Ny, Nθ]`.
         `source_point`: Tuple[int] describing index of source point in 
           `cost`.
         `G_np`: np.ndarray(shape=(3,), dtype=[float]) of constants of the
@@ -158,8 +158,8 @@ def eikonal_solver_SE2_uniform(domain_shape, source_point, dxy, dθ, θs, contro
     (2015).
 
     Args:
-        `domain_shape`: Tuple[int] describing the shape of the domain, with
-          respect to standard array indexing.
+        `domain_shape`: Tuple[int] describing the shape of the domain, namely
+          [Nx, Ny, Nθ].
         `source_point`: Tuple[int] describing index of source point in 
           `domain_shape`.
         `dxy`: Spatial step size, taking values greater than 0.
@@ -249,11 +249,11 @@ def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, x_min, 
 
     Args:
         `grad_W`: np.ndarray of upwind gradient with respect to some cost of the
-          approximate distance map.
+          approximate distance map, with shape [Nx, Ny, Nθ, 3].
         `source_point`: Tuple[int] describing index of source point in `cost`.
         `target_point`: Tuple[int] describing index of target point in `cost`.
         `cost`: np.ndarray of cost function throughout domain, taking values
-          between 0 and 1.
+          between 0 and 1, with shape [Nx, Ny, Nθ].
         `x_min`: minimum value of x-coordinates in rectangular domain.
         `y_min`: minimum value of y-coordinates in rectangular domain.
         `θ_min`: minimum value of θ-coordinates in rectangular domain.
@@ -336,7 +336,7 @@ def eikonal_solver_SO3(cost, source_point, dα, dβ, dφ, αs_np, φs_np, contro
 
     Args:
         `cost`: np.ndarray of cost function throughout domain, taking values
-          between 0 and 1.
+          between 0 and 1, with shape [Nα, Nβ, Nφ].
         `source_point`: Tuple[int] describing index of source point in 
           `cost`.
         `G_np`: np.ndarray(shape=(3,), dtype=[float]) of constants of the
@@ -446,8 +446,8 @@ def eikonal_solver_SO3_uniform(domain_shape, source_point, dα, dβ, dφ, αs_np
     (2015).
 
     Args:
-        `domain_shape`: Tuple[int] describing the shape of the domain, with
-          respect to standard array indexing.
+        `domain_shape`: Tuple[int] describing the shape of the domain, namely
+          [Nα, Nβ, Nφ].
         `source_point`: Tuple[int] describing index of source point in 
           `domain_shape`.
         `dα`: spatial resolution in the α-direction, taking values greater than
@@ -543,11 +543,11 @@ def geodesic_back_tracking_SO3(grad_W, source_point, target_point, cost, α_min,
 
     Args:
         `grad_W`: np.ndarray of upwind gradient with respect to some cost of the
-          approximate distance map.
+          approximate distance map, with shape [Nα, Nβ, Nφ, 3].
         `source_point`: Tuple[int] describing index of source point in `cost`.
         `target_point`: Tuple[int] describing index of target point in `cost`.
         `cost`: np.ndarray of cost function throughout domain, taking values
-          between 0 and 1.
+          between 0 and 1, with shape [Nα, Nβ, Nφ].
         `α_min`: minimum value of α-coordinates in rectangular domain.
         `β_min`: minimum value of β-coordinates in rectangular domain.
         `φ_min`: minimum value of φ-coordinates in rectangular domain.

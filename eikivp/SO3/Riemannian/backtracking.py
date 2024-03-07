@@ -30,11 +30,11 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, α_mi
 
     Args:
         `grad_W_np`: np.ndarray of upwind gradient with respect to some cost of 
-          the approximate distance map.
+          the approximate distance map, with shape [Nα, Nβ, Nφ, 3].
         `source_point`: Tuple[int] describing index of source point in `W_np`.
         `target_point`: Tuple[int] describing index of target point in `W_np`.
         `cost_np`: np.ndarray of cost function throughout domain, taking values
-          between 0 and 1.
+          between 0 and 1, with shape [Nα, Nβ, Nφ].
         `α_min`: minimum value of α-coordinates in rectangular domain.
         `β_min`: minimum value of β-coordinates in rectangular domain.
         `φ_min`: minimum value of φ-coordinates in rectangular domain.
@@ -118,8 +118,8 @@ def geodesic_back_tracking_backend(
 
     Args:
       Static:
-        `grad_W`: ti.field(dtype=[float], shape=shape) of upwind gradient with
-          respect to some cost of the approximate distance map.
+        `grad_W`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ, 3]) of upwind
+          gradient with respect to some cost of the approximate distance map.
         `source_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
           source point in `W_np`.
         `target_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
@@ -128,8 +128,8 @@ def geodesic_back_tracking_backend(
         `φs`: angle coordinate at each grid point.
         `G`: ti.types.vector(n=3, dtype=[float]) of constants of diagonal metric
           tensor with respect to left invariant basis.
-        `cost`: ti.field(dtype=[float]) of cost function, taking values between
-          0 and 1.
+        `cost`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of cost function,
+          taking values between 0 and 1.
         `α_min`: minimum value of α-coordinates in rectangular domain.
         `β_min`: minimum value of β-coordinates in rectangular domain.
         `φ_min`: minimum value of φ-coordinates in rectangular domain.
@@ -155,7 +155,7 @@ def geodesic_back_tracking_backend(
     γ[0] = point
     # To get the gradient, we need the corresponding array indices.
     point_array = coordinate_real_to_array_ti(point, α_min, β_min, φ_min, dα, dβ, dφ)
-    tol = 2. * ti.math.min(dα, dβ, dφ) # Stop if we are within two pixels of the source.
+    tol = ti.math.sqrt((2 * dα)**2 + (2 * dβ)**2 + (2 * dφ)**2) # Stop if we are within two pixels of the source.
     n = 1
     # Get gradient using componentwise trilinear interpolation.
     gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point_array, G, cost)

@@ -202,46 +202,6 @@ def get_next_point(
     new_point[2] = point[2] - dt * gradient_at_point[2]
     return new_point
 
-def convert_continuous_indices_to_real_space(γ_ci_np, xs_np, ys_np, θs_np):
-    """
-    Convert the continuous indices in the geodesic `γ_ci_np` to the 
-    corresponding real space coordinates described by `xs_np`, `ys_np`, and
-    `θs_np`.
-    """
-    γ_ci = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_ci_np.shape[0])
-    γ_ci.from_numpy(γ_ci_np)
-    γ = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_ci.shape)
-
-    xs = ti.field(dtype=ti.f32, shape=xs_np.shape)
-    xs.from_numpy(xs_np)
-    ys = ti.field(dtype=ti.f32, shape=ys_np.shape)
-    ys.from_numpy(ys_np)
-    θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
-    θs.from_numpy(θs_np)
-
-    continuous_indices_to_real(γ_ci, xs, ys, θs, γ)
-
-    return γ.to_numpy()
-
-@ti.kernel
-def continuous_indices_to_real(
-    γ_ci: ti.template(),
-    xs: ti.template(),
-    ys: ti.template(),
-    θs: ti.template(),
-    γ: ti.template()
-):
-    """
-    @taichi.kernel
-
-    Interpolate the real space coordinates described by `xs`, `ys`, and `θs` at 
-    the continuous indices in `γ_ci`.
-    """
-    for I in ti.grouped(γ_ci):
-        γ[I][0] = scalar_trilinear_interpolate(xs, γ_ci[I])
-        γ[I][1] = scalar_trilinear_interpolate(ys, γ_ci[I])
-        γ[I][2] = scalar_trilinear_interpolate(θs, γ_ci[I])
-
 # Coordinate Transforms
 
 @ti.func
@@ -427,7 +387,7 @@ def align_to_real_axis_point(point, shape):
     Express `point`, given in indices with respect to standard array convention,
     in terms of indices with respect to arrays aligned with real axes (see Notes
     for more explanation). Here, `shape` gives the shape of the array in which
-    we index _after_ aligning with real axes.
+    we index _after_ aligning with real axes, so [Nx, Ny, Nθ].
 
     Args:
         `point`: Tuple[int, int, int] describing point with respect to standard
@@ -437,6 +397,15 @@ def align_to_real_axis_point(point, shape):
           `0 <= point[1] <= shape[0] - 1`, and `0 <= point[2] <= shape[2] - 1`.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up, you do so by decreasing I, while if you want to move a single
+        pixel to the right, you do so by increasing J. Hence, the shape of the
+        array is [Ny, Nx, Nθ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing J, and moving right a single pixel is achieved by increasing
+        I. Hence, the shape of the array is [Nx, Ny, Nθ].
+
         Alignment is achieved by first flipping and subsequently transposing the
         array.
             
@@ -461,6 +430,15 @@ def align_to_real_axis_scalar_field(field):
           convention.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up, you do so by decreasing I, while if you want to move a single
+        pixel to the right, you do so by increasing J. Hence, the shape of the
+        array is [Ny, Nx, Nθ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing J, and moving right a single pixel is achieved by increasing
+        I. Hence, the shape of the array is [Nx, Ny, Nθ].
+
         Alignment is achieved by first flipping and subsequently transposing the
         array.
             
@@ -487,6 +465,15 @@ def align_to_real_axis_vector_field(vector_field):
           standard array convention.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up, you do so by decreasing I, while if you want to move a single
+        pixel to the right, you do so by increasing J. Hence, the shape of the
+        array is [Ny, Nx, Nθ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing J, and moving right a single pixel is achieved by increasing
+        I. Hence, the shape of the array is [Nx, Ny, Nθ].
+
         Alignment is achieved by first flipping and subsequently transposing the
         array.
             
@@ -508,7 +495,8 @@ def align_to_standard_array_axis_point(point, shape):
     Express `point`, given in indices with respect to arrays aligned with real 
     axes, in terms of indices with respect to standard array convention, (see 
     Notes for more explanation). Here, `shape` gives the shape of the array in 
-    which we index _after_ aligning with standard array convention.
+    which we index _after_ aligning with standard array convention, so
+    [Ny, Nx, Nθ].
 
     Args:
         `point`: Tuple[int, int] describing point with respect to arrays aligned
@@ -518,6 +506,15 @@ def align_to_standard_array_axis_point(point, shape):
           `0 <= point[1] <= shape[0] - 1`, and `0 <= point[2] <= shape[2] - 1`.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up, you do so by decreasing I, while if you want to move a single
+        pixel to the right, you do so by increasing J. Hence, the shape of the
+        array is [Ny, Nx, Nθ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing J, and moving right a single pixel is achieved by increasing
+        I. Hence, the shape of the array is [Nx, Ny, Nθ].
+
         Alignment is achieved by first transposing and subsequently flipping the
         array.
             
@@ -543,6 +540,15 @@ def align_to_standard_array_axis_scalar_field(field):
           arrays aligned with real axes.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up, you do so by decreasing I, while if you want to move a single
+        pixel to the right, you do so by increasing J. Hence, the shape of the
+        array is [Ny, Nx, Nθ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing J, and moving right a single pixel is achieved by increasing
+        I. Hence, the shape of the array is [Nx, Ny, Nθ].
+
         Alignment is achieved by first flipping and subsequently transposing the
         array.
             
@@ -570,6 +576,15 @@ def align_to_standard_array_axis_vector_field(vector_field):
           to arrays aligned with real axes.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up, you do so by decreasing I, while if you want to move a single
+        pixel to the right, you do so by increasing J. Hence, the shape of the
+        array is [Ny, Nx, Nθ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing J, and moving right a single pixel is achieved by increasing
+        I. Hence, the shape of the array is [Nx, Ny, Nθ].
+
         Alignment is achieved by first flipping and subsequently transposing the
         array.
             

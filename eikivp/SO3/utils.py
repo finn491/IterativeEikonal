@@ -465,7 +465,7 @@ def align_to_real_axis_point(point, shape):
     Express `point`, given in indices with respect to standard array convention,
     in terms of indices with respect to arrays aligned with real axes (see Notes
     for more explanation). Here, `shape` gives the shape of the array in which
-    we index _after_ aligning with real axes.
+    we index _after_ aligning with real axes, so [Nα, Nβ, Nφ].
 
     Args:
         `point`: Tuple[int, int, int] describing point with respect to standard
@@ -475,6 +475,16 @@ def align_to_real_axis_point(point, shape):
           `0 <= point[1] <= shape[1] - 1`, and `0 <= point[2] <= shape[2] - 1`.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up (i.e. in the positive α-direction), you do so by decreasing I,
+        while if you want to move a single pixel to the left (i.e. in the
+        positive β-direction), you do so by decreasing J. Hence, the shape of
+        the array is [Nβ, Nα, Nφ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing I, and moving left a single pixel is achieved by increasing
+        J. Hence, the shape of the array is [Nα, Nβ, Nφ].
+
         Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
@@ -498,6 +508,16 @@ def align_to_real_axis_scalar_field(field):
           convention.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up (i.e. in the positive α-direction), you do so by decreasing I,
+        while if you want to move a single pixel to the left (i.e. in the
+        positive β-direction), you do so by decreasing J. Hence, the shape of
+        the array is [Nβ, Nα, Nφ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing I, and moving left a single pixel is achieved by increasing
+        J. Hence, the shape of the array is [Nα, Nβ, Nφ].
+
         Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
@@ -522,6 +542,16 @@ def align_to_real_axis_vector_field(vector_field):
           standard array convention.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up (i.e. in the positive α-direction), you do so by decreasing I,
+        while if you want to move a single pixel to the left (i.e. in the
+        positive β-direction), you do so by decreasing J. Hence, the shape of
+        the array is [Nβ, Nα, Nφ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing I, and moving left a single pixel is achieved by increasing
+        J. Hence, the shape of the array is [Nα, Nβ, Nφ].
+
         Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
@@ -541,7 +571,8 @@ def align_to_standard_array_axis_point(point, shape):
     Express `point`, given in indices with respect to arrays aligned with real 
     axes, in terms of indices with respect to standard array convention, (see 
     Notes for more explanation). Here, `shape` gives the shape of the array in 
-    which we index _after_ aligning with standard array convention.
+    which we index _after_ aligning with standard array convention, so
+    [Nβ, Nα, Nφ].
 
     Args:
         `point`: Tuple[int, int] describing point with respect to arrays aligned
@@ -551,6 +582,16 @@ def align_to_standard_array_axis_point(point, shape):
           `0 <= point[1] <= shape[1] - 1`, and `0 <= point[2] <= shape[2] - 1`.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up (i.e. in the positive α-direction), you do so by decreasing I,
+        while if you want to move a single pixel to the left (i.e. in the
+        positive β-direction), you do so by decreasing J. Hence, the shape of
+        the array is [Nβ, Nα, Nφ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing I, and moving left a single pixel is achieved by increasing
+        J. Hence, the shape of the array is [Nα, Nβ, Nφ].
+
         Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
@@ -575,6 +616,16 @@ def align_to_standard_array_axis_scalar_field(field):
           arrays aligned with real axes.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up (i.e. in the positive α-direction), you do so by decreasing I,
+        while if you want to move a single pixel to the left (i.e. in the
+        positive β-direction), you do so by decreasing J. Hence, the shape of
+        the array is [Nβ, Nα, Nφ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing I, and moving left a single pixel is achieved by increasing
+        J. Hence, the shape of the array is [Nα, Nβ, Nφ].
+
         Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    
@@ -599,6 +650,16 @@ def align_to_standard_array_axis_vector_field(vector_field):
           to arrays aligned with real axes.
 
     Notes:
+        By default, if you take a point in an image, and want to move a single
+        pixel up (i.e. in the positive α-direction), you do so by decreasing I,
+        while if you want to move a single pixel to the left (i.e. in the
+        positive β-direction), you do so by decreasing J. Hence, the shape of
+        the array is [Nβ, Nα, Nφ].
+
+        When aligned with real axes, moving up a single pixel is achieved by
+        increasing I, and moving left a single pixel is achieved by increasing
+        J. Hence, the shape of the array is [Nα, Nβ, Nφ].
+
         Alignment is achieved by flipping the array twice.
             
     ===================== DRAWING DOES NOT WORK IN HELP ========================    

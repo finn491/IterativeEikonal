@@ -27,11 +27,11 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
 
     Args:
         `grad_W_np`: np.ndarray of upwind gradient with respect to some cost of 
-          the approximate distance map.
+          the approximate distance map, with shape [Nx, Ny, 2]
         `source_point`: Tuple[int] describing index of source point in `W_np`.
         `target_point`: Tuple[int] describing index of target point in `W_np`.
         `cost_np`: np.ndarray of cost function throughout domain, taking values
-          between 0 and 1.
+          between 0 and 1, with shape [Nx, Ny]
         `x_min`: minimum value of x-coordinates in rectangular domain.
         `y_min`: minimum value of y-coordinates in rectangular domain.
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
@@ -104,16 +104,16 @@ def geodesic_back_tracking_backend(
 
     Args:
       Static:
-        `grad_W`: ti.field(dtype=[float], shape=shape) of upwind gradient with
-          respect to some cost of the approximate distance map.
+        `grad_W`: ti.field(dtype=[float], shape=[Nx, Ny, 2]) of upwind gradient
+          with respect to some cost of the approximate distance map.
         `source_point`: ti.types.vector(n=2, dtype=[float]) describing index of 
           source point in `W_np`.
         `target_point`: ti.types.vector(n=2, dtype=[float]) describing index of 
           target point in `W_np`.
         `G`: ti.types.vector(n=2, dtype=[float]) of constants of the diagonal
           metric tensor with respect to standard basis.
-        `cost`: ti.field(dtype=[float]) of cost function, taking values between
-          0 and 1.
+        `cost`: ti.field(dtype=[float], shape=[Nx, Ny]) of cost function, taking
+          values between 0 and 1.
         `x_min`: minimum value of x-coordinates in rectangular domain.
         `y_min`: minimum value of y-coordinates in rectangular domain.
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
@@ -135,7 +135,7 @@ def geodesic_back_tracking_backend(
     γ[0] = point
     # To get the gradient, we need the corresponding array indices.
     point_array = coordinate_real_to_array_ti(point, x_min, y_min, dxy)
-    tol = 2. * dxy # Stop if we are within two pixels of the source.
+    tol = ti.math.sqrt((2 * dxy)**2 + (2 * dxy)**2) # Stop if we are within two pixels of the source.
     n = 1
     # Get gradient using componentwise bilinear interpolation.
     gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point_array, G, cost)

@@ -54,7 +54,7 @@ def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, plus_softness=0.
 
     Args:
         `cost_np`: np.ndarray of cost function throughout domain, taking values
-          between 0 and 1.
+          between 0 and 1, with shape [Nx, Ny, Nθ].
         `source_point`: Tuple[int] describing index of source point in 
           `cost_np`.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
@@ -191,7 +191,7 @@ def step_W(
 
     Args:
       Static:
-        `cost`: ti.field(dtype=[float], shape=shape) of cost function.
+        `cost`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of cost function.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `plus_softness`: Strength of the plus controller, taking values between
@@ -206,14 +206,15 @@ def step_W(
         `ε`: "Time" step size, taking values greater than 0.
         `*_target`: Indices of the target point.
       Mutated:
-        `W`: ti.field(dtype=[float], shape=shape) of approximate distance map, 
-          which is updated in place.
-        `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives.
-        `A*_W`: ti.field(dtype=[float], shape=shape) of upwind derivative of the 
-          approximate distance map in the A* direction, which is updated in 
+        `W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of approximate distance
+          map, which is updated in place.
+        `A*_*`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of derivatives.
+        `A*_W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of upwind derivative
+          of the approximate distance map in the A* direction, which is updated
+          in place.
+        `dW_dt`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of error of the
+          distance map with respect to the Eikonal PDE, which is updated in
           place.
-        `dW_dt`: ti.field(dtype=[float], shape=shape) of error of the distance 
-          map with respect to the Eikonal PDE, which is updated in place.
     """
     upwind_A1(W, dxy, θs, A1_forward, A1_backward, A1_W)
     upwind_A3(W, dθ, A3_forward, A3_backward, A3_W)
@@ -250,8 +251,9 @@ def distance_gradient_field(
 
     Args:
       Static:
-        `W`: ti.field(dtype=[float], shape=shape) of approximate distance map.
-        `cost`: ti.field(dtype=[float], shape=shape) of cost function.
+        `W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of approximate distance
+          map.
+        `cost`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of cost function.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `plus_softness`: Strength of the plus controller, taking values between
@@ -264,13 +266,13 @@ def distance_gradient_field(
         `dθ`: Orientational step size, taking values greater than 0.
         `θs`: angle coordinate at each grid point.
       Mutated:
-        `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `A*_W`: ti.field(dtype=[float], shape=shape) of upwind derivative of the 
-          approximate distance map in the A* direction, which is updated in 
-          place.
-        `grad_W`: ti.field(dtype=[float], shape=shape) of upwind derivatives of 
-          approximate distance map, which is updated inplace.
+        `A*_*`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of derivatives,
+          which are updated in place.
+        `A*_W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of upwind derivative
+          of the approximate distance map in the A* direction, which is updated
+          in place.
+        `grad_W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of upwind
+          derivatives of approximate distance map, which is updated inplace.
     """
     upwind_A1(W, dxy, θs, A1_forward, A1_backward, A1_W)
     upwind_A3(W, dθ, A3_forward, A3_backward, A3_W)
@@ -293,8 +295,8 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, plu
     Sub-Riemannian Geodesics in SE(2)" (2015).
 
     Args:
-        `domain_shape`: Tuple[int] describing the shape of the domain, with
-          respect to standard array indexing.
+        `domain_shape`: Tuple[int] describing the shape of the domain, namely
+          [Nx, Ny, Nθ].
         `source_point`: Tuple[int] describing index of source point in 
           `domain_shape`.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
@@ -424,14 +426,15 @@ def step_W_uniform(
         `ε`: "Time" step size, taking values greater than 0.
         `*_target`: Indices of the target point.
       Mutated:
-        `W`: ti.field(dtype=[float], shape=shape) of approximate distance map, 
-          which is updated in place.
-        `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives.
-        `A*_W`: ti.field(dtype=[float], shape=shape) of upwind derivative of the 
-          approximate distance map in the A* direction, which is updated in 
+        `W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of approximate distance
+          map, which is updated in place.
+        `A*_*`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of derivatives.
+        `A*_W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of upwind derivative
+          of the approximate distance map in the A* direction, which is updated
+          in place.
+        `dW_dt`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of error of the
+          distance map with respect to the Eikonal PDE, which is updated in
           place.
-        `dW_dt`: ti.field(dtype=[float], shape=shape) of error of the distance 
-          map with respect to the Eikonal PDE, which is updated in place.
     """
     upwind_A1(W, dxy, θs, A1_forward, A1_backward, A1_W)
     upwind_A3(W, dθ, A3_forward, A3_backward, A3_W)
@@ -467,20 +470,21 @@ def distance_gradient_field_uniform(
 
     Args:
       Static:
-        `W`: ti.field(dtype=[float], shape=shape) of approximate distance map.
+        `W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of approximate distance
+          map.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `dxy`: Spatial step size, taking values greater than 0.
         `dθ`: Orientational step size, taking values greater than 0.
         `θs`: angle coordinate at each grid point.
       Mutated:
-        `A*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `A*_W`: ti.field(dtype=[float], shape=shape) of upwind derivative of the 
-          approximate distance map in the A* direction, which is updated in 
-          place.
-        `grad_W`: ti.field(dtype=[float], shape=shape) of upwind derivatives of 
-          approximate distance map, which is updated inplace.
+        `A*_*`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of derivatives,
+          which are updated in place.
+        `A*_W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of upwind derivative
+          of the approximate distance map in the A* direction, which is updated
+          in place.
+        `grad_W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ, 3]) of upwind
+          derivatives of approximate distance map, which is updated inplace.
     """
     upwind_A1(W, dxy, θs, A1_forward, A1_backward, A1_W)
     upwind_A3(W, dθ, A3_forward, A3_backward, A3_W)

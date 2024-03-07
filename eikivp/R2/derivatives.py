@@ -33,12 +33,12 @@ def derivatives(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nx, Ny]) which we want to 
           differentiate.
         `dxy`: step size in x and y direction, taking values greater than 0.
       Mutated:
-        `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
+        `d*_*`: ti.field(dtype=[float], shape=[Nx, Ny]) of derivatives, which
+          are updated in place.
     """
     I_dx = ti.Vector([1, 0], dt=ti.i32)
     I_dy = ti.Vector([0, 1], dt=ti.i32)
@@ -73,13 +73,13 @@ def abs_derivatives(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nx, Ny]) which we want to 
           differentiate.
         `dxy`: step size in x and y direction, taking values greater than 0.
       Mutated:
-        `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `abs_d*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
+        `d*_*`: ti.field(dtype=[float], shape=[Nx, Ny]) of derivatives, which
+          are updated in place.
+        `abs_d*`: ti.field(dtype=[float], shape=[Nx, Ny]) of upwind derivatives,
           which are updated in place.
     """
     derivatives(u, dxy, dx_forward, dx_backward, dy_forward, dy_backward)
@@ -106,14 +106,14 @@ def upwind_derivatives(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nx, Ny]) which we want to 
           differentiate.
         `dxy`: step size in x and y direction, taking values greater than 0.
       Mutated:
-        `d*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `upwind_d*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
-          which are updated in place.
+        `d*_*`: ti.field(dtype=[float], shape=[Nx, Ny]) of derivatives, which
+          are updated in place.
+        `upwind_d*`: ti.field(dtype=[float], shape=[Nx, Ny]) of upwind
+          derivatives, which are updated in place.
     """
     derivatives(u, dxy, dx_forward, dx_backward, dy_forward, dy_backward)
     for I in ti.grouped(u):

@@ -39,12 +39,12 @@ def derivatives(
     @taichi.func
 
     Compute the forward and backward finite difference approximations of the 
-    left invariant derivatives of `u` with spatial step size `dαβ` and 
+    left invariant derivatives of `u` with spatial step sizes `dα` and `dβ` and 
     orientational step size `dφ`.
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -53,8 +53,8 @@ def derivatives(
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
+        `B*_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
+          which are updated in place.
     """
     h = ti.math.min(dα, dβ, dφ)
     for I in ti.grouped(B1_forward):
@@ -102,7 +102,7 @@ def abs_derivatives(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -111,10 +111,10 @@ def abs_derivatives(
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `abs_B*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
+        `B*_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
           which are updated in place.
+        `abs_B*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of upwind
+          derivatives, which are updated in place.
     """
     derivatives(u, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward)
     for I in ti.grouped(u):
@@ -148,7 +148,7 @@ def upwind_derivatives(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -157,10 +157,10 @@ def upwind_derivatives(
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B*_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `upwind_B*`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
+        `B*_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
           which are updated in place.
+        `upwind_B*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of upwind
+          derivatives, which are updated in place.
     """
     derivatives(u, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B2_forward, B2_backward, B3_forward, B3_backward)
     for I in ti.grouped(u):
@@ -185,12 +185,12 @@ def derivative_B1(
     @taichi.func
 
     Compute the forward and backward finite difference approximations of the 
-    left invariant derivative B1 of `u` with spatial step size `dαβ`. Adapted
-    from Gijs Bellaard.
+    left invariant derivative B1 of `u` with spatial step sizes `dα` and `dβ`
+    and orientational step size `dφ`. Adapted from Gijs Bellaard.
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -199,8 +199,8 @@ def derivative_B1(
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B1_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
+        `B1_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
+          which are updated in place.
     """
     h = ti.math.min(dα, dβ, dφ)
     for I in ti.grouped(B1_forward):
@@ -231,12 +231,12 @@ def derivative_B2(
     @taichi.func
 
     Compute the forward and backward finite difference approximations of the 
-    left invariant derivative B2 of `u` with spatial step size `dαβ`. Adapted
-    from Gijs Bellaard.
+    left invariant derivative B2 of `u` with spatial step sizes `dα` and `dβ`
+    and orientational step size `dφ`. Adapted from Gijs Bellaard.
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -245,8 +245,8 @@ def derivative_B2(
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B2_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
+        `B2_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
+          which are updated in place.
     """
     h = ti.math.min(dα, dβ, dφ)
     for I in ti.grouped(B2_forward):
@@ -277,13 +277,13 @@ def derivative_B3(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B3_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
+        `B3_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
+          which are updated in place.
     """
     for I in ti.grouped(B3_forward):
         I_B3 = ti.Vector([0., 0., 1.], dt=ti.f32)
@@ -312,7 +312,7 @@ def abs_B1(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -321,10 +321,10 @@ def abs_B1(
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B1_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `abs_B1_u`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
+        `B1_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
           which are updated in place.
+        `abs_B1_u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of upwind
+          derivatives, which are updated in place.
     """
     derivative_B1(u, dα, dβ, dφ, αs, φs, B1_forward, B1_backward)
     for I in ti.grouped(u):
@@ -351,7 +351,7 @@ def abs_B2(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -360,10 +360,10 @@ def abs_B2(
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B2_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `abs_B2_u`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
+        `B2_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
           which are updated in place.
+        `abs_B2_u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of upwind
+          derivatives, which are updated in place.
     """
     derivative_B2(u, dα, dβ, dφ, αs, φs, B2_forward, B2_backward)
     for I in ti.grouped(u):
@@ -386,15 +386,15 @@ def abs_A3(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B3_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `abs_B3_u`: ti.field(dtype=[float], shape=shape) of upwind derivatives,
+        `B3_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
           which are updated in place.
+        `abs_B3_u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of upwind
+          derivatives, which are updated in place.
     """
     derivative_B3(u, dφ, B3_forward, B3_backward)
     for I in ti.grouped(u):
@@ -420,7 +420,7 @@ def upwind_B1(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -429,9 +429,9 @@ def upwind_B1(
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B1_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `upwind_B1_u`: ti.field(dtype=[float], shape=shape) of upwind 
+        `B1_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
+          which are updated in place.
+        `upwind_B1_u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of upwind 
           derivatives, which are updated in place.
     """
     derivative_B1(u, dα, dβ, dφ, αs, φs, B1_forward, B1_backward)
@@ -458,7 +458,7 @@ def upwind_B2(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `αs`: α-coordinate at each grid point.
         `φs`: angle coordinate at each grid point.
@@ -467,9 +467,9 @@ def upwind_B2(
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B2_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `upwind_B2_u`: ti.field(dtype=[float], shape=shape) of upwind 
+        `B2_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
+          which are updated in place.
+        `upwind_B2_u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of upwind 
           derivatives, which are updated in place.
     """
     derivative_B2(u, dα, dβ, dφ, αs, φs, B2_forward, B2_backward)
@@ -492,14 +492,14 @@ def upwind_B3(
 
     Args:
       Static:
-        `u`: ti.field(dtype=[float], shape=shape) which we want to 
+        `u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) which we want to 
           differentiate.
         `dφ`: step size in orientational direction, taking values greater than
           0.
       Mutated:
-        `B3_*`: ti.field(dtype=[float], shape=shape) of derivatives, which are 
-          updated in place.
-        `upwind_B3_u`: ti.field(dtype=[float], shape=shape) of upwind 
+        `B3_*`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of derivatives,
+          which are updated in place.
+        `upwind_B3_u`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of upwind 
           derivatives, which are updated in place.
     """
     derivative_B3(u, dφ, B3_forward, B3_backward)
