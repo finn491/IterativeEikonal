@@ -240,8 +240,8 @@ def eikonal_solver_SE2_uniform(domain_shape, source_point, dxy, dθ, θs, contro
         raise ValueError(f"""Controller "{controller}" is not supported! Choose one of "Riemannian", "sub-Riemannian", or "plus".""")
     return W, grad_W
 
-def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, x_min, y_min, θ_min, dxy, dθ, θs, controller="sub-Riemannian",
-                               G=None, ξ=None, dt=None, β=0., n_max=10000):
+def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, x_min, y_min, θ_min, dxy, dθ, θs,
+                               controller="sub-Riemannian", G=None, ξ=None, dt=None, β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -254,10 +254,12 @@ def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, x_min, 
         `target_point`: Tuple[int] describing index of target point in `cost`.
         `cost`: np.ndarray of cost function throughout domain, taking values
           between 0 and 1.
-        `xs`: x-coordinate at every point in the grid on which `cost` is
-          sampled.
-        `ys`: y-coordinate at every point in the grid on which `cost` is
-          sampled.
+        `x_min`: minimum value of x-coordinates in rectangular domain.
+        `y_min`: minimum value of y-coordinates in rectangular domain.
+        `θ_min`: minimum value of θ-coordinates in rectangular domain.
+        `dxy`: spatial resolution, which is equal in the x- and y-directions,
+          taking values greater than 0.
+        `dθ`: orientational resolution, taking values greater than 0.
         `θs`: Orientation coordinate at every point in the grid on which `cost`
           is sampled.
       Optional:
@@ -532,8 +534,8 @@ def eikonal_solver_SO3_uniform(domain_shape, source_point, dα, dβ, dφ, αs_np
         raise ValueError(f"""Controller "{controller}" is not supported! Choose one of "Riemannian", "sub-Riemannian", or "plus".""")
     return W, grad_W
 
-def geodesic_back_tracking_SO3(grad_W, source_point, target_point, cost, α_min, β_min, φ_min, dα, dβ, dφ, αs, φs, controller="sub-Riemannian",
-                               G=None, ξ=None, dt=None, β=0., n_max=10000):
+def geodesic_back_tracking_SO3(grad_W, source_point, target_point, cost, α_min, β_min, φ_min, dα, dβ, dφ, αs, φs,
+                               controller="sub-Riemannian", G=None, ξ=None, dt=None, β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -546,9 +548,15 @@ def geodesic_back_tracking_SO3(grad_W, source_point, target_point, cost, α_min,
         `target_point`: Tuple[int] describing index of target point in `cost`.
         `cost`: np.ndarray of cost function throughout domain, taking values
           between 0 and 1.
+        `α_min`: minimum value of α-coordinates in rectangular domain.
+        `β_min`: minimum value of β-coordinates in rectangular domain.
+        `φ_min`: minimum value of φ-coordinates in rectangular domain.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
+        `dφ`: orientational resolution, taking values greater than 0.
         `αs`: α-coordinate at every point in the grid on which `cost` is
-          sampled.
-        `βs`: β-coordinate at every point in the grid on which `cost` is
           sampled.
         `φs`: Orientation coordinate at every point in the grid on which
           `cost_np` is sampled.

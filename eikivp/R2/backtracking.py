@@ -32,6 +32,10 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
         `target_point`: Tuple[int] describing index of target point in `W_np`.
         `cost_np`: np.ndarray of cost function throughout domain, taking values
           between 0 and 1.
+        `x_min`: minimum value of x-coordinates in rectangular domain.
+        `y_min`: minimum value of y-coordinates in rectangular domain.
+        `dxy`: spatial resolution, which is equal in the x- and y-directions,
+          taking values greater than 0.
       Optional:
         `G_np`: np.ndarray(shape=(2,), dtype=[float]) of constants of the
           diagonal metric tensor with respect to standard basis. Defaults to
@@ -102,7 +106,6 @@ def geodesic_back_tracking_backend(
       Static:
         `grad_W`: ti.field(dtype=[float], shape=shape) of upwind gradient with
           respect to some cost of the approximate distance map.
-        `dt`: Gradient descent step size, taking values greater than 0.
         `source_point`: ti.types.vector(n=2, dtype=[float]) describing index of 
           source point in `W_np`.
         `target_point`: ti.types.vector(n=2, dtype=[float]) describing index of 
@@ -111,6 +114,11 @@ def geodesic_back_tracking_backend(
           metric tensor with respect to standard basis.
         `cost`: ti.field(dtype=[float]) of cost function, taking values between
           0 and 1.
+        `x_min`: minimum value of x-coordinates in rectangular domain.
+        `y_min`: minimum value of y-coordinates in rectangular domain.
+        `dxy`: spatial resolution, which is equal in the x- and y-directions,
+          taking values greater than 0.
+        `dt`: Gradient descent step size, taking values greater than 0.
         `n_max`: Maximum number of points in geodesic, taking positive integral
           values. Defaults to 10000.
         `β`: *Currently not used* Momentum parameter in gradient descent, taking 

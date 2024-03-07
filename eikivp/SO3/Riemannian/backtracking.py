@@ -21,8 +21,8 @@ from eikivp.SO3.utils import (
     vector_LI_to_static
 )
 
-def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, α_min, β_min, φ_min, dα, dβ, dφ, αs_np, φs_np, G_np, dt=None, β=0.,
-                           n_max=10000):
+def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, α_min, β_min, φ_min, dα, dβ, dφ, αs_np,
+                           φs_np, G_np, dt=None, β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described in Bekkers et al. "A PDE 
@@ -35,9 +35,15 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, α_mi
         `target_point`: Tuple[int] describing index of target point in `W_np`.
         `cost_np`: np.ndarray of cost function throughout domain, taking values
           between 0 and 1.
+        `α_min`: minimum value of α-coordinates in rectangular domain.
+        `β_min`: minimum value of β-coordinates in rectangular domain.
+        `φ_min`: minimum value of φ-coordinates in rectangular domain.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
+        `dφ`: orientational resolution, taking values greater than 0.
         `αs_np`: α-coordinate at every point in the grid on which `cost_np` is
-          sampled.
-        `βs_np`: β-coordinate at every point in the grid on which `cost_np` is
           sampled.
         `φs_np`: Orientation coordinate at every point in the grid on which
           `cost_np` is sampled.
@@ -114,7 +120,6 @@ def geodesic_back_tracking_backend(
       Static:
         `grad_W`: ti.field(dtype=[float], shape=shape) of upwind gradient with
           respect to some cost of the approximate distance map.
-        `dt`: Gradient descent step size, taking values greater than 0.
         `source_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
           source point in `W_np`.
         `target_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
@@ -125,6 +130,15 @@ def geodesic_back_tracking_backend(
           tensor with respect to left invariant basis.
         `cost`: ti.field(dtype=[float]) of cost function, taking values between
           0 and 1.
+        `α_min`: minimum value of α-coordinates in rectangular domain.
+        `β_min`: minimum value of β-coordinates in rectangular domain.
+        `φ_min`: minimum value of φ-coordinates in rectangular domain.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
+        `dφ`: orientational resolution, taking values greater than 0.
+        `dt`: Gradient descent step size, taking values greater than 0.
         `n_max`: Maximum number of points in geodesic, taking positive integral
           values. Defaults to 10000.
         `β`: *Currently not used* Momentum parameter in gradient descent, taking 
