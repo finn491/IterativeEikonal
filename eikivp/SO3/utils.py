@@ -389,7 +389,7 @@ def coordinate_real_to_array(α, β, φ, α_min, β_min, φ_min, dα, dβ, dφ):
     Args:
         `α`: α-coordinate of the point.
         `β`: β-coordinate of the point.
-        `θ`: θ-coordinate of the point.
+        `φ`: φ-coordinate of the point.
         `α_min`: minimum value of α-coordinates in rectangular domain.
         `β_min`: minimum value of β-coordinates in rectangular domain.
         `φ_min`: minimum value of φ-coordinates in rectangular domain.
@@ -403,6 +403,38 @@ def coordinate_real_to_array(α, β, φ, α_min, β_min, φ_min, dα, dβ, dφ):
     J = np.rint((β - β_min) / dβ).astype(int)
     K = np.rint((φ - φ_min) / dφ).astype(int)
     return I, J, K
+
+@ti.func
+def coordinate_real_to_array_ti(
+    point: ti.types.vector(3, ti.f32),
+    α_min: ti.f32,
+    β_min: ti.f32,
+    φ_min: ti.f32,
+    dα: ti.f32,
+    dβ: ti.f32,
+    dφ: ti.f32
+) -> ti.types.vector(3, ti.f32):
+    """
+    @taichi.func
+    
+    Compute the array indices (I, J, K) of the point defined by real coordinates 
+    `point`. Can broadcast over entire arrays of real coordinates.
+
+    Args:
+        `point`: vector of α-, β-, and φ-coordinates of the point.
+        `α_min`: minimum value of α-coordinates in rectangular domain.
+        `β_min`: minimum value of β-coordinates in rectangular domain.
+        `φ_min`: minimum value of φ-coordinates in rectangular domain.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
+        `dφ`: orientational resolution, taking values greater than 0.
+    """
+    I = (point[0] - α_min) / dα
+    J = (point[1] - β_min) / dβ
+    K = (point[2] - φ_min) / dφ
+    return ti.Vector([I, J, K], dt=ti.f32)
 
 
 def coordinate_array_to_real(I, J, K, α_min, β_min, φ_min, dα, dβ, dφ):

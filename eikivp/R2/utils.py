@@ -119,8 +119,7 @@ def coordinate_real_to_array_ti(
     `point`. Can broadcast over entire arrays of real coordinates.
 
     Args:
-        `x`: x-coordinate of the point.
-        `y`: y-coordinate of the point.
+        `point`: vector of x- and y-coordinates of the point.
         `x_min`: minimum value of x-coordinates in rectangular domain.
         `y_min`: minimum value of y-coordinates in rectangular domain.
         `dxy`: spatial resolution, which is equal in the x- and y-directions,

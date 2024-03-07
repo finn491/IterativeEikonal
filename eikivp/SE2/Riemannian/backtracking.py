@@ -58,7 +58,6 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
     G = ti.Vector(G_np, ti.f32)
     if dt is None:
         # It would make sense to also include G somehow, but I am not sure how.
-        # dt = cost_np.min() * min(dxy, dθ) # Step roughly 1 pixel at a time.
         dt = cost_np[target_point] * min(dxy, dθ) # Step roughly 1 pixel at a time.
 
     # Initialise Taichi objects
