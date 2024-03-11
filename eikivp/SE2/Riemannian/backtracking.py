@@ -18,7 +18,8 @@ from eikivp.SE2.utils import (
     get_next_point,
     coordinate_array_to_real,
     coordinate_real_to_array_ti,
-    vector_LI_to_static
+    vector_LI_to_static,
+    distance_in_pixels
 )
 
 def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min, y_min, θ_min, dxy, dθ, θs_np, G_np,
@@ -144,14 +145,14 @@ def geodesic_back_tracking_backend(
     γ[0] = point
     # To get the gradient, we need the corresponding array indices.
     point_array = coordinate_real_to_array_ti(point, x_min, y_min, θ_min, dxy, dθ)
-    tol = ti.math.sqrt((2 * dxy)**2 + (2 * dxy)**2 + (2 * dθ)**2) # Stop if we are within two pixels of the source.
+    tol = 2. # Stop if we are within two pixels of the source.
     n = 1
     # Get gradient using componentwise trilinear interpolation.
     gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point_array, G, cost)
     θ = scalar_trilinear_interpolate(θs, point)
     # Get gradient with respect to static frame.
     gradient_at_point = vector_LI_to_static(gradient_at_point_LI, θ)
-    while (ti.math.length(point - source_point) >= tol) and (n < n_max - 1):
+    while (distance_in_pixels(point - source_point, dxy, dθ) >= tol) and (n < n_max - 1):
         # Get gradient using componentwise trilinear interpolation.
         gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point_array, G, cost)
         θ = scalar_trilinear_interpolate(θs, point_array)

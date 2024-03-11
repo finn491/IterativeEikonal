@@ -202,45 +202,33 @@ def get_next_point(
     new_point[2] = point[2] - dt * gradient_at_point[2]
     return new_point
 
-def convert_continuous_indices_to_real_space(γ_ci_np, αs_np, βs_np, φs_np):
+@ti.func
+def distance_in_pixels(
+    distance: ti.types.vector(3, ti.f32),
+    dα: ti.f32,
+    dβ: ti.f32,
+    dφ: ti.f32
+) -> ti.f32:
     """
-    Convert the continuous indices in the geodesic `γ_ci_np` to the 
-    corresponding real space coordinates described by `αs_np`, `βs_np`, and
-    `φs_np`.
+    @taichi.func
+
+    Compute the distance in pixels given the difference in coordinates and the
+    pixel size.
+
+    Args:
+        `distance`: ti.types.vector(n=3, dtype=[float]) difference in
+          coordinates.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
+        `dφ`: orientational resolution, taking values greater than 0.
     """
-    γ_ci = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_ci_np.shape[0])
-    γ_ci.from_numpy(γ_ci_np)
-    γ = ti.Vector.field(n=3, dtype=ti.f32, shape=γ_ci.shape)
-
-    αs = ti.field(dtype=ti.f32, shape=αs_np.shape)
-    αs.from_numpy(αs_np)
-    βs = ti.field(dtype=ti.f32, shape=βs_np.shape)
-    βs.from_numpy(βs_np)
-    φs = ti.field(dtype=ti.f32, shape=φs_np.shape)
-    φs.from_numpy(φs_np)
-
-    continuous_indices_to_real(γ_ci, αs, βs, φs, γ)
-
-    return γ.to_numpy()
-
-@ti.kernel
-def continuous_indices_to_real(
-    γ_ci: ti.template(),
-    αs: ti.template(),
-    βs: ti.template(),
-    φs: ti.template(),
-    γ: ti.template()
-):
-    """
-    @taichi.kernel
-
-    Interpolate the real space coordinates described by `αs`, `βs`, and `φs` at 
-    the continuous indices in `γ_ci`.
-    """
-    for I in ti.grouped(γ_ci):
-        γ[I][0] = scalar_trilinear_interpolate(αs, γ_ci[I])
-        γ[I][1] = scalar_trilinear_interpolate(βs, γ_ci[I])
-        γ[I][2] = scalar_trilinear_interpolate(φs, γ_ci[I])
+    return ti.math.sqrt(
+        (distance[0] / dα)**2 + 
+        (distance[1] / dβ)**2 + 
+        (ti.math.mod(ti.abs(distance[2]), 2 * ti.math.pi) / dφ)**2
+    )
 
 # Coordinate Transforms
 

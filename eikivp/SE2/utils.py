@@ -202,6 +202,31 @@ def get_next_point(
     new_point[2] = point[2] - dt * gradient_at_point[2]
     return new_point
 
+@ti.func
+def distance_in_pixels(
+    distance: ti.types.vector(3, ti.f32),
+    dxy: ti.f32,
+    dθ: ti.f32
+) -> ti.f32:
+    """
+    @taichi.func
+
+    Compute the distance in pixels given the difference in coordinates and the
+    pixel size.
+
+    Args:
+        `distance`: ti.types.vector(n=3, dtype=[float]) difference in
+          coordinates.
+        `dxy`: spatial resolution, which is equal in the x- and y-directions,
+          taking values greater than 0.
+        `dθ`: orientational resolution, taking values greater than 0.
+    """
+    return ti.math.sqrt(
+        (distance[0] / dxy)**2 +
+        (distance[1] / dxy)**2 +
+        (ti.math.mod(distance[2], 2 * ti.math.pi) / dθ)**2
+    )
+
 # Coordinate Transforms
 
 @ti.func

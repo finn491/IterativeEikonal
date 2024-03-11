@@ -135,11 +135,11 @@ def geodesic_back_tracking_backend(
     γ[0] = point
     # To get the gradient, we need the corresponding array indices.
     point_array = coordinate_real_to_array_ti(point, x_min, y_min, dxy)
-    tol = ti.math.sqrt((2 * dxy)**2 + (2 * dxy)**2) # Stop if we are within two pixels of the source.
+    tol = 2. # Stop if we are within two pixels of the source.
     n = 1
     # Get gradient using componentwise bilinear interpolation.
     gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point_array, G, cost)
-    while (ti.math.length(point - source_point) >= tol) and (n < n_max - 1):
+    while (distance_in_pixels(point - source_point, dxy) >= tol) and (n < n_max - 1):
         # Get gradient using componentwise bilinear interpolation.
         gradient_at_point_next = vectorfield_bilinear_interpolate(grad_W, point_array, G, cost)
         # Take weighted average with previous gradients for momentum.
@@ -178,3 +178,22 @@ def get_next_point(
     new_point[0] = point[0] - dt * gradient_at_point[0]
     new_point[1] = point[1] - dt * gradient_at_point[1]
     return new_point
+
+@ti.func
+def distance_in_pixels(
+    distance: ti.types.vector(2, ti.f32),
+    dxy: ti.f32
+) -> ti.f32:
+    """
+    @taichi.func
+
+    Compute the distance in pixels given the difference in coordinates and the
+    pixel size.
+
+    Args:
+        `distance`: ti.types.vector(n=2, dtype=[float]) difference in
+          coordinates.
+        `dxy`: spatial resolution, which is equal in the x- and y-directions,
+          taking values greater than 0.
+    """
+    return ti.math.sqrt((distance[0] / dxy)**2 + (distance[1] / dxy)**2)
