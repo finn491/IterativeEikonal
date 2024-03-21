@@ -4,9 +4,8 @@
 
     Provides methods to compute the distance map on SO(3) with respect to a
     data-driven left invariant sub-Riemannian metric, by solving the Eikonal PDE
-    using the iterative Initial Value Problem (IVP) technique described in
-    Bekkers et al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in
-    SE(2)" (2015). The primary methods are:
+    using the iterative Initial Value Problem (IVP) technique described by
+    Bekkers et al.[1] The primary methods are:
       1. `eikonal_solver`: solve the Eikonal PDE with respect to
       some data-driven left invariant sub-Riemannian metric, defined by a 
       stiffness parameter ξ a cost function. The stiffness parameter ξ fixes the
@@ -19,6 +18,12 @@
       cost of moving in the B1-direction compared to the B3-direction (it
       corresponds to β in the paper by Bekkers et al.); motion in the
       B2-direction is inhibited.
+    
+    References:
+      [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+      "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+      In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+      DOI:10.1137/15M1018460.
 """
 
 import numpy as np
@@ -47,8 +52,7 @@ def eikonal_solver(cost_np, source_point, ξ, dα, dβ, dφ, αs_np, φs_np, tar
     """
     Solve the Eikonal PDE on SO(3) equipped with a datadriven left invariant 
     sub-Riemannian metric tensor field defined by `ξ` and `cost_np`, with source
-    at `source_point`, using the iterative method described in Bekkers et al. 
-    "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    at `source_point`, using the iterative method described by Bekkers et al.[1]
 
     Args:
         `cost_np`: np.ndarray of cost function throughout domain, taking values
@@ -101,6 +105,12 @@ def eikonal_solver(cost_np, source_point, ξ, dα, dβ, dφ, αs_np, φs_np, tar
         The base metric tensor field (i.e. with uniform cost), is given, for a
         pair of vectors v = v^i B_i and w = w^i B_i at point p, by 
           G_p(v, w) = ξ^2 v^1 w^1 + v^3 w^3.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     # First compute for uniform cost to get initial W
     print("Solving Eikonal PDE with left invariant metric to compute initialisation.")
@@ -188,8 +198,7 @@ def step_W(
     @taichi.kernel
 
     Update the (approximate) distance map `W` by a single step of the iterative 
-    method described in Bekkers et al. in "A PDE approach to Data-Driven Sub-
-    Riemannian Geodesics in SE(2)" (2015).
+    method described by Bekkers et al.[1]
 
     Args:
       Static:
@@ -213,6 +222,12 @@ def step_W(
         `dW_dt`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of error of the
           distance map with respect to the Eikonal PDE, which is updated in
           place.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     upwind_B1(W, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B1_W)
     upwind_B3(W, dφ, B3_forward, B3_backward, B3_W)
@@ -285,8 +300,7 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dα, dβ, dφ, αs_np
     """
     Solve the Eikonal PDE on SO(3) equipped with a datadriven left invariant 
     metric tensor field defined by `ξ`, with source at `source_point`,
-    using the iterative method described in Bekkers et al. "A PDE approach to 
-    Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    using the iterative method described by Bekkers et al.[1]
 
     Args:
         `domain_shape`: Tuple[int] describing the shape of the domain, namely
@@ -333,6 +347,12 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dα, dβ, dφ, αs_np
         The base metric tensor field (i.e. with uniform cost), is given, for a
         pair of vectors v = v^i B_i and w = w^i B_i at point p, by 
           G_p(v, w) = ξ^2 v^1 w^2 + v^3 w^3.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
@@ -409,8 +429,7 @@ def step_W_uniform(
     @taichi.kernel
 
     Update the (approximate) distance map `W` by a single step of the iterative 
-    method described in Bekkers et al. in "A PDE approach to Data-Driven Sub-
-    Riemannian Geodesics in SE(2)" (2015).
+    method described by Bekkers et al.[1]
 
     Args:
       Static:
@@ -433,6 +452,12 @@ def step_W_uniform(
         `dW_dt`: ti.field(dtype=[float], shape=[Nα, Nβ, Nφ]) of error of the
           distance map with respect to the Eikonal PDE, which is updated in
           place.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     upwind_B1(W, dα, dβ, dφ, αs, φs, B1_forward, B1_backward, B1_W)
     upwind_B3(W, dφ, B3_forward, B3_backward, B3_W)
