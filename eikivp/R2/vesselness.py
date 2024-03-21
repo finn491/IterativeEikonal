@@ -16,8 +16,8 @@ import diplib as dip
 
 def rc_vessel_enhancement(image, σ, α=0.2, γ=0.75, ε=0.2):
     """
-    Compute Frangi filter of vessels in `image` at a single scale `σ`. Copied 
-    from "Code A - Vesselness in SE(2)".
+    Compute Frangi filter[1] of vessels in `image` at a single scale `σ`.
+    Implementation adapted from "Code A - Vesselness in SE(2)".
 
     Args:
         `image`: np.ndarray of a grayscale image, taking values between 0 and 1,
@@ -30,6 +30,12 @@ def rc_vessel_enhancement(image, σ, α=0.2, γ=0.75, ε=0.2):
 
     Returns:
         np.ndarray of the vesselness of `image`, taking values between 0 and 1.
+    
+    References:
+        [1]: A. F. Frangi, W. J. Niessen, K. L. Vincken, and M. A. Viergever.
+          "Multiscale vessel enhancement filtering". In: Medical Image Computing
+          and Computer-Assisted Intervention (1998), pp. 130--137.
+          DOI:10.1007/BFb0056195.
     """
     # Calculate Hessian derivatives.
     Lxx = np.array(dip.Gauss(image, (σ, σ), (2, 0)))
@@ -54,8 +60,8 @@ def rc_vessel_enhancement(image, σ, α=0.2, γ=0.75, ε=0.2):
 
 def multiscale_frangi_filter(image, σs, α=0.3, γ=0.75, ε=0.3):
     """
-    Compute Frangi filter of vessels in `image` at scales in `σs`. Copied from 
-    "Code A - Vesselness in SE(2)".
+    Compute Frangi filter[1] of vessels in `image` at scales in `σs`.
+    Implementation adapted from "Code A - Vesselness in SE(2)".
 
     Args:
         `image`: np.ndarray of a grayscale image, taking values between 0 and 1.
@@ -67,6 +73,12 @@ def multiscale_frangi_filter(image, σs, α=0.3, γ=0.75, ε=0.3):
 
     Returns:
         np.ndarray of the vesselness of `image`, taking values between 0 and 1.
+    
+    References:
+        [1]: A. F. Frangi, W. J. Niessen, K. L. Vincken, and M. A. Viergever.
+          "Multiscale vessel enhancement filtering". In: Medical Image Computing
+          and Computer-Assisted Intervention (1998), pp. 130--137.
+          DOI:10.1007/BFb0056195.
     """
     # Compute vesselness at each scale σ in σs, and select the maximum at
     # each point.

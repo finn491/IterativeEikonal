@@ -26,8 +26,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
                            dt=None, β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
-    gradient descent back tracking, as described in Bekkers et al. "A PDE 
-    approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    gradient descent back tracking, as described by Bekkers et al.[1]
 
     Args:
         `grad_W_np`: np.ndarray of upwind gradient with respect to some cost of 
@@ -55,6 +54,12 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
 
     Returns:
         np.ndarray of geodesic connecting `target_point` to `source_point`.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     # Set hyperparameters
     shape = grad_W_np.shape[0:-1]
@@ -106,8 +111,7 @@ def geodesic_back_tracking_backend(
     @taichi.kernel
 
     Find the geodesic connecting `target_point` to `source_point`, using
-    gradient descent backtracking, as described in Bekkers et al. "A PDE 
-    approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    gradient descent backtracking, as described by Bekkers et al.[1]
 
     Args:
       Static:
@@ -140,6 +144,12 @@ def geodesic_back_tracking_backend(
 
     Returns:
         Number of points in the geodesic.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     point = target_point
     γ[0] = point

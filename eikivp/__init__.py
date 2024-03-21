@@ -50,9 +50,8 @@ def eikonal_solver_SE2(cost, source_point, dxy, dθ, θs, controller="sub-Rieman
                        n_check_initialisation=None, tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant
-    norm, with source at `source_point`, using the iterative method described in
-    Bekkers et al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in
-    SE(2)" (2015).
+    norm, with source at `source_point`, using the iterative method described by
+    Bekkers et al.[1]
 
     Args:
         `cost`: np.ndarray of cost function throughout domain, taking values
@@ -121,6 +120,12 @@ def eikonal_solver_SE2(cost, source_point, dxy, dθ, θs, controller="sub-Rieman
           v = v^i A_i at point p, by 
             F(p, v)^2 = ξ^2 (v^1)_+^2 + (v^3)^2,
           where (x)_+ := max{x, 0} is the positive part of x.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     if controller == "Riemannian":
         if G is None:
@@ -153,9 +158,8 @@ def eikonal_solver_SE2_uniform(domain_shape, source_point, dxy, dθ, θs, contro
                                initial_condition=100.):
     """
     Solve the Eikonal PDE on SE(2) equipped with a left invariant norm, with
-    source at `source_point`, using the iterative method described in Bekkers et
-    al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)"
-    (2015).
+    source at `source_point`, using the iterative method described by Bekkers et
+    al.[1]
 
     Args:
         `domain_shape`: Tuple[int] describing the shape of the domain, namely
@@ -216,6 +220,12 @@ def eikonal_solver_SE2_uniform(domain_shape, source_point, dxy, dθ, θs, contro
           v = v^i A_i at point p, by 
             F(p, v)^2 = ξ^2 (v^1)_+^2 + (v^3)^2,
           where (x)_+ := max{x, 0} is the positive part of x.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     if controller == "Riemannian":
         if G is None:
@@ -244,8 +254,7 @@ def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, x_min, 
                                controller="sub-Riemannian", G=None, ξ=None, dt=None, β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
-    gradient descent back tracking, as described in Bekkers et al. "A PDE 
-    approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    gradient descent back tracking, as described by Bekkers et al.[1]
 
     Args:
         `grad_W`: np.ndarray of upwind gradient with respect to some cost of the
@@ -292,6 +301,12 @@ def geodesic_back_tracking_SE2(grad_W, source_point, target_point, cost, x_min, 
           v = v^i A_i at point p, by 
             F(p, v)^2 = ξ^2 (v^1)_+^2 + (v^3)^2,
           where (x)_+ := max{x, 0} is the positive part of x.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     if controller == "Riemannian":
         if G is None:
@@ -330,9 +345,8 @@ def eikonal_solver_SO3(cost, source_point, dα, dβ, dφ, αs_np, φs_np, contro
                        n_check_initialisation=None, tol=1e-3, dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on SO(3) equipped with a datadriven left invariant
-    norm, with source at `source_point`, using the iterative method described in
-    Bekkers et al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in
-    SE(2)" (2015).
+    norm, with source at `source_point`, using the iterative method described by
+    Bekkers et al.[1]
 
     Args:
         `cost`: np.ndarray of cost function throughout domain, taking values
@@ -407,6 +421,12 @@ def eikonal_solver_SO3(cost, source_point, dα, dβ, dφ, αs_np, φs_np, contro
           v = v^i B_i at point p, by 
             F(p, v)^2 = ξ^2 (v^1)_+^2 + (v^3)^2,
           where (x)_+ := max{x, 0} is the positive part of x.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     if controller == "Riemannian":
         if G is None:
@@ -441,9 +461,8 @@ def eikonal_solver_SO3_uniform(domain_shape, source_point, dα, dβ, dφ, αs_np
                                dε=1., initial_condition=100.):
     """
     Solve the Eikonal PDE on SO(3) equipped with a left invariant norm, with
-    source at `source_point`, using the iterative method described in Bekkers et
-    al. "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)"
-    (2015).
+    source at `source_point`, using the iterative method described by Bekkers et
+    al.[1]
 
     Args:
         `domain_shape`: Tuple[int] describing the shape of the domain, namely
@@ -510,6 +529,12 @@ def eikonal_solver_SO3_uniform(domain_shape, source_point, dα, dβ, dφ, αs_np
           v = v^i B_i at point p, by 
             F(p, v)^2 = ξ^2 (v^1)_+^2 + (v^3)^2,
           where (x)_+ := max{x, 0} is the positive part of x.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     if controller == "Riemannian":
         if G is None:
@@ -538,8 +563,7 @@ def geodesic_back_tracking_SO3(grad_W, source_point, target_point, cost, α_min,
                                controller="sub-Riemannian", G=None, ξ=None, dt=None, β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
-    gradient descent back tracking, as described in Bekkers et al. "A PDE 
-    approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    gradient descent back tracking, as described by Bekkers et al.[1]
 
     Args:
         `grad_W`: np.ndarray of upwind gradient with respect to some cost of the
@@ -590,6 +614,12 @@ def geodesic_back_tracking_SO3(grad_W, source_point, target_point, cost, α_min,
           v = v^i B_i at point p, by 
             F(p, v)^2 = ξ^2 (v^1)_+^2 + (v^3)^2,
           where (x)_+ := max{x, 0} is the positive part of x.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     if controller == "Riemannian":
         if G is None:

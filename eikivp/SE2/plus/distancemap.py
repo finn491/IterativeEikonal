@@ -4,23 +4,28 @@
 
     Provides methods to compute the distance map on SE(2) with respect to various
     metrics, by solving the Eikonal PDE using the iterative Initial Value 
-    Problem (IVP) technique described in Bekkers et al. "A PDE approach to 
-    Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015). The primary methods
+    Problem (IVP) technique described by Bekkers et al.[1] The primary methods
     are:
       1. `eikonal_solver`: solve the Eikonal PDE with respect to some
       data-driven left invariant plus controller, defined by a stiffness 
       parameter ξ, a plus softness ε, and a cost function. The stiffness 
       parameter ξ fixes the relative cost of moving in the A1-direction compared
-      to the A3-direction (it corresponds to β in the paper by Bekkers et al.);
+      to the A3-direction (it corresponds to β used by Bekkers et al.[1]);
       the plus softness ε restricts the motion in the reverse A1-direction; 
       motion in the A2-direction is inhibited.
       2. `eikonal_solver_uniform`: solve the Eikonal PDE with respect to some
       left invariant plus controller, defined by a stiffness parameter ξ, a plus
       softness ε, and a cost function. The stiffness parameter ξ fixes the
       relative cost of moving in the A1-direction compared to the A3-direction
-      (it corresponds to β in the paper by Bekkers et al.); the plus softness ε
+      (it corresponds to β used by Bekkers et al.[1]); the plus softness ε
       restricts the motion in the reverse A1-direction; motion in the
       A2-direction is inhibited.
+
+    References:
+      [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+      "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+      In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+      DOI:10.1137/15M1018460.
 """
 
 import numpy as np
@@ -49,8 +54,7 @@ def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, plus_softness=0.
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     Finsler function defined by `ξ` and `cost_np`, with source at 
-    `source_point`, using the iterative method described in Bekkers et al. 
-    "A PDE approach to Data-Driven Sub-Riemannian Geodesics in SE(2)" (2015).
+    `source_point`, using the iterative method described by Bekkers et al.[1]
 
     Args:
         `cost_np`: np.ndarray of cost function throughout domain, taking values
@@ -104,6 +108,12 @@ def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, plus_softness=0.
         v = v^i A_i at point p, by 
           F(p, v)^2 = ξ^2 (v^1)_+^2 + (v^3)^2,
         where (x)_+ := max{x, 0} is the positive part of x.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     # First compute for uniform cost to get initial W
     print("Solving Eikonal PDE with left invariant metric to compute initialisation.")
@@ -186,8 +196,7 @@ def step_W(
     @taichi.kernel
 
     Update the (approximate) distance map `W` by a single step of the iterative 
-    method described in Bekkers et al. in "A PDE approach to Data-Driven Sub-
-    Riemannian Geodesics in SE(2)" (2015).
+    method described by Bekkers et al.[1]
 
     Args:
       Static:
@@ -215,6 +224,12 @@ def step_W(
         `dW_dt`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of error of the
           distance map with respect to the Eikonal PDE, which is updated in
           place.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     upwind_A1(W, dxy, θs, A1_forward, A1_backward, A1_W)
     upwind_A3(W, dθ, A3_forward, A3_backward, A3_W)
@@ -291,8 +306,7 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, plu
     """
     Solve the Eikonal PDE on SE(2) equipped with a datadriven left invariant 
     Finsler function defined by `ξ`, with source at `source_point`, using the 
-    iterative method described in Bekkers et al. "A PDE approach to Data-Driven
-    Sub-Riemannian Geodesics in SE(2)" (2015).
+    iterative method described by Bekkers et al.[1]
 
     Args:
         `domain_shape`: Tuple[int] describing the shape of the domain, namely
@@ -340,6 +354,12 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, plu
         v = v^i A_i at point p, by 
           F(p, v)^2 = ξ^2 (v^1)_+^2 + (v^3)^2,
         where (x)_+ := max{x, 0} is the positive part of x.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     # Set hyperparameters.
     # Heuristic, so that W does not become negative.
@@ -413,8 +433,7 @@ def step_W_uniform(
     @taichi.kernel
 
     Update the (approximate) distance map `W` by a single step of the iterative 
-    method described in Bekkers et al. in "A PDE approach to Data-Driven Sub-
-    Riemannian Geodesics in SE(2)" (2015).
+    method described by Bekkers et al.[1]
 
     Args:
       Static:
@@ -435,6 +454,12 @@ def step_W_uniform(
         `dW_dt`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of error of the
           distance map with respect to the Eikonal PDE, which is updated in
           place.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
     """
     upwind_A1(W, dxy, θs, A1_forward, A1_backward, A1_W)
     upwind_A3(W, dθ, A3_forward, A3_backward, A3_W)
