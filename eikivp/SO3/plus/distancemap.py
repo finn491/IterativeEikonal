@@ -1,6 +1,6 @@
 """
     distancemap
-    ============
+    ===========
 
     Provides methods to compute the distance map on SO(3) with respect to various
     metrics, by solving the Eikonal PDE using the iterative Initial Value 

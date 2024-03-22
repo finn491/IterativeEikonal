@@ -1,6 +1,6 @@
 """
     distancemap
-    ============
+    ===========
 
     Provides methods to compute the distance map on SE(2) with respect to a
     data-driven left invariant sub-Riemannian metric, by solving the Eikonal PDE

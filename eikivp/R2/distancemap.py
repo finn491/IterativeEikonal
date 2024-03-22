@@ -1,6 +1,6 @@
 """
     distancemap
-    ============
+    ===========
 
     Provides methods to compute the distance map on R^2 with a data-driven left
     invariant metric, by solving the Eikonal PDE using the iterative Initial
