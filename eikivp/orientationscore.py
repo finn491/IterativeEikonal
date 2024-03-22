@@ -14,118 +14,125 @@
 import numpy as np
 import scipy as sp
 
-def ErfSet(size, No, periodicity):
-    """
-    ErfSet returns a set of 2 D error functions.This function is used to cut the
-    wavelets in two (in the spatial domain)
-    """
-    out = np.zeros((No, size, size))
-    xs, ys = np.meshgrid(np.arange(-np.floor(size / 2), np.ceil(size / 2)),
-                         np.arange(-np.floor(size / 2), np.ceil(size / 2)),
-                         indexing="ij")
-    for i in range(No):
-        out[i, ...] = (1 + sp.special.erf(
-            xs * np.cos((periodicity * i) / No) + 
-            ys * np.sin((periodicity * i) / No)
-            )) / 2
-    return out
+def mod_offset(x, period, offset):
+    return x - (x - offset)//period * period
 
-def WindowGauss(size, σ_s):
+def rotate_left(array, k):
+    """idk."""
+    return rotate_right(array, -k)
+
+def rotate_right(array, k):
+    """idk."""
+    if type(k) == int or type(k) == float:
+        arr1 = array[:-k]
+        arr2 = array[-k:]
+        rotated_array = np.concatenate((arr2, arr1), axis=0)
+    elif len(k) == 2 and len(array.shape) == 2:
+        k_0, k_1 = k
+        arr1 = array[:, :-k_1]
+        arr2 = array[:, -k_1:]
+        array = np.concatenate((arr2, arr1), axis=1)
+        arr1 = array[:-k_0, :]
+        arr2 = array[-k_0:, :]
+        rotated_array = np.concatenate((arr2, arr1), axis=0)
+    else:
+        raise ValueError(f"k = {k} is not a supported point for rotating. k should be a number or a pair of numbers.")
+    return rotated_array
+
+def Gauss_window(N_spatial, σ_s):
     """WindowGauss retuns the spatial Gauss envelope"""
-    xs, ys = np.meshgrid(np.arange(-np.floor(size / 2), np.ceil(size / 2)),
-                         np.arange(-np.floor(size / 2), np.ceil(size / 2)),
+    xs, ys = np.meshgrid(np.arange(-np.floor(N_spatial / 2), np.ceil(N_spatial / 2)),
+                         np.arange(-np.floor(N_spatial / 2), np.ceil(N_spatial / 2)),
                          indexing="ij")
     out = np.exp(-(xs**2 + ys**2) / (2 * σ_s**2))
     return out
 
-def PolarCoordinateGridAngular(size):
+def angular_grid(N_spatial):
     """
     PolarCoordinateGridRadial returns a matrix in which each element gives the
     corresponding radial coordinate (with the origin in the center of the matrix
     """
-    centerx = np.ceil((size - 1) / 2)
+    centerx = np.ceil((N_spatial - 1) / 2)
     centery = centerx
-    xs, ys = np.meshgrid(np.arange(size), np.arange(size), indexing="ij")
+    xs, ys = np.meshgrid(np.arange(N_spatial), np.arange(N_spatial), indexing="ij")
     dxs = xs - centerx
     dys = ys - centery
     m = np.arctan2(dys, dxs)
     return m
 
-
-def PolarCoordinateGridRadial(size):
+def radial_grid(N_spatial):
     """
     PolarCoordinateGridRadial returns a matrix in which each element gives the 
     corresponding radial coordinate (with the origin in the center of the matrix
     """
-    m = np.zeros((size,size))
-    centerx = np.ceil((size-1)/2)
+    centerx = np.ceil((N_spatial-1)/2)
     centery = centerx
-    xs, ys = np.meshgrid(np.arange(size), np.arange(size), indexing="ij")
+    xs, ys = np.meshgrid(np.arange(N_spatial), np.arange(N_spatial), indexing="ij")
     dxs = centerx - xs
     dys = centery - ys
-    m = (np.sqrt(dxs**2 + dys**2) + np.finfo(np.float64).eps) / ((size - 1) / 2)
+    m = (np.sqrt(dxs**2 + dys**2) + np.finfo(np.float64).eps) / ((N_spatial - 1) / 2)
     return m
 
 
-def MnWindow(size,n,inflectionPoint):
-    """MnWindow gives the radial windowing matrix for sampling the fourier \
-        domain"""
-    
-    eps = np.finfo(np.float64).eps
-    po_matrix = eps + 1 / (np.sqrt(2 * inflectionPoint**2 / (1 + 2*n))) * PolarCoordinateGridRadial(size)
+def radial_window(N_spatial, n, inflection_point):
+    """
+    MnWindow gives the radial windowing matrix for sampling the fourier domain
+    """
+    ε = np.finfo(np.float64).eps
+    po_matrix = ε + radial_grid(N_spatial) / np.sqrt(2 * inflection_point**2 / (1 + 2 * n))
     s = np.zeros_like(po_matrix)
-    for k in range(n+1):
-        s = s + np.exp(-po_matrix**2) * po_matrix**(2*k) / np.math.factorial(k)
+    for k in range(n + 1):
+        s = s + np.exp(-po_matrix**2) * po_matrix**(2*k) / sp.special.factorial(k)
     return s
 
-
-def BSplineMatrixFunc(n,x):
-    eps = np.finfo(np.float64).eps
+def B_spline_matrix(n, x):
+    ε = np.finfo(np.float64).eps
     r = 0
-    for i in np.arange((1 - n - 1) / 2, (n - 1 + 1) / 2+1):
+    for i in np.arange(-n/2, n/2 + 1):
         s = 0
-        for k in range(n+2):
-            binom_cof = sp.special.binom(n+1, k)
+        for k in range(n + 2):
+            binom_cof = sp.special.binom(n + 1, k)
             sign = np.sign(i + (n + 1) / 2 - k)
             s += binom_cof * (x + (n + 1) / 2 - k) ** (n + 1 - 1) * (-1)**k * sign
 
-        f = 1/(2 * np.math.factorial(n+1-1)) * s
-        if i < (n+1-1)/2:
-            ic = np.heaviside((x - (i - 1/2 + eps)), 1) * np.heaviside(-(x - (i + 1/2)), 1)
-        else :
-            ic = np.heaviside((x - (i - 1/2 + eps)), 1) * np.heaviside(-(x - (i + 1/2 - eps)), 1)
+        f = s / (2 * sp.special.factorial(n+1-1))
+        ic = np.heaviside((x - (i - 1/2 + ε)), 1) * np.heaviside(-(x - (i + 1/2 - ε*(i>=n/2))), 1)
         
-        r += f*np.round(ic)
+        r += f * np.round(ic)
     return r
+## This does not work because it breaks broadcasting over x.
+#     ε = np.finfo(np.float64).eps
+#     js = np.arange(-n/2, n/2 + 1)
+#     ss = np.zeros(n + 1)
+#     for k in range(n + 2):
+#         binom_cof = sp.special.binom(n + 1, k)
+#         signs = np.sign(js + (n + 1) / 2 - k)
+#         ss += binom_cof * (x + (n + 1) / 2 - k) ** (n + 1 - 1) * (-1)**k * signs
+#     fs = ss / (2 * sp.special.factorial(n))
+#     ics = np.heaviside((x - (js - 1/2 + ε)), 1) * np.heaviside(-(x - (js + 1/2 - ε*(js>=n/2))), 1)    
+#     r = np.sum(fs * np.round(ics))
+#     return r
 
-
-def CakeWaveletStackFourier(size, sPhi, splineOrder, overlapFactor, inflectionPoint, mnOrder, dcStdDev,
-                            noSymmetry):
-    """CakeWaveletStackFourier constructs the cake wavelets in the Fourier \
-        domain (note that windowing in the spatial domain is still required \
-        after this"""
-    dcWindow = np.ones((size,size)) - WindowGauss(size,dcStdDev) 
-    mnWindow = MnWindow(size, mnOrder, inflectionPoint)
-    angleGrid = PolarCoordinateGridAngular(size)
-    sPhiOverlapped = sPhi/overlapFactor
-    if noSymmetry == True:
-        s = 2*np.pi
-    else :
-        s = np.pi
-    
-    out = np.array([], dtype=np.int64).reshape(0,size,size)
-    for theta in np.arange(0, s, sPhiOverlapped):
-        x = mod_offset(angleGrid - theta - np.pi / 2, 2*np.pi, -np.pi) / sPhi 
-        f = dcWindow*mnWindow * BSplineMatrixFunc(splineOrder,x) / overlapFactor
-        f = np.expand_dims(f,axis = 0)
-        out = np.vstack([out,f])
-    
-    filters = np.vstack([out,np.expand_dims((1-dcWindow),axis = 0)])
+def cakewavelet_stack_fourier(N_spatial, dθ, spline_order, overlap_factor, inflection_point, mn_order, DC_σ):
+    """
+    CakeWaveletStackFourier constructs the cake wavelets in the Fourier domain 
+    (note that windowing in the spatial domain is still required after this
+    """
+    DC_window = np.ones((N_spatial, N_spatial)) - Gauss_window(N_spatial, DC_σ) 
+    mn_window = radial_window(N_spatial, mn_order, inflection_point)
+    window = DC_window * mn_window
+    angle_grid = angular_grid(N_spatial)
+    dθ_overlapped = dθ / overlap_factor
+    s = 2 * np.pi
+    θs = np.arange(0, s, dθ_overlapped)
+    filters = np.zeros((θs.shape[0] + 1, N_spatial, N_spatial))
+    for i, θ in enumerate(θs):
+        x = mod_offset(angle_grid - θ - np.pi / 2, 2 * np.pi, -np.pi) / dθ
+        filters[i, ...] = window * B_spline_matrix(spline_order, x) / overlap_factor   
+    filters[-1, ...] = 1 - DC_window
     return filters
 
-
-def CakeWaveletStack(size = 15, nOrientations = 8, design = "N", inflectionPoint = 0.9, mnOrder = 10, splineOrder = 3, overlapFactor = 1,
-                    dcStdDev=5, directional= False):
+def cakewavelet_stack(N_spatial, Nθ, inflection_point=0.9, mn_order=10, spline_order=3, overlap_factor=1, DC_σ_pixels=5):
     """
     directional     - Determines whenever the filter goes in both directions;
     design          - Indicates which design is used N = Subscript[N, \[Psi]] or M = Subscript[M, \[Psi]]
@@ -146,352 +153,54 @@ def CakeWaveletStack(size = 15, nOrientations = 8, design = "N", inflectionPoint
     dcStdDev = 8
     directional = False
     """
-
-    noSymmetry = nOrientations%2 == 1
-    dcSigma = (1/dcStdDev)*(size/(2*np.pi))
-    filters = CakeWaveletStackFourier(size, 2*np.pi / nOrientations, splineOrder, overlapFactor,
-                                      inflectionPoint, mnOrder, dcSigma, noSymmetry)
-    #print(filters.shape)
-    cakeF = filters[:-1,:,:]
-    #print(cakeF.shape)
-    dcFilter = filters[-1,:,:]
-    if design == "M":
-        cakeF = np.sqrt(cakeF)
-        dcFilter = np.sqrt(dcFilter)
-
-    cake = np.zeros_like(cakeF,dtype=np.complex_)
-    for i in range(cakeF.shape[0]):
-        cakeIF = RotateLeft(cakeF[i,:,:],np.floor(np.array([size,size])/2).astype(int))
-       
-        ##### ifftn gives result not similar to wolfram (gives conjucate)########
-        cakeIF = np.conj(np.fft.ifftn(cakeIF))
-        
-        cakeIF = RotateRight(cakeIF,np.floor(np.array([size,size])/2).astype(int))
-        cake[i,:,:] = cakeIF
-        
-    if directional:
-        if not noSymmetry:
-            cake = np.vstack([cake,np.conj(cake)])
-        cake = cake*ErfSet(size, (overlapFactor*nOrientations), 2*np.pi)
-    else :
-        if not noSymmetry:
-            cake = np.vstack([cake,np.conj(cake)])
-
-    # cake = np.expand_dims(cake.real, axis=1)
-    cake = cake.real
-
-    dcFilter = RotateLeft(dcFilter, np.floor(np.array([size, size])/2).astype(int))
-    dcFilter = np.conj(np.fft.ifftn(dcFilter))
-    dcFilter = RotateRight(dcFilter, np.floor(np.array([size, size])/2).astype(int))
-    # dcFilter = np.expand_dims(dcFilter.real, axis=0)
-    dcFilter = dcFilter.real
-
-    return cake, dcFilter
-
-def mod_offset(arr,divv,offset):
-    return arr-(arr-offset)//divv*divv
-
-def RotateLeft(arr,k):
-    if type(k) == int or type(k) == float:
-        arr1 = arr[:k]
-        arr2 = arr[k:]
-        arr = np.concatenate((arr2,arr1),axis = 0)
-        return arr
-    if len(k) == 2 and len(arr.shape) == 2:
-        arr1 = arr[:,:k[1]]
-        arr2 = arr[:,k[1]:]
-        arr = np.concatenate((arr2,arr1),axis = 1)
-        arr1 = arr[:k[0],:]
-        arr2 = arr[k[0]:,:]
-        arr = np.concatenate((arr2,arr1),axis = 0)
-        return arr
-            
-def RotateRight(arr,k):
-    if type(k) == int or type(k) == float:
-        arr1 = arr[:-k]
-        arr2 = arr[-k:]
-        arr = np.concatenate((arr2,arr1),axis = 0)
-        return arr
-    if len(k) == 2 and len(arr.shape) == 2:
-        arr1 = arr[:,:-k[1]]
-        arr2 = arr[:,-k[1]:]
-        arr = np.concatenate((arr2,arr1),axis = 1)
-        arr1 = arr[:-k[0],:]
-        arr2 = arr[-k[0]:,:]
-        arr = np.concatenate((arr2,arr1),axis = 0)
-        return arr     
+    dθ = 2 * np.pi / Nθ
+    DC_σ = 1 / (dθ * DC_σ_pixels)
+    filters = cakewavelet_stack_fourier(N_spatial, dθ, spline_order, overlap_factor, inflection_point, mn_order, DC_σ)
     
-def WaveletTransform2D(im, kernels):
-    os = np.zeros((kernels.shape[0], im.shape[0], im.shape[1]))
-    imf = np.fft.fftn(im)
-    for i in range(kernels.shape[0]):
-        v = kernels[i,:,:]
-        v = np.fft.fftn(v)
-        v = np.fft.ifftn(v * imf).real
-        v = RotateRight(v, np.ceil(0.1 + np.array(im.shape) / 2).astype(int))
-        os[i, :, :] = v
-    return os 
+    cake_fourier = filters[:-1, ...]
+    dc_filter = filters[-1, ...]
+
+    cake = np.zeros_like(cake_fourier, dtype=np.complex_)
+    rotation_amounts = np.array((N_spatial // 2, N_spatial // 2))
+    for i, slice_fourier in enumerate(cake_fourier):
+        slice_fourier = rotate_left(slice_fourier, rotation_amounts)
+        slice = np.conj(np.fft.ifftn(slice_fourier))        
+        slice = rotate_right(slice, rotation_amounts)
+        cake[i, ...] = slice
+
+    cake = np.vstack((cake, np.conj(cake)))
     
+    dc_filter = rotate_left(dc_filter, rotation_amounts)
+    dc_filter = np.fft.ifftn(dc_filter).real # dcFilter is real
+    dc_filter = rotate_right(dc_filter, rotation_amounts)
 
-# def ErfSet(size, No, periodicity):
-#     """
-#     ErfSet returns a set of 2 D error functions.This function is used to cut the
-#     wavelets in two (in the spatial domain)
-#     """
-#     ks, xs, ys = np.meshgrid(np.arange(No),
-#                              np.arange(-np.floor(size / 2), np.ceil(size / 2)),
-#                              np.arange(-np.floor(size / 2), np.ceil(size / 2)),
-#                              indexing="ij")
-#     out = (1 + sp.special.erf(
-#         xs * np.cos((periodicity * ks) / No) +
-#         ys * np.sin((periodicity * ks) / No)
-#         )) / 2
-#     return out
-
-# # def ErfSet(size, No, periodicity):
-# #     """
-# #     ErfSet returns a set of 2 D error functions.This function is used to cut the
-# #     wavelets in two (in the spatial domain)
-# #     """
-# #     out = np.zeros((No, size, size))
-# #     for i in range(No):
-# #         xx = 0
-# #         for x in np.arange(-np.floor(size / 2), np.ceil(size / 2)):
-# #             yy = 0
-# #             for y in np.arange(-np.floor(size / 2), np.ceil(size / 2)):
-# #                 out[i, xx, yy] = (1 + sp.special.erf(
-# #                     x * np.cos((periodicity * i) / No) + 
-# #                     y * np.sin((periodicity * i) / No)
-# #                     )) / 2
-# #                 yy += 1
-# #             xx += 1
-# #     return out
-
-# def WindowGauss(size, σ_s):
-#     """WindowGauss retuns the spatial Gauss envelope"""
-#     out = np.zeros((size,size))
-#     i = 0
-#     for x in np.arange(-np.floor(size / 2), np.ceil(size / 2)):
-#         j = 0
-#         for y in np.arange(-np.floor(size / 2), np.ceil(size / 2)):
-#             out[i, j] = np.exp(-(x**2 + y**2) / (2 * σ_s**2))
-#             j += 1
-#         i += 1
-#     return out
-
-
-# def PolarCoordinateGridAngular(size):
-#     """
-#     PolarCoordinateGridRadial returns a matrix in which each element gives the 
-#     corresponding radial coordinate (with the origin in the center of the matrix
-#     """
-#     m = np.zeros((size, size))
-#     centerx = np.ceil((size - 1) / 2)
-#     centery = centerx
-#     xs, ys = np.meshgrid(np.arange(size), np.arange(size))
-#     dxs = centerx - xs
-#     dys = centery - ys
-#     m = np.arctan2(dys, dxs)
-#     # for i in range(size):
-#     #     for j in range(size):
-#     #         dx = i-centerx
-#     #         dy = j-centery
-#     #         m[i, j] = cmath.phase(complex(dx,dy))
-#     return m
-
-
-# def PolarCoordinateGridRadial(size):
-#     """
-#     PolarCoordinateGridRadial returns a matrix in which each element gives the 
-#     corresponding radial coordinate (with the origin in the center of the matrix
-#     """
-#     m = np.zeros((size,size))
-#     centerx = np.ceil((size-1)/2)
-#     centery = centerx
-#     xs, ys = np.meshgrid(np.arange(size), np.arange(size))
-#     dxs = centerx - xs
-#     dys = centery - ys
-#     m = (np.sqrt(dxs**2 + dys**2) + np.finfo(np.float64).eps) / ((size - 1) / 2)
-#     # for i in range(size):
-#     #     for j in range(size):
-#     #         dx = centerx-i
-#     #         dy = centery-j
-#     #         m[i,j] = (np.sqrt(dx**2 + dy**2) + np.finfo(np.float64).eps) / ((size - 1) / 2)
-#     return m
-
-# def MnWindow(size, n, inflectionPoint):
-#     """
-#     MnWindow gives the radial windowing matrix for sampling the fourier domain
-#     """
-#     ε = np.finfo(np.float64).eps
-#     po_matrix = ε + PolarCoordinateGridRadial(size) / np.sqrt(2 * inflectionPoint**2 / (1 + 2 * n))
-#     s = np.zeros_like(po_matrix)
-#     for k in range(n + 1):
-#         s = s + np.exp(-po_matrix**2) * po_matrix**(2*k) / np.math.factorial(k)
-#     return s
-
-
-# def BSplineMatrixFunc(n, x):
-#     ε = np.finfo(np.float64).eps
-#     r = 0
-#     for i in np.arange(-n/2, n/2 + 1):
-#         s = 0
-#         for k in range(n + 2):
-#             binom_cof = sp.special.binom(n + 1, k)
-#             sign = np.sign(i + (n + 1) / 2 - k)
-#             s += binom_cof * (x + (n + 1) / 2 - k) ** (n + 1 - 1) * (-1)**k * sign
-
-#         f = s / (2 * np.math.factorial(n+1-1))
-#         ic = np.heaviside((x - (i - 1/2 + ε)), 1) * np.heaviside(-(x - (i + 1/2 - ε*(i>=n/2))), 1)
-#         # if i < n/2:
-#         #     ic = np.heaviside((x - (i - 1/2 + ε)), 1) * np.heaviside(-(x - (i + 1/2)), 1)
-#         # else:
-#         #     ic = np.heaviside((x - (i - 1/2 + ε)), 1) * np.heaviside(-(x - (i + 1/2 - ε)), 1)
-        
-#         r += f * np.round(ic)
-#     return r
-
-# def mod_offset(arr, divv, offset):
-#     return arr - (arr - offset) // divv**2
-
-# def CakeWaveletStackFourier(size, sΦ, splineOrder, overlapFactor, inflectionPoint, mnOrder, dcStdDev,
-#                             noSymmetry):
-#     """
-#     CakeWaveletStackFourier constructs the cake wavelets in the Fourier domain 
-#     (note that windowing in the spatial domain is still required after this
-#     """
-#     dcWindow = np.ones((size, size)) - WindowGauss(size, dcStdDev) 
-#     mnWindow = MnWindow(size, mnOrder, inflectionPoint)
-#     angleGrid = PolarCoordinateGridAngular(size)
-#     sΦOverlapped = sΦ/overlapFactor
-#     if noSymmetry:
-#         s = 2*np.pi
-#     else:
-#         s = np.pi
-#     θs = np.arange(0, s, sΦOverlapped)
-#     filters = np.zeros((θs.shape[0]+1, size, size))
-#     for i, θ in enumerate(θs):
-#         x = mod_offset(angleGrid - θ - np.pi / 2, 2 * np.pi, -np.pi) / sΦ 
-#         f = dcWindow * mnWindow * BSplineMatrixFunc(splineOrder, x) / overlapFactor
-#         f = np.expand_dims(f, axis=0)
-#         filters[i, :, :] = f
+    return cake, dc_filter
     
-#     filters[-1, :, :] = np.expand_dims((1 - dcWindow), axis=0)
-#     return filters
+def wavelet_transform(f, kernels):
+    """
+    Return the real part of the wavelet transform of image `f` under the
+    `kernels`.
+    """
+    ost = np.zeros((kernels.shape[0], f.shape[0], f.shape[1]))
+    f_hat = np.fft.fftn(f)
+    rotation_amount = np.ceil(0.1 + np.array(f.shape) / 2).astype(int) # Why?
+    for i, ψ_θ in enumerate(kernels):
+        ψ_θ_hat = np.fft.fftn(ψ_θ)
+        U_θ_hat = np.fft.ifftn(ψ_θ_hat * f_hat).real
+        U_θ_hat = rotate_right(U_θ_hat, rotation_amount)
+        ost[i, ...] = U_θ_hat
+    return ost
 
-
-# def CakeWaveletStack(size=15, nOrientations=8, design="N", inflectionPoint=0.9, mnOrder=10, splineOrder=3, 
-#                      overlapFactor=1, dcStdDev=5, directional=False):
-#     """
-#     directional     - Determines whenever the filter goes in both directions;
-#     design          - Indicates which design is used N = Subscript[N, \[Psi]] or
-#                       M = Subscript[M, \[Psi]]
-#     inflectionPoint - Is the location of the inflection point as a factor in 
-#                       (positive) radial direction
-#     splineOrder     - Order of the B - Spline that is used to construct the 
-#                       wavelet
-#     mnOrder         - The order of the (Taylor expansion) gaussian decay used to
-#                       construct the wavelet
-#     dcStdDev        - The standard deviation of the gaussian window (in the 
-#                       Spatial domain) that removes the center of the pie, to 
-#                       avoid long tails in the spatial domain
-#     overlapFactor   - How much the cakepieces overlaps in \[Phi] - direction, 
-#                       this can be seen as subsampling the angular direction
-#     size = 15
-#     nOrientations = 8
-#     design = "N"
-#     inflectionPoint = 0.9
-#     mnOrder = 10
-#     splineOrder = 3
-#     overlapFactor = 1
-#     dcStdDev = 5
-#     directional = False
-#     """
-#     noSymmetry = nOrientations % 2 == 1
-#     dcSigma = size / (2 * np.pi * dcStdDev)
-#     filters = CakeWaveletStackFourier(size, 2 * np.pi / nOrientations, splineOrder, overlapFactor, inflectionPoint, 
-#                                       mnOrder, dcSigma, noSymmetry)
-#     #print(filters.shape)
-#     cakeF = filters[:-1, :, :]
-#     #print(cakeF.shape)
-#     dcFilter = filters[-1, :, :]
-#     if design == "M":
-#         cakeF = np.sqrt(cakeF)
-#         dcFilter = np.sqrt(dcFilter)
-
-#     cake = np.zeros_like(cakeF, dtype=np.complex_)
-#     for i in range(cakeF.shape[0]):
-#         cakeIF = RotateLeft(cakeF[i, :, :], np.floor(np.array([size, size])/2).astype(int))
-       
-#         ##### ifftn gives result not similar to wolfram (gives conjucate)########
-#         cakeIF = np.conj(np.fft.ifftn(cakeIF))
-        
-#         cakeIF = RotateRight(cakeIF, np.floor(np.array([size,size])/2).astype(int))
-#         cake[i, :, :] = cakeIF
-
-#     if directional and noSymmetry:
-#         cake = cake * ErfSet(size, (overlapFactor * nOrientations), 2*np.pi)
-#     elif not noSymmetry: # necessarily not directional
-#         cake = np.vstack([cake, np.conj(cake)])
-#     # elif necessarily not directional and noSymmetry: then do nothing, apparently.
-    
-#     # Why do we bother doing stuff with complex numbers if we only take the real part?
-
-#     # cake = np.expand_dims(cake.real, axis=1)
-#     cake = cake.real
-
-#     dcFilter = RotateLeft(dcFilter, np.floor(np.array([size, size])/2).astype(int))
-#     dcFilter = np.conj(np.fft.ifftn(dcFilter))
-#     dcFilter = RotateRight(dcFilter, np.floor(np.array([size, size])/2).astype(int))
-#     # dcFilter = np.expand_dims(dcFilter.real, axis=0)
-#     dcFilter = dcFilter.real
-
-#     return cake, dcFilter
-
-# def RotateLeft(array, k):
-#     """idk."""
-#     if type(k) == int or type(k) == float:
-#         arr1 = array[:k]
-#         arr2 = array[k:]
-#         rotated_array = np.concatenate((arr2, arr1), axis=0)
-#     elif len(k) == 2 and len(array.shape) == 2:
-#         k_0, k_1 = k
-#         arr1 = array[:, :k_1]
-#         arr2 = array[:, k_1:]
-#         array = np.concatenate((arr2, arr1), axis=1)
-#         arr1 = array[:k_0, :]
-#         arr2 = array[k_0:, :]
-#         rotated_array = np.concatenate((arr2, arr1), axis=0)
-#     else:
-#         raise ValueError(f"k = {k} is not a supported point for rotating. k should be a number or a pair of numbers.")
-#     return rotated_array
-
-# def RotateRight(array, k):
-#     """idk."""
-#     if type(k) == int or type(k) == float:
-#         arr1 = array[:-k]
-#         arr2 = array[-k:]
-#         rotated_array = np.concatenate((arr2, arr1), axis=0)
-#     elif len(k) == 2 and len(array.shape) == 2:
-#         k_0, k_1 = k
-#         arr1 = array[:, :-k_1]
-#         arr2 = array[:, -k_1:]
-#         array = np.concatenate((arr2, arr1), axis=1)
-#         arr1 = array[:-k_0, :]
-#         arr2 = array[-k_0:, :]
-#         rotated_array = np.concatenate((arr2, arr1), axis=0)
-#     else:
-#         raise ValueError(f"k = {k} is not a supported point for rotating. k should be a number or a pair of numbers.")
-#     return rotated_array
-
-# def WaveletTransform2D(f, kernels):
-#     """Return the wavelet transform of image `f` under the `kernels`"""
-#     os = np.zeros((f.shape[0], f.shape[1], kernels.shape[0]))
-#     f_hat = np.fft.fftn(f)
-#     for i in range(kernels.shape[0]):
-#         ψ_θ = kernels[i, :, :]
-#         ψ_θ_hat = np.fft.fftn(ψ_θ)
-#         U_θ_hat = np.fft.ifftn(ψ_θ_hat * f_hat).real
-#         U_θ_hat = RotateRight(U_θ_hat, np.ceil(0.1 + np.array(f.shape) / 2).astype(int))
-#         os[:, :, i] = U_θ_hat
-#     return os
+def wavelet_transform_complex(f, kernels):
+    """
+    Return the wavelet transform of image `f` under the `kernels`.
+    """
+    ost = np.zeros((kernels.shape[0], f.shape[0], f.shape[1]))
+    f_hat = np.fft.fftn(f)
+    rotation_amount = np.ceil(0.1 + np.array(f.shape) / 2).astype(int) # Why?
+    for i, ψ_θ in enumerate(kernels):
+        ψ_θ_hat = np.fft.fftn(ψ_θ)
+        U_θ_hat = np.fft.ifftn(ψ_θ_hat * f_hat)
+        U_θ_hat = rotate_right(U_θ_hat, rotation_amount)
+        ost[i, ...] = U_θ_hat
+    return ost
