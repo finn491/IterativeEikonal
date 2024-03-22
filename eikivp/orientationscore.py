@@ -4,25 +4,29 @@
 
     Provides methods to compute the orientation score of a 2D image. The primary
     methods are:
-      1. `CakeWaveletStack`: compute the stack of cakewavelets, as described in
+      1. `cakewavelet_stack`: compute the stack of cakewavelets, as described in
       Duits "Perceptual Organization in Image Analysis" (2005)
       (https://www.win.tue.nl/~rduits/THESISRDUITS.pdf).
-      2. `WaveletTransform2D`: compute the wavelet transform of a 2D image,
+      2. `wavelet_transform`: compute the real wavelet transform of a 2D image,
       with respect to some wavelet (which need not be a cakewavelet).
+      3. `wavelet_transform_complex`: compute the complex wavelet transform of a
+      2D image, with respect to some wavelet (which need not be a cakewavelet).
+      TODO: figure out why `wavelet_transform_complex` does not work...
 """
 
 import numpy as np
 import scipy as sp
 
 def mod_offset(x, period, offset):
+    """Compute `x` modulo `period` with offset `offset`."""
     return x - (x - offset)//period * period
 
 def rotate_left(array, k):
-    """idk."""
+    """Rotate left the columns and rows of `array` by `k`."""
     return rotate_right(array, -k)
 
 def rotate_right(array, k):
-    """idk."""
+    """Rotate right the columns and rows of `array` by `k`."""
     if type(k) == int or type(k) == float:
         arr1 = array[:-k]
         arr2 = array[-k:]
@@ -40,7 +44,10 @@ def rotate_right(array, k):
     return rotated_array
 
 def Gauss_window(N_spatial, σ_s):
-    """WindowGauss retuns the spatial Gauss envelope"""
+    """
+    Compute a Gaussian envelope, which can be used as a low pass filter by 
+    multiplying pointwise in the Fourier domain.
+    """
     xs, ys = np.meshgrid(np.arange(-np.floor(N_spatial / 2), np.ceil(N_spatial / 2)),
                          np.arange(-np.floor(N_spatial / 2), np.ceil(N_spatial / 2)),
                          indexing="ij")
@@ -48,35 +55,32 @@ def Gauss_window(N_spatial, σ_s):
     return out
 
 def angular_grid(N_spatial):
-    """
-    PolarCoordinateGridRadial returns a matrix in which each element gives the
-    corresponding radial coordinate (with the origin in the center of the matrix
-    """
+    """Compute a grid of angle coordinates."""
     centerx = np.ceil((N_spatial - 1) / 2)
     centery = centerx
     xs, ys = np.meshgrid(np.arange(N_spatial), np.arange(N_spatial), indexing="ij")
     dxs = xs - centerx
     dys = ys - centery
-    m = np.arctan2(dys, dxs)
-    return m
+    θs = np.arctan2(dys, dxs)
+    return θs
 
 def radial_grid(N_spatial):
-    """
-    PolarCoordinateGridRadial returns a matrix in which each element gives the 
-    corresponding radial coordinate (with the origin in the center of the matrix
-    """
-    centerx = np.ceil((N_spatial-1)/2)
+    """Compute a grid of radial coordinates."""
+    centerx = N_spatial // 2
     centery = centerx
     xs, ys = np.meshgrid(np.arange(N_spatial), np.arange(N_spatial), indexing="ij")
-    dxs = centerx - xs
-    dys = centery - ys
-    m = (np.sqrt(dxs**2 + dys**2) + np.finfo(np.float64).eps) / ((N_spatial - 1) / 2)
-    return m
-
+    dxs = xs - centerx
+    dys = ys - centery
+    rs = (np.sqrt(dxs**2 + dys**2) + np.finfo(np.float64).eps) / ((N_spatial - 1) / 2)
+    return rs
 
 def radial_window(N_spatial, n, inflection_point):
     """
-    MnWindow gives the radial windowing matrix for sampling the fourier domain
+    Compute a smooth radial window in the Fourier domain for limiting the
+    bandwidth of the cakewavelets.
+
+    Corresponds to M_N, given by Eq. (4.41) in Duits
+    "Perceptual Organization in Image Analysis" (2005).
     """
     ε = np.finfo(np.float64).eps
     po_matrix = ε + radial_grid(N_spatial) / np.sqrt(2 * inflection_point**2 / (1 + 2 * n))
@@ -86,6 +90,14 @@ def radial_window(N_spatial, n, inflection_point):
     return s
 
 def B_spline_matrix(n, x):
+    """
+    Compute degree `n` B-splines.
+
+    In this way, the sum of all cakewavelets in the Fourier domain is
+    identically equal to 1 (within the disk M), while each cakewavelet varies
+    smoothly in the angular direction in the Fourier domain. See Section 4.6
+    in Duits "Perceptual Organization in Image Analysis" (2005).
+    """
     ε = np.finfo(np.float64).eps
     r = 0
     for i in np.arange(-n/2, n/2 + 1):
@@ -115,8 +127,25 @@ def B_spline_matrix(n, x):
 
 def cakewavelet_stack_fourier(N_spatial, dθ, spline_order, overlap_factor, inflection_point, mn_order, DC_σ):
     """
-    CakeWaveletStackFourier constructs the cake wavelets in the Fourier domain 
-    (note that windowing in the spatial domain is still required after this
+    Compute the cakewavelets in the Fourier domain.
+
+    Args:
+        `N_spatial`: number of pixels in each spatial direction. This notably
+          means that the support of the wavelets will be a square.
+        `dθ`: angular resolution in radians.
+        `spline_order`: degree of the B-splines.
+        `overlap_factor`: degree to which adjacent slices overlap in the
+          angular direction. When `overlap_factor` is larger than 1, then
+          multiple wavelets will cover the same angles.
+        `inflection_point`: point at which the radial window M_N starts to
+          decrease, taking values at most 1. By increasing this will improve the
+          stability of the reconstruction, but the L^1 norm of the cakewavelets
+          will also increase.
+        `mn_order`: order at which the geometric sum in the radial window is
+          truncated.
+        `DC_σ`: standard deviation of the high pass filter used to remove the
+          DC component, such that the cakewavelets can be constructed around
+          the origin in the Fourier domain.
     """
     DC_window = np.ones((N_spatial, N_spatial)) - Gauss_window(N_spatial, DC_σ) 
     mn_window = radial_window(N_spatial, mn_order, inflection_point)
@@ -132,29 +161,32 @@ def cakewavelet_stack_fourier(N_spatial, dθ, spline_order, overlap_factor, infl
     filters[-1, ...] = 1 - DC_window
     return filters
 
-def cakewavelet_stack(N_spatial, Nθ, inflection_point=0.9, mn_order=10, spline_order=3, overlap_factor=1, DC_σ_pixels=5):
+def cakewavelet_stack(N_spatial, Nθ, inflection_point=0.9, mn_order=10, spline_order=3, overlap_factor=1, DC_σ_factor=5):
     """
-    directional     - Determines whenever the filter goes in both directions;
-    design          - Indicates which design is used N = Subscript[N, \[Psi]] or M = Subscript[M, \[Psi]]
-    inflectionPoint - Is the location of the inflection point as a factor in (positive) radial direction
-    splineOrder     - Order of the B - Spline that is used to construct the wavelet
-    mnOrder         - The order of the (Taylor expansion) gaussian decay used to construct the wavelet
-    dcStdDev        - The standard deviation of the gaussian window (in the Spatial domain) \
-                      that removes the center of the pie, to avoid long tails in the spatial domain
-    overlapFactor   - How much the cakepieces overlaps in \[Phi] - direction, this can be \
-                      seen as subsampling the angular direction
-                      size = 45
-    nOrientations = 16
-    design = "N"
-    inflectionPoint = 0.5
-    mnOrder = 8
-    splineOrder = 3
-    overlapFactor = 1
-    dcStdDev = 8
-    directional = False
+    Compute the cakewavelets in the Fourier domain.
+
+    Args:
+        `N_spatial`: number of pixels in each spatial direction. This notably
+          means that the support of the wavelets will be a square.
+        `Nθ`: number of orientations.
+      Optional:
+        `inflection_point`: point at which the radial window M_N starts to
+          decrease, taking values at most 1. By increasing this will improve the
+          stability of the reconstruction, but the L^1 norm of the cakewavelets
+          will also increase. Defaults to 0.9.
+        `mn_order`: order at which the geometric sum in the radial window is
+          truncated. Defaults to 10.
+        `spline_order`: degree of the B-splines. Defaults to 3.
+        `overlap_factor`: degree to which adjacent slices overlap in the
+          angular direction. When `overlap_factor` is larger than 1, then
+          multiple wavelets will cover the same angles. Defaults to 1.
+        `DC_σ_factor`: factor used to determine the standard deviation of the
+          high pass filter used to remove the DC component, such that the
+          cakewavelets can be constructed around the origin in the Fourier
+          domain. Defaults to 5.
     """
     dθ = 2 * np.pi / Nθ
-    DC_σ = 1 / (dθ * DC_σ_pixels)
+    DC_σ = 1 / (dθ * DC_σ_factor)
     filters = cakewavelet_stack_fourier(N_spatial, dθ, spline_order, overlap_factor, inflection_point, mn_order, DC_σ)
     
     cake_fourier = filters[:-1, ...]
@@ -167,7 +199,6 @@ def cakewavelet_stack(N_spatial, Nθ, inflection_point=0.9, mn_order=10, spline_
         slice = np.conj(np.fft.ifftn(slice_fourier))        
         slice = rotate_right(slice, rotation_amounts)
         cake[i, ...] = slice
-
     cake = np.vstack((cake, np.conj(cake)))
     
     dc_filter = rotate_left(dc_filter, rotation_amounts)
@@ -195,7 +226,7 @@ def wavelet_transform_complex(f, kernels):
     """
     Return the wavelet transform of image `f` under the `kernels`.
     """
-    ost = np.zeros((kernels.shape[0], f.shape[0], f.shape[1]))
+    ost = np.zeros((kernels.shape[0], f.shape[0], f.shape[1]), dtype=np.complex_)
     f_hat = np.fft.fftn(f)
     rotation_amount = np.ceil(0.1 + np.array(f.shape) / 2).astype(int) # Why?
     for i, ψ_θ in enumerate(kernels):
