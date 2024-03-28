@@ -436,4 +436,68 @@ def upwind_A3(
     for I in ti.grouped(u):
         upwind_A3_u[I] = select_upwind_derivative(A3_forward[I], A3_backward[I])
 
+# Central Differences
+        
+@ti.func
+def A11_central(
+    u: ti.template(),
+    dxy: ti.f32,
+    θs: ti.template(),
+    A11_u: ti.template()
+):
+    """
+    @taichi.func
+
+    Compute an approximation of A_11 `u` using central differences.
+
+    Args:
+      Static:
+        `u`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) which we want to
+          differentiate.
+        `θs`: angle coordinate at each grid point.
+        `dxy`: step size in x and y direction, taking values greater than 0.
+      Mutated:
+        `A11_u`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) central difference
+          approximation of A_11 u, which is updated in place.
+    """
+    for I in ti.grouped(A11_u):
+        θ = θs[I]
+        cos = ti.math.cos(θ)
+        sin = ti.math.sin(θ)
+        I_A1 = ti.Vector([cos, sin, 0.0], dt=ti.f32)
+        A11_u[I] = (
+            scalar_trilinear_interpolate(u, I + I_A1) - 2 * u[I] + scalar_trilinear_interpolate(u, I - I_A1)
+        ) / dxy**2
+
+@ti.func
+def A22_central(
+    u: ti.template(),
+    dxy: ti.f32,
+    θs: ti.template(),
+    A22_u: ti.template()
+):
+    """
+    @taichi.func
+
+    Compute an approximation of A_22 `u` using central differences.
+
+    Args:
+      Static:
+        `u`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) which we want to
+          differentiate.
+        `θs`: angle coordinate at each grid point.
+        `dxy`: step size in x and y direction, taking values greater than 0.
+      Mutated:
+        `A22_u`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) central difference
+          approximation of A_22 u, which is updated in place.
+    """
+    for I in ti.grouped(A22_u):
+        θ = θs[I]
+        cos = ti.math.cos(θ)
+        sin = ti.math.sin(θ)
+        I_A2 = ti.Vector([-sin, cos, 0.0], dt=ti.f32)
+        A22_u[I] = (
+            scalar_trilinear_interpolate(u, I + I_A2) - 2 * u[I] + scalar_trilinear_interpolate(u, I - I_A2)
+        ) / dxy**2
+
 # Gauge Frame ???
