@@ -36,48 +36,129 @@ import taichi as ti
 from eikivp.SE2.utils import sanitize_index
 from eikivp.SE2.derivatives import (
     A11_central,
-    A22_central
+    A22_central,
+    A11_shit,
+    A22_shit
 )
+import scipy as sp
 
-# Vesselness
-
-def single_scale_vesselness(U_np, mask_np, θs_np, σ_s, σ_o, σ_s_ext, σ_o_ext, dxy, dθ, ξ=1., ζ=1.):
+def single_scale_vesselness(U, mask, θs, σ_s, σ_o, σ_s_ext, σ_o_ext, dxy, dθ):
     """
     ksjgfkhlsf
     """
-    # Initialise TaiChi objects.
-    shape = U_np.shape
-    U = ti.field(dtype=ti.f32, shape=shape)
-    U.from_numpy(U_np)
-    mask = ti.field(dtype=ti.f32, shape=shape)
-    mask.from_numpy(mask_np)
-    θs = ti.field(dtype=ti.f32, shape=shape)
-    θs.from_numpy(θs_np)
-    convolution_storage_1 = ti.field(dtype=ti.f32, shape=shape)
-    convolution_storage_2 = ti.field(dtype=ti.f32, shape=shape)
-    U_int = ti.field(dtype=ti.f32, shape=shape)
-    A11_U = ti.field(dtype=ti.f32, shape=shape)
-    A22_U = ti.field(dtype=ti.f32, shape=shape)
-    A11_U_ext = ti.field(dtype=ti.f32, shape=shape)
-    A22_U_ext = ti.field(dtype=ti.f32, shape=shape)
-    Q = ti.field(dtype=ti.f32, shape=shape)
-    S = ti.field(dtype=ti.f32, shape=shape)
-    R = ti.field(dtype=ti.f32, shape=shape)
-    V = ti.field(dtype=ti.f32, shape=shape)
-    ## Compute Gaussian kernels.
-    σ_s_pixels = σ_s #/ dxy
-    k_s, radius_s = gaussian_derivative_kernel(σ_s_pixels, 0, dxy=dxy)
-    σ_o_pixels = σ_o #/ dθ
-    k_o, radius_o = gaussian_derivative_kernel(σ_o_pixels, 0, dxy=dθ)
-    σ_s_ext_pixels = σ_s_ext #/ dxy
-    k_s_ext, radius_s_ext = gaussian_derivative_kernel(σ_s_ext_pixels, 0, dxy=dxy)
-    σ_o_ext_pixels = σ_o_ext #/ dθ
-    k_o_ext, radius_o_ext = gaussian_derivative_kernel(σ_o_ext_pixels, 0, dxy=dθ)
+    A11_U, A22_U = compute_structural_derivatives(U, θs, σ_s, σ_o)
+    A11_U_ext = sp.ndimage.gaussian_filter(A11_U, (σ_s_ext, σ_s_ext, σ_o_ext), mode="nearest")
+    A22_U_ext = sp.ndimage.gaussian_filter(A22_U, (σ_s_ext, σ_s_ext, σ_o_ext), mode="nearest")
+
+    ε = 0. # 10**-8 # For safe division.
+        # Adapted from "SE2-Vesselness-LI-Simple.nb", found in
+        # S:\Lieanalysis\VICI\researchers\FinnSherry\Mathematica\Vascular Tracking OS\CodeA-SE2-Vesselness\Relevant-Sub-Routines-in-A\2D-Vesselness
+    λ1 = A11_U_ext
+    c = A22_U_ext
+    Q = c # Convexity criterion.
+    S = np.sqrt(λ1**2 + c**2) # Structure measure.
+    R = λ1 / (c + ε * (-1)**(c < 0.)) # Anisotropy measure. 
+
+    σ1 = 0.005
+    σ2 = S.max()
+
+    lineness = np.exp(-R**2 / (2 * σ1**2)) * (1 - np.exp(-S**2 / (0.1 * σ2**2)))
+    # Vessels are dark lines, so they are locally convex. We can assess
+    # local convexity by looking at the left invariant perpendicular
+    # Laplacian, given by A_22.
+    is_convex = Q > 0.
+    V = lineness * mask * is_convex
+    return V, Q, S, R, A11_U, A22_U
+
+def compute_structural_derivatives(U, θs, σ_s, σ_o):
+    N_ors = U.shape[-1]
+    σ_s_reduced = σ_s/np.sqrt(2)
+    σ_o_reduced = σ_o/np.sqrt(2)
+    σs = (σ_s_reduced, σ_s_reduced, σ_o_reduced)
+
+    dx_U = sp.ndimage.gaussian_filter(U, σs, order=(1, 0, 0), mode="nearest")
+    dy_U = sp.ndimage.gaussian_filter(U, σs, order=(0, 1, 0), mode="nearest")
+    A1_U = np.zeros_like(U)
+    A2_U = np.zeros_like(U)
+    for i in range(N_ors):
+        cos = np.cos(θs[0, 0, i])
+        sin = np.sin(θs[0, 0, i])
+        A1_U[..., i] = cos * dx_U[..., i] + sin * dy_U[..., i]
+        A2_U[..., i] = -sin * dx_U[..., i] + cos * dy_U[..., i]
+
+    dx_A1_U = sp.ndimage.gaussian_filter(A1_U, σs, order=(1, 0, 0), mode="nearest")
+    dy_A1_U = sp.ndimage.gaussian_filter(A1_U, σs, order=(0, 1, 0), mode="nearest")
+    dx_A2_U = sp.ndimage.gaussian_filter(A2_U, σs, order=(1, 0, 0), mode="nearest")
+    dy_A2_U = sp.ndimage.gaussian_filter(A2_U, σs, order=(0, 1, 0), mode="nearest")
+    A11_U = np.zeros_like(U)
+    A22_U = np.zeros_like(U)
+    for i in range(N_ors):
+        cos = np.cos(θs[0, 0, i])
+        sin = np.sin(θs[0, 0, i])
+        A11_U[..., i] = cos * dx_A1_U[..., i] + sin * dy_A1_U[..., i]
+        A22_U[..., i] = -sin * dx_A2_U[..., i] + cos * dy_A2_U[..., i]
+
+    return A11_U, A22_U
+
+# Vesselness
+
+# def single_scale_vesselness(U_np, mask_np, θs_np, σ_s, σ_o, σ_s_ext, σ_o_ext, dxy, dθ):
+#     """
+#     ksjgfkhlsf
+#     """
+#     # Initialise TaiChi objects.
+#     shape = U_np.shape
+#     U = ti.field(dtype=ti.f32, shape=shape)
+#     U.from_numpy(U_np)
+#     mask = ti.field(dtype=ti.f32, shape=shape)
+#     mask.from_numpy(mask_np)
+#     θs = ti.field(dtype=ti.f32, shape=shape)
+#     θs.from_numpy(θs_np)
+#     convolution_storage_1 = ti.field(dtype=ti.f32, shape=shape)
+#     convolution_storage_2 = ti.field(dtype=ti.f32, shape=shape)
+#     U_int = ti.field(dtype=ti.f32, shape=shape)
+#     A11_U = ti.field(dtype=ti.f32, shape=shape)
+#     A22_U = ti.field(dtype=ti.f32, shape=shape)
+#     A11_U_ext = ti.field(dtype=ti.f32, shape=shape)
+#     A22_U_ext = ti.field(dtype=ti.f32, shape=shape)
+#     # Q = ti.field(dtype=ti.f32, shape=shape)
+#     # S = ti.field(dtype=ti.f32, shape=shape)
+#     # R = ti.field(dtype=ti.f32, shape=shape)
+#     # V = ti.field(dtype=ti.f32, shape=shape)
+#     ## Compute Gaussian kernels.
+#     σ_s_pixels = σ_s #/ dxy
+#     k_s, radius_s = gaussian_derivative_kernel(σ_s_pixels, 0, dxy=dxy)
+#     σ_o_pixels = σ_o #/ dθ
+#     k_o, radius_o = gaussian_derivative_kernel(σ_o_pixels, 0, dxy=dθ)
+#     σ_s_ext_pixels = σ_s_ext #/ dxy
+#     k_s_ext, radius_s_ext = gaussian_derivative_kernel(σ_s_ext_pixels, 0, dxy=dxy)
+#     σ_o_ext_pixels = σ_o_ext #/ dθ
+#     k_o_ext, radius_o_ext = gaussian_derivative_kernel(σ_o_ext_pixels, 0, dxy=dθ)
     
-    single_scale_vesselness_backend(U, mask, dxy, θs, k_s, radius_s, k_o, radius_o, U_int, A11_U, A22_U, k_s_ext,
-                                    radius_s_ext, k_o_ext, radius_o_ext, A11_U_ext, A22_U_ext, ξ, ζ, Q, S, R, V,
-                                    convolution_storage_1, convolution_storage_2)
-    return V.to_numpy(), A11_U_ext.to_numpy(), A22_U_ext.to_numpy()
+#     single_scale_vesselness_backend(U, mask, dxy, θs, k_s, radius_s, k_o, radius_o, U_int, A11_U, A22_U, k_s_ext,
+#                                     radius_s_ext, k_o_ext, radius_o_ext, A11_U_ext, A22_U_ext, # Q, S, R, V,
+#                                     convolution_storage_1, convolution_storage_2)
+#     # return V.to_numpy(), Q.to_numpy(), S.to_numpy(), R.to_numpy(), A11_U.to_numpy(), A22_U.to_numpy(), convolution_storage_1.to_numpy(), convolution_storage_2.to_numpy()
+
+#     ε = 0. # 10**-8 # For safe division.
+#         # Adapted from "SE2-Vesselness-LI-Simple.nb", found in
+#         # S:\Lieanalysis\VICI\researchers\FinnSherry\Mathematica\Vascular Tracking OS\CodeA-SE2-Vesselness\Relevant-Sub-Routines-in-A\2D-Vesselness
+#     λ1 = A11_U_ext.to_numpy()
+#     c = A22_U_ext.to_numpy()
+#     Q = c # Convexity criterion.
+#     S = np.sqrt(λ1**2 + c**2) # Structure measure.
+#     R = λ1 / (c + ε * (-1)**(c < 0.)) # Anisotropy measure. 
+
+#     σ1 = 0.005
+#     σ2 = S.max()
+
+#     lineness = np.exp(-R**2 / (2 * σ1**2)) * (1 - np.exp(-S**2 / (0.1 * σ2**2)))
+#     # Vessels are dark lines, so they are locally convex. We can assess
+#     # local convexity by looking at the left invariant perpendicular
+#     # Laplacian, given by A_22.
+#     is_convex = Q > 0.
+#     V = lineness * mask_np * is_convex
+#     return V, Q, S, R, A11_U.to_numpy(), A22_U.to_numpy()
 
 @ti.kernel
 def single_scale_vesselness_backend(
@@ -98,12 +179,10 @@ def single_scale_vesselness_backend(
     radius_o_ext: ti.i32,
     A11_U_ext: ti.template(),
     A22_U_ext: ti.template(),
-    ξ: ti.f32,
-    ζ: ti.f32,
-    Q: ti.template(),
-    S: ti.template(),
-    R: ti.template(),
-    V: ti.template(),
+    # Q: ti.template(),
+    # S: ti.template(),
+    # R: ti.template(),
+    # V: ti.template(),
     convolution_storage_1: ti.template(),
     convolution_storage_2: ti.template()
 ):
@@ -116,9 +195,11 @@ def single_scale_vesselness_backend(
     convolve_with_kernel_y_dir(convolution_storage_1, k_s, radius_s, convolution_storage_2)
     convolve_with_kernel_θ_dir(convolution_storage_2, k_o, radius_o, U_int)
     ## Compute A_11 and A_22 derivatives.
-    A11_central(U, dxy, θs, A11_U)
-    A22_central(U, dxy, θs, A22_U)
-    ## Apply external regularisation.
+    A11_central(U_int, dxy, θs, A11_U)
+    A22_central(U_int, dxy, θs, A22_U)
+    # A11_shit(U_int, dxy, θs, A11_U, convolution_storage_1)
+    # A22_shit(U_int, dxy, θs, A22_U, convolution_storage_1)
+    ## Apply external regularisation to derivatives.
     convolve_with_kernel_x_dir(A11_U, k_s_ext, radius_s_ext, convolution_storage_1)
     convolve_with_kernel_y_dir(convolution_storage_1, k_s_ext, radius_s_ext, convolution_storage_2)
     convolve_with_kernel_θ_dir(convolution_storage_2, k_o_ext, radius_o_ext, A11_U_ext)
@@ -127,36 +208,40 @@ def single_scale_vesselness_backend(
     convolve_with_kernel_θ_dir(convolution_storage_2, k_o_ext, radius_o_ext, A22_U_ext)
 
     # Combine components.
-    ε = 10**-8 # For safe division.
-    for I in ti.grouped(V):
-        # Adapted from "SE2-Vesselness-LI-Simple.nb", found in
-        # S:\Lieanalysis\VICI\researchers\FinnSherry\Mathematica\Vascular Tracking OS\CodeA-SE2-Vesselness\Relevant-Sub-Routines-in-A\2D-Vesselness
-        λ1 = A11_U_ext[I] / ξ**2
-        Q[I] = A22_U_ext[I] * (ζ / ξ)**2 # Convexity criterion.
-        S[I] = λ1**2 + Q[I]**2 # Structure measure.
-        R[I] = λ1 / (Q[I] + ε * (-1)**(Q[I] < 0.)) # Anisotropy measure.
-    # σ1 = 0.2 * ti.abs(R[0, 0, 0])
-    σ2 = 0.2 * ti.abs(S[0, 0, 0])
-    for I in ti.grouped(S):
-        # σ1 = ti.atomic_max(σ1, 0.2 * ti.abs(R[I]))
-        σ2 = ti.atomic_max(σ2, 0.2 * ti.abs(S[I]))
-    for I in ti.grouped(V):
-        lineness = ti.math.exp(-2 * R[I]**2) / (1 - ti.math.exp(-S[I] / (2 * σ2)) + ε)
-        assert lineness > 0. or lineness < 0. or lineness == 0., f"{ti.math.exp(-S[I] / (2 * σ2))}"
-        # Vessels are dark lines, so they are locally convex. We can assess
-        # local convexity by looking at the left invariant perpendicular
-        # Laplacian, given by A_22.
-        is_convex = Q[I] > 0
-        V[I] = lineness * is_convex * mask[I]
+    # ε = 0. # 10**-8 # For safe division.
+    # for I in ti.grouped(V):
+    #     # Adapted from "SE2-Vesselness-LI-Simple.nb", found in
+    #     # S:\Lieanalysis\VICI\researchers\FinnSherry\Mathematica\Vascular Tracking OS\CodeA-SE2-Vesselness\Relevant-Sub-Routines-in-A\2D-Vesselness
+    #     λ1 = A11_U_ext[I]
+    #     c = A22_U_ext[I]
+    #     Q[I] = c # Convexity criterion.
+    #     S[I] = ti.math.sqrt(λ1**2 + c**2) # Structure measure.
+    #     R[I] = λ1 / (c + ε * (-1)**(c < 0.)) # Anisotropy measure. 
 
-def multi_scale_vesselness(U, mask, θs, σ_s_list, σ_o, σ_s_ext, σ_o_ext, dxy, dθ, ξ=1., ζ=1.):
+    # σ1 = 0.005
+    # σ2 = S[0, 0, 0]
+    # for I in ti.grouped(S):
+    #     # ti.atomic_max(σ1, 0.5 * R[I])
+    #     ti.atomic_max(σ2, S[I])
+
+    # for I in ti.grouped(V):
+    #     convolution_storage_1[I] = ti.math.exp(-R[I]**2 / (2 * σ1**2))
+    #     convolution_storage_2[I] = (1 - ti.math.exp(-S[I]**2 / (0.1 * σ2**2)))
+    #     lineness = ti.math.exp(-R[I]**2 / (2 * σ1**2)) * (1 - ti.math.exp(-S[I]**2 / (0.1 * σ2**2)))
+    #     # Vessels are dark lines, so they are locally convex. We can assess
+    #     # local convexity by looking at the left invariant perpendicular
+    #     # Laplacian, given by A_22.
+    #     is_convex = Q[I] > 0.
+    #     V[I] = lineness * mask[I] * is_convex
+
+def multi_scale_vesselness(U, mask, θs, σ_s_list, σ_o, σ_s_ext, σ_o_ext, dxy, dθ):
     """
     ssdgf
     """
     Nx, Ny, Nθ = U.shape
     Vs = np.zeros((len(σ_s_list), Nx, Ny, Nθ))
     for i, σ_s in enumerate(σ_s_list):
-        Vs[i] = single_scale_vesselness(U, mask, θs, σ_s, σ_o, σ_s_ext, σ_o_ext, dxy, dθ, ξ=ξ, ζ=ζ)
+        Vs[i] = single_scale_vesselness(U, mask, θs, σ_s, σ_o, σ_s_ext, σ_o_ext, dxy, dθ)
     V_unnormalised = Vs.sum(0) # Vs.max(0)
     V = (V_unnormalised - V_unnormalised.min()) / (V_unnormalised.max() - V_unnormalised.min())
     return V

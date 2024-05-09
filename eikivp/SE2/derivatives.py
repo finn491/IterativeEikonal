@@ -15,7 +15,7 @@
 
 import taichi as ti
 from eikivp.utils import select_upwind_derivative
-from eikivp.SE2.utils import scalar_trilinear_interpolate
+from eikivp.SE2.utils import scalar_trilinear_interpolate, sanitize_index
 
 
 # All at once
@@ -499,5 +499,87 @@ def A22_central(
         A22_u[I] = (
             scalar_trilinear_interpolate(u, I + I_A2) - 2 * u[I] + scalar_trilinear_interpolate(u, I - I_A2)
         ) / dxy**2
+
+@ti.func
+def A11_shit(
+    u: ti.template(),
+    dxy: ti.f32,
+    θs: ti.template(),
+    A11_u: ti.template(),
+    storage: ti.template()
+):
+    """
+    @taichi.func
+
+    Compute an approximation of A_11 `u` using central differences.
+
+    Args:
+      Static:
+        `u`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) which we want to
+          differentiate.
+        `θs`: angle coordinate at each grid point.
+        `dxy`: step size in x and y direction, taking values greater than 0.
+      Mutated:
+        `A11_u`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) central difference
+          approximation of A_11 u, which is updated in place.
+    """
+    I_dx = ti.Vector([1, 0, 0], dt=ti.i32)
+    I_dy = ti.Vector([0, 1, 0], dt=ti.i32)
+    for I in ti.grouped(A11_u):
+        θ = θs[I]
+        cos = ti.math.cos(θ)
+        sin = ti.math.sin(θ)
+        dx = u[I] - u[sanitize_index(I - I_dx, u)]
+        dy = u[I] - u[sanitize_index(I - I_dy, u)]
+        storage[I] = dx * cos + dy * sin
+
+    for I in ti.grouped(A11_u):
+        θ = θs[I]
+        cos = ti.math.cos(θ)
+        sin = ti.math.sin(θ)
+        dx = u[sanitize_index(I + I_dx, storage)] - storage[I]
+        dy = u[sanitize_index(I + I_dy, storage)] - storage[I]
+        A11_u[I] = dx * cos + dy * sin
+
+@ti.func
+def A22_shit(
+    u: ti.template(),
+    dxy: ti.f32,
+    θs: ti.template(),
+    A22_u: ti.template(),
+    storage: ti.template()
+):
+    """
+    @taichi.func
+
+    Compute an approximation of A_22 `u` using central differences.
+
+    Args:
+      Static:
+        `u`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) which we want to
+          differentiate.
+        `θs`: angle coordinate at each grid point.
+        `dxy`: step size in x and y direction, taking values greater than 0.
+      Mutated:
+        `A22_u`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) central difference
+          approximation of A_22 u, which is updated in place.
+    """
+    I_dx = ti.Vector([1, 0, 0], dt=ti.i32)
+    I_dy = ti.Vector([0, 1, 0], dt=ti.i32)
+    for I in ti.grouped(A22_u):
+        θ = θs[I]
+        cos = ti.math.cos(θ)
+        sin = ti.math.sin(θ)
+        dx = u[sanitize_index(I + I_dx, u)] - u[I]
+        dy = u[sanitize_index(I + I_dy, u)] - u[I]
+        storage[I] = -dx * sin + dy * cos
+
+    for I in ti.grouped(A22_u):
+        θ = θs[I]
+        cos = ti.math.cos(θ)
+        sin = ti.math.sin(θ)
+        dx = u[sanitize_index(I + I_dx, storage)] - storage[I]
+        dy = u[sanitize_index(I + I_dy, storage)] - storage[I]
+        A22_u[I] =-dx * sin + dy * cos
 
 # Gauge Frame ???

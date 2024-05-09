@@ -153,7 +153,7 @@ def eikonal_solver(cost_np, source_point, G_np, dα, dβ, dφ, αs_np, φs_np, t
             step_W(W, cost, G_inv, dα, dβ, dφ, αs_np, φs_np, ε, B1_forward, B1_backward, B2_forward, B2_backward,
                    B3_forward, B3_backward, B1_W, B2_W, B3_W, dW_dt)
             apply_boundary_conditions(W, boundarypoints, boundaryvalues)
-        is_converged = check_convergence(dW_dt, tol=tol, target_point=target_point)
+        is_converged = check_convergence(dW_dt, source_point, tol=tol, target_point=target_point)
         if is_converged: # Hamiltonian throughout domain is sufficiently small
             print(f"Converged after {(n + 1) * n_check} steps!")
             break
@@ -390,7 +390,7 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dα, dβ, dφ, αs_
             step_W_uniform(W, G_inv, dα, dβ, dφ, αs, φs, ε, B1_forward, B1_backward, B2_forward, B2_backward,
                            B3_forward, B3_backward, B1_W, B2_W, B3_W, dW_dt)
             apply_boundary_conditions(W, boundarypoints, boundaryvalues)
-        is_converged = check_convergence(dW_dt, tol=tol, target_point=target_point)
+        is_converged = check_convergence(dW_dt, source_point, tol=tol, target_point=target_point)
         if is_converged: # Hamiltonian throughout domain is sufficiently small
             print(f"Converged after {(n + 1) * n_check} steps!")
             break

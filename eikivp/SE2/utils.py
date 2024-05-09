@@ -152,24 +152,22 @@ def field_abs_max(
     """
     value = ti.abs(scalar_field[0, 0, 0])
     for I in ti.grouped(scalar_field):
-        value = ti.atomic_max(value, ti.abs(scalar_field[I]))
+        ti.atomic_max(value, ti.abs(scalar_field[I]))
     return value
 
-def check_convergence(dW_dt, tol=1e-3, target_point=None):
+def check_convergence(dW_dt, source_point, tol=1e-3, target_point=None):
     """
     Check whether the IVP method has converged by comparing the Hamiltonian
     `dW_dt` to tolerance `tol`. If `target_point` is provided, only check
     convergence at `target_point`; otherwise check throughout the domain.
     """
-    is_converged = False
     if target_point is None:
+        dW_dt[source_point[0]+1, source_point[1]+1, source_point[2]+1] = 0. # Source is fixed.
         error = field_abs_max(dW_dt)
-        print(error)
-        is_converged = error < tol
     else:
         error = ti.abs(dW_dt[target_point])
-        print(error)
-        is_converged = error < tol
+    print(error)
+    is_converged = error < tol
     return is_converged
 
 
