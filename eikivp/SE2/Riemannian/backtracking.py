@@ -41,15 +41,15 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
           taking values greater than 0.
         `dθ`: orientational resolution, taking values greater than 0.
-        `θs_np`: Orientation coordinate at every point in the grid on which
+        `θs_np`: orientation coordinate at every point in the grid on which
           `cost` is sampled.
         `G_np`: np.ndarray(shape=(3,), dtype=[float]) of constants of the
           diagonal metric tensor with respect to left invariant basis.
       Optional:
-        `dt`: Step size, taking values greater than 0. Defaults to 1.
-        `β`: Momentum parameter in gradient descent, taking values between 0 and 
+        `dt`: step size, taking values greater than 0. Defaults to 1.
+        `β`: momentum parameter in gradient descent, taking values between 0 and 
           1. Defaults to 0.
-        `n_max`: Maximum number of points in geodesic, taking positive integral
+        `n_max`: maximum number of points in geodesic, taking positive integral
           values. Defaults to 10000.
 
     Returns:
