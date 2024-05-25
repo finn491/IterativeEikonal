@@ -4,10 +4,16 @@
 
     Provides tools compute vesselness scores on R^2. The available methods are:
       1. `rc_vessel_enhancement`: compute the singlescale vesselness using a
-      Frangi filter.
+      Frangi filter[1].
       2. `multiscale_frangi_filter`: compute the multiscale vesselness by
       applying the Frangi filter at numerous scales and combining the results
       via maximum projection.
+      
+    References:
+        [1]: A. F. Frangi, W. J. Niessen, K. L. Vincken, and M. A. Viergever.
+        "Multiscale vessel enhancement filtering". In: Medical Image Computing
+        and Computer-Assisted Intervention (1998), pp. 130--137.
+        DOI:10.1007/BFb0056195.
 """
 
 import numpy as np

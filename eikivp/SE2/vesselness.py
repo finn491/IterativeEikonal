@@ -2,8 +2,11 @@
     vesselness
     ==========
     Provides tools to compute vesselness scores on SE(2), namely:
-      1. `single_scale_vesselness`:
-      2. `multi_scale_vesselness`:
+      1. `single_scale_vesselness`: compute the singlescale vesselness using a
+      crossing-preserving vesselness[1].
+      2. `multi_scale_vesselness`: compute the multiscale vesselness by
+      combining crossing-preserving vesselnesses at various scales via maximum
+      projection.
     Additionally, we have code for regularising functions on SE(2), namely:
       1. `convolve_with_kernel_x_dir`: convolve a field with a 1D kernel along
       the x-direction.
@@ -13,7 +16,7 @@
       the θ-direction.
       4. `gaussian_derivative_kernel`: computes 1D Gaussian derivative kernels
       of order 0 and 1, using an algorithm that improves the accuracy of higher
-      order derivative kernels with small widths, based on the DIPlib[1]
+      order derivative kernels with small widths, based on the DIPlib[2]
       algorithm MakeHalfGaussian: https://github.com/DIPlib/diplib/blob/a6f825a69109ae388c5f0c14e76cdb2505da4594/src/linear/gauss.cpp#L95.
     We use that the spatially isotropic diffusion equation on SE(2) can be
     solved by convolving in the x-, y-, and θ-direction with some 1D kernel. For
@@ -22,10 +25,13 @@
     small.
 
     TODO: maybe add in correct kernel for θ-direction?
-    TODO: find reference for vesselness filter.
 
     References:
-      [1]: C. Luengo, W. Caarls, R. Ligteringen, E. Schuitema, Y. Guo,
+      [1]: J. Hannink, R. Duits, and E. Bekkers.
+      "Crossing-Preserving Multi-scale Vesselness". In: Medical Image Computing
+      and Computer-Assisted Intervention 8674 (2014), pp. 603-610.
+      DOI:10.1007/978-3-319-10470-6_75
+      [2]: C. Luengo, W. Caarls, R. Ligteringen, E. Schuitema, Y. Guo,
       E. Wernersson, F. Malmberg, S. Lokhorst, M. Wolff, G. van Kempen,
       M. van Ginkel, L. van Vliet, B. Rieger, B. Verwer, H. Netten,
       J. W. Brandenburg, J. Dijk, N. van den Brink, F. Faas, K. van Wijk,
@@ -44,7 +50,8 @@ from eikivp.SE2.derivatives import (
 
 def single_scale_vesselness(U_np, mask_np, θs_np, σ_s, σ_o, σ_s_ext, σ_o_ext, dxy, dθ):
     """
-    Compute vesselness of orientation score of retinal image `U_np`.
+    Compute the crossing-preserving vesselness[1] of the orientation score of an
+    image `U_np`.
 
     Args:
         `U_np`: np.ndarray of orientation score, with shape [Nx, Ny, Nθ].
@@ -52,15 +59,15 @@ def single_scale_vesselness(U_np, mask_np, θs_np, σ_s, σ_o, σ_s_ext, σ_o_ex
           with boundary effects of the image, with shape [Nx, Ny, Nθ].
         `θs_np`: orientation coordinate at every point in the grid on which
           `cost` is sampled, with shape [Nx, Ny, Nθ].
-        `σ_s`: standard deviation in pixels of the internal regularisation
-          in the spatial directions before taking derivatives.
-        `σ_o`: standard deviation in pixels of the internal regularisation
+        `σ_s`: standard deviation in spatial units of the internal
+          regularisation in the spatial directions before taking derivatives.
+        `σ_o`: standard deviation in radians of the internal regularisation
           in the orientational direction before taking derivatives.
-        `σ_s_ext`: standard deviation in pixels of the external regularisation
-          in the spatial direction after taking derivatives.
+        `σ_s_ext`: standard deviation in spatial units of the external
+          regularisation in the spatial direction after taking derivatives.
           Notably, this regularisation is NOT truly external, because it
           commutes with the derivatives.
-        `σ_o_ext`: standard deviation in pixels of the internal regularisation
+        `σ_o_ext`: standard deviation in radians of the internal regularisation
           in the orientational direction after taking derivatives.
           Notably, this regularisation is NOT truly external, because it
           commutes with the derivatives.
@@ -70,6 +77,12 @@ def single_scale_vesselness(U_np, mask_np, θs_np, σ_s, σ_o, σ_s_ext, σ_o_ex
 
     Returns:
         np.ndarray of vesselness of orientation score of retinal image `U_np`.
+
+    References:
+      [1]: J. Hannink, R. Duits, and E. Bekkers.
+        "Crossing-Preserving Multi-scale Vesselness". In: Medical Image
+        Computing and Computer-Assisted Intervention 8674 (2014), pp. 603-610.
+        DOI:10.1007/978-3-319-10470-6_75
     """
     # Initialise TaiChi objects.
     shape = U_np.shape
@@ -91,13 +104,13 @@ def single_scale_vesselness(U_np, mask_np, θs_np, σ_s, σ_o, σ_s_ext, σ_o_ex
     R = ti.field(dtype=ti.f32, shape=shape)
     V = ti.field(dtype=ti.f32, shape=shape)
     ## Compute Gaussian kernels.
-    σ_s_pixels = σ_s #/ dxy
+    σ_s_pixels = σ_s / dxy
     k_s, radius_s = gaussian_derivative_kernel(σ_s_pixels, 0, dxy=dxy)
-    σ_o_pixels = σ_o #/ dθ
+    σ_o_pixels = σ_o / dθ
     k_o, radius_o = gaussian_derivative_kernel(σ_o_pixels, 0, dxy=dθ)
-    σ_s_ext_pixels = σ_s_ext #/ dxy
+    σ_s_ext_pixels = σ_s_ext / dxy
     k_s_ext, radius_s_ext = gaussian_derivative_kernel(σ_s_ext_pixels, 0, dxy=dxy)
-    σ_o_ext_pixels = σ_o_ext #/ dθ
+    σ_o_ext_pixels = σ_o_ext / dθ
     k_o_ext, radius_o_ext = gaussian_derivative_kernel(σ_o_ext_pixels, 0, dxy=dθ)
     
     single_scale_vesselness_backend(U, mask, dxy, θs, k_s, radius_s, k_o, radius_o, U_int, A11_U, A22_U, k_s_ext,
@@ -134,7 +147,8 @@ def single_scale_vesselness_backend(
     """
     @taichi.kernel
 
-    Compute vesselness of orientation score of retinal image `U_np`.
+    Compute the crossing-preserving vesselness[1] of the orientation score of an
+    image `U`.
 
     Args:
       Static:
@@ -176,6 +190,12 @@ def single_scale_vesselness_backend(
           updated in place.
         `convolution_storage_*`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ])
           arrays to hold intermediate results when performing convolutions.
+
+    References:
+      [1]: J. Hannink, R. Duits, and E. Bekkers.
+        "Crossing-Preserving Multi-scale Vesselness". In: Medical Image
+        Computing and Computer-Assisted Intervention 8674 (2014), pp. 603-610.
+        DOI:10.1007/978-3-319-10470-6_75
     """
     # Compute relevant "Hessian" components:
     ## Apply internal regularisation.
@@ -194,7 +214,6 @@ def single_scale_vesselness_backend(
     convolve_with_kernel_θ_dir(convolution_storage_2, k_o_ext, radius_o_ext, A22_U_ext)
 
     # Combine components.
-    ε = 0. # 10**-8 # For safe division.
     for I in ti.grouped(V):
         # Adapted from "SE2-Vesselness-LI-Simple.nb", found in
         # S:\Lieanalysis\VICI\researchers\FinnSherry\Mathematica\Vascular Tracking OS\CodeA-SE2-Vesselness\Relevant-Sub-Routines-in-A\SE2-Vesselness
@@ -207,12 +226,9 @@ def single_scale_vesselness_backend(
     σ1 = 0.5
     σ2 = S[0, 0, 0]
     for I in ti.grouped(S):
-        # ti.atomic_max(σ1, 0.5 * R[I])
         ti.atomic_max(σ2, S[I])
 
     for I in ti.grouped(V):
-        convolution_storage_1[I] = ti.math.exp(-R[I]**2 / (2 * σ1**2))
-        convolution_storage_2[I] = (1 - ti.math.exp(-S[I]**2 / (0.1 * σ2**2)))
         lineness = ti.math.exp(-R[I]**2 / (2 * σ1**2)) * (1 - ti.math.exp(-S[I]**2 / (0.1 * σ2**2)))
         # Vessels are dark lines, so they are locally convex. We can assess
         # local convexity by looking at the left invariant perpendicular
@@ -222,7 +238,9 @@ def single_scale_vesselness_backend(
 
 def multi_scale_vesselness(U, mask, θs, σ_s_list, σ_o, σ_s_ext, σ_o_ext, dxy, dθ):
     """
-    Compute multi scale vesselness of orientation score of retinal image `U_np`.
+    Compute the multiscale vesselness of the orientation score of an image
+    `U_np` by combining crossing-preserving vesselnesses[1] at various scales
+    via maximum projection.
 
     Args:
         `U_np`: np.ndarray of orientation score, with shape [Nx, Ny, Nθ].
@@ -249,12 +267,18 @@ def multi_scale_vesselness(U, mask, θs, σ_s_list, σ_o, σ_s_ext, σ_o_ext, dx
     Returns:
         np.ndarray of multi scale vesselness of orientation score of retinal
           image `U_np`.
+
+    References:
+      [1]: J. Hannink, R. Duits, and E. Bekkers.
+        "Crossing-Preserving Multi-scale Vesselness". In: Medical Image
+        Computing and Computer-Assisted Intervention 8674 (2014), pp. 603-610.
+        DOI:10.1007/978-3-319-10470-6_75
     """
     Nx, Ny, Nθ = U.shape
     Vs = np.zeros((len(σ_s_list), Nx, Ny, Nθ))
     for i, σ_s in enumerate(σ_s_list):
         Vs[i] = single_scale_vesselness(U, mask, θs, σ_s, σ_o, σ_s_ext, σ_o_ext, dxy, dθ)
-    V_unnormalised = Vs.sum(0) # Vs.max(0) ?
+    V_unnormalised = Vs.max(0) # Vs.sum(0) ?
     V = (V_unnormalised - V_unnormalised.min()) / (V_unnormalised.max() - V_unnormalised.min())
     return V
 
@@ -413,7 +437,6 @@ def gaussian_derivative_kernel_order_0(
           J. W. Brandenburg, J. Dijk, N. van den Brink, F. Faas, K. van Wijk,
           and T. Pham. "DIPlib 3". GitHub: https://github.com/DIPlib/diplib.
     """
-    ti.loop_config(serialize=True)
     for i in range(2*radius+1):
         x = -radius + i
         val = ti.math.exp(-x**2 / (2 * σ**2))
@@ -452,7 +475,6 @@ def gaussian_derivative_kernel_order_1(
           and T. Pham. "DIPlib 3". GitHub: https://github.com/DIPlib/diplib.
     """
     moment = 0.
-    ti.loop_config(serialize=True)
     for i in range(2*radius+1):
         x = -radius + i
         val = x * ti.math.exp(-x**2 / (2 * σ**2))
@@ -482,7 +504,7 @@ def normalise_field(
     """
     current_norm = 0.
     for I in ti.grouped(field):
-        current_norm += field[I]
+        ti.atomic_add(current_norm, field[I])
     norm_factor = norm / current_norm
     for I in ti.grouped(field):
         field[I] *= norm_factor
