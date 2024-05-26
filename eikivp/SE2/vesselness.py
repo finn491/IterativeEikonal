@@ -1,7 +1,12 @@
 """
     vesselness
     ==========
-    Provides tools to compute vesselness scores on SE(2), namely:
+
+    Provides tools to compute vesselness scores on SE(2). In particular,
+    provides the class `VesselnessSE2`, which can compute the vesselness and
+    store it with its parameters.
+
+    The available methods are:
       1. `single_scale_vesselness`: compute the singlescale vesselness using a
       crossing-preserving vesselness[1].
       2. `multi_scale_vesselness`: compute the multiscale vesselness by
@@ -39,12 +44,121 @@
 """
 
 import numpy as np
+import h5py
 import taichi as ti
 from eikivp.SE2.utils import sanitize_index
 from eikivp.SE2.derivatives import (
     A11_central,
     A22_central
 )
+
+class VesselnessSE2():
+    """
+    The vesselness of a retinal image in SE(2) computed using multiscale Frangi
+    filters[1].
+
+    Attributes:
+        `V`: np.ndarray of vesselness data.
+        `σ_s_list`: standard deviations in pixels of the internal regularisation
+          in the spatial directions before taking derivatives.
+        `σ_o`: standard deviation in pixels of the internal regularisation
+          in the orientational direction before taking derivatives.
+        `σ_s_ext`: standard deviation in pixels of the external regularisation
+          in the spatial direction after taking derivatives.
+          Notably, this regularisation is NOT truly external, because it
+          commutes with the derivatives.
+        `σ_o_ext`: standard deviation in pixels of the internal regularisation
+          in the orientational direction after taking derivatives.
+          Notably, this regularisation is NOT truly external, because it
+          commutes with the derivatives.
+        `image_name`: identifier of image used to generate vesselness.
+
+    References:
+      [1]: J. Hannink, R. Duits, and E. Bekkers.
+        "Crossing-Preserving Multi-scale Vesselness". In: Medical Image
+        Computing and Computer-Assisted Intervention 8674 (2014), pp. 603-610.
+        DOI:10.1007/978-3-319-10470-6_75
+    """
+
+    def __init__(self, σ_s_list, σ_o, σ_s_ext, σ_o_ext, image_name):
+        # Vesselness attributes
+        self.σ_s_list = σ_s_list
+        self.σ_o = σ_o
+        self.σ_s_ext = σ_s_ext
+        self.σ_o_ext = σ_o_ext
+        self.image_name = image_name
+
+    def compute_V(self, U_np, mask_np, θs_np, dxy, dθ):
+        """
+        Compute the multiscale vesselness of the orientation score of an image
+        `U_np` by combining crossing-preserving vesselnesses[1] at various
+        scales via maximum projection.
+
+        Args:
+            `U_np`: np.ndarray of orientation score, with shape [Nx, Ny, Nθ].
+            `mask_np`: np.ndarray of mask in which vesselness is computed, to
+              deal with boundary effects of the image, with shape [Nx, Ny, Nθ].
+            `θs_np`: orientation coordinate at every point in the grid on which
+              `cost` is sampled, with shape [Nx, Ny, Nθ].
+            `dxy`: spatial resolution, which is equal in the x- and y-directions,
+              taking values greater than 0.
+            `dθ`: orientational resolution, taking values greater than 0.
+
+        Returns:
+            np.ndarray of multi scale vesselness of orientation score of retinal
+              image `U_np`.
+
+        References:
+          [1]: J. Hannink, R. Duits, and E. Bekkers.
+            "Crossing-Preserving Multi-scale Vesselness". In: Medical Image
+            Computing and Computer-Assisted Intervention 8674 (2014), pp. 603-610.
+            DOI:10.1007/978-3-319-10470-6_75
+        """
+        self.V = multi_scale_vesselness(U_np, mask_np, θs_np, self.σ_s_list, self.σ_o, self.σ_s_ext, self.σ_o_ext, dxy,
+                                        dθ)
+
+    def import_V(self, folder):
+        """
+        Import the vesselness matching the attributes `σ_s_list`, `σ_o`,
+        `σ_s_ext`, `σ_o_ext`, and `image_name`.
+        """
+        vesselness_filename = f".\\{folder}\\SE2_sigmas_s={[s for s in self.σ_s_list]}_sigma_o={self.σ_o}_sigma_s_ext={self.σ_s_ext}_sigma_o_ext={self.σ_o_ext}.hdf5"
+        with h5py.File(vesselness_filename, "r") as vesselness_file:
+            assert (
+                np.all(self.σ_s_list == vesselness_file.attrs["σ_s_list"]) and
+                self.σ_o == vesselness_file.attrs["σ_o"] and
+                self.σ_s_ext == vesselness_file.attrs["σ_s_ext"] and
+                self.σ_o_ext == vesselness_file.attrs["σ_o_ext"] and
+                self.image_name == vesselness_file.attrs["image_name"]
+            ), "There is a parameter mismatch!"
+            self.V = vesselness_file["Vesselness"][()]
+            
+    def export_V(self, folder):
+        """
+        Export the vesselness to hdf5 with attributes `σ_s_list`, `σ_o`,
+        `σ_s_ext`, `σ_o_ext`, and `image_name` stored as metadata.
+        """
+        vesselness_filename = f".\\{folder}\\SE2_sigmas_s={[s for s in self.σ_s_list]}_sigma_o={self.σ_o}_sigma_s_ext={self.σ_s_ext}_sigma_o_ext={self.σ_o_ext}.hdf5"
+        with h5py.File(vesselness_filename, "w") as vesselness_file:
+            vesselness_file.create_dataset("Vesselness", data=self.V)
+            vesselness_file.attrs["σ_s_list"] = self.σ_s_list
+            vesselness_file.attrs["σ_o"] = self.σ_o
+            vesselness_file.attrs["σ_s_ext"] = self.σ_s_ext
+            vesselness_file.attrs["σ_o_ext"] = self.σ_o_ext
+            vesselness_file.attrs["image_name"] = self.image_name
+
+    # def plot(self, x_min, x_max, y_min, y_max):
+    #     """Quick visualisation of vesselness."""
+    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
+    #     fig.colorbar(cbar, ax=ax);
+
+    def print(self):
+        """Print attributes."""
+        print(f"σ_s_list => {self.σ_s_list}")
+        print(f"σ_o => {self.σ_o}")
+        print(f"σ_s_ext => {self.σ_s_ext}")
+        print(f"σ_o_ext => {self.σ_o_ext}")
+        print(f"image_name => {self.image_name}")
 
 # Vesselness
 

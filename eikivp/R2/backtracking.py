@@ -77,21 +77,22 @@ class GeodesicR2():
 
     def import_γ_path(self, folder):
         """
-        Import the distance and its gradient matching the attributes `scales`, `α`, `γ`, `ε`, and
-        `image_name`.
+        Import the geodesic matching the attributes `scales`, `α`, `γ`, `ε`,
+        `image_name`, `λ`, `p`, `G`, `source_point`, and `target_point`.
         """
-        geodesic_filename = f".\\{folder}\\R2_sigmas={[s for s in self.scales]}_alpha={self.α}_gamma={self.γ}_epsilon={self.ε}.hdf5"
+        geodesic_filename = f".\\{folder}\\R2_sigmas={[s for s in self.scales]}_alpha={self.α}_gamma={self.γ}_epsilon={self.ε}_lambda={self.λ}_p={self.p}_G={[g for g in self.G]}_source={self.source_point}_target={self.target_point}.hdf5"
         with h5py.File(geodesic_filename, "r") as geodesic_file:
             assert (
                 np.all(self.scales == geodesic_file.attrs["scales"]) and
                 self.α == geodesic_file.attrs["α"] and
                 self.γ == geodesic_file.attrs["γ"] and
                 self.ε == geodesic_file.attrs["ε"] and
+                self.image_name == geodesic_file.attrs["image_name"] and
                 self.λ == geodesic_file.attrs["λ"] and
                 self.p == geodesic_file.attrs["p"] and
-                self.G == geodesic_file.attrs["G"] and
-                self.source_point == geodesic_file.attrs["source_point"] and
-                self.target_point == geodesic_file.attrs["target_point"] and
+                np.all(self.G == geodesic_file.attrs["G"]) and
+                np.all(self.source_point == geodesic_file.attrs["source_point"]) and
+                np.all(self.target_point == geodesic_file.attrs["target_point"]) and
                 (
                     self.dt == geodesic_file.attrs["dt"] or
                     geodesic_file.attrs["dt"] == "default"
@@ -101,16 +102,17 @@ class GeodesicR2():
             
     def export_γ_path(self, folder):
         """
-        Export the geodesic to hdf5 with attributes
-        `scales`, `α`, `γ`, `ε`, and `image_name` stored as metadata.
+        Export the geodesic to hdf5 with attributes `scales`, `α`, `γ`, `ε`,
+        `image_name`, `λ`, `p`, `G`, `source_point`, and `target_point`.
         """
-        geodesic_filename = f".\\{folder}\\R2_sigmas={[s for s in self.scales]}_alpha={self.α}_gamma={self.γ}_epsilon={self.ε}_lambda={self.λ}_p={self.p}_G={self.G}.hdf5"
+        geodesic_filename = f".\\{folder}\\R2_sigmas={[s for s in self.scales]}_alpha={self.α}_gamma={self.γ}_epsilon={self.ε}_lambda={self.λ}_p={self.p}_G={[g for g in self.G]}_source={self.source_point}_target={self.target_point}.hdf5"
         with h5py.File(geodesic_filename, "w") as geodesic_file:
             geodesic_file.create_dataset("Geodesic", data=self.γ_path)
             geodesic_file.attrs["scales"] = self.scales
             geodesic_file.attrs["α"] = self.α
             geodesic_file.attrs["γ"] = self.γ
             geodesic_file.attrs["ε"] = self.ε
+            geodesic_file.attrs["image_name"] = self.image_name
             geodesic_file.attrs["λ"] = self.λ
             geodesic_file.attrs["p"] = self.p
             geodesic_file.attrs["G"] = self.G
@@ -135,6 +137,7 @@ class GeodesicR2():
         print(f"α => {self.α}")
         print(f"γ => {self.γ}")
         print(f"ε => {self.ε}")
+        print(f"image_name => {self.image_name}")
         print(f"λ => {self.λ}")
         print(f"p => {self.p}")
         print(f"G => {self.G}")

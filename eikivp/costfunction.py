@@ -17,6 +17,7 @@ from eikivp.SE2.utils import(
     coordinate_real_to_array_ti
 )
 from eikivp.R2.vesselness import VesselnessR2
+from eikivp.SE2.vesselness import VesselnessSE2
 
 class CostR2():
     """
@@ -58,6 +59,56 @@ class CostR2():
         print(f"α => {self.α}")
         print(f"γ => {self.γ}")
         print(f"ε => {self.ε}")
+        print(f"λ => {self.λ}")
+        print(f"p => {self.p}")
+
+class CostSE2():
+    """
+    Compute the cost function from the SE(2) vesselness.
+
+    Attributes:
+        `C`: np.ndarray of cost function data.
+        `σ_s_list`: standard deviations in pixels of the internal regularisation
+          in the spatial directions before taking derivatives.
+        `σ_o`: standard deviation in pixels of the internal regularisation
+          in the orientational direction before taking derivatives.
+        `σ_s_ext`: standard deviation in pixels of the external regularisation
+          in the spatial direction after taking derivatives.
+          Notably, this regularisation is NOT truly external, because it
+          commutes with the derivatives.
+        `σ_o_ext`: standard deviation in pixels of the internal regularisation
+          in the orientational direction after taking derivatives.
+          Notably, this regularisation is NOT truly external, because it
+          commutes with the derivatives.
+        `image_name`: identifier of image used to generate vesselness.
+        `λ`: vesselness prefactor, taking values greater than 0.
+        `p`: vesselness exponent, taking values greater than 0.
+    """
+
+    def __init__(self, V: VesselnessSE2, λ, p):
+        # Vesselness attributes
+        self.σ_s_list = V.σ_s_list
+        self.σ_o = V.σ_o
+        self.σ_s_ext = V.σ_s_ext
+        self.σ_o_ext = V.σ_o_ext
+        self.image_name = V.image_name
+        # Cost attributes
+        self.λ = λ
+        self.p = p
+
+        self.C = cost_function(V.V, λ, p)
+
+    # def plot(self, x_min, x_max, y_min, y_max):
+    #     """Quick visualisation of cost."""
+    #     fig, ax, cbar = plot_image_array(self.C, x_min, x_max, y_min, y_max)
+    #     fig.colorbar(cbar, ax=ax);
+
+    def print(self):
+        """Print attributes."""
+        print(f"σ_s_list => {self.σ_s_list}")
+        print(f"σ_o => {self.σ_o}")
+        print(f"σ_s_ext => {self.σ_s_ext}")
+        print(f"σ_o_ext => {self.σ_o_ext}")
         print(f"λ => {self.λ}")
         print(f"p => {self.p}")
 

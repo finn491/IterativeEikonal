@@ -75,7 +75,7 @@ class VesselnessR2():
               "Multiscale vessel enhancement filtering". In: Medical Image
               Computing and Computer-Assisted Intervention (1998), pp. 130--137.
               DOI:10.1007/BFb0056195.
-          """
+        """
         V_unmasked = multiscale_frangi_filter(-retinal_array, self.scales, α=self.α, γ=self.γ, ε=self.ε)
         mask = (retinal_array > 0) # Remove boundary
         V_unnormalised = V_unmasked * sp.ndimage.binary_erosion(mask, iterations=int(np.ceil(self.scales.max() * 2)))
@@ -110,6 +110,7 @@ class VesselnessR2():
             vesselness_file.attrs["α"] = self.α
             vesselness_file.attrs["γ"] = self.γ
             vesselness_file.attrs["ε"] = self.ε
+            vesselness_file.attrs["image_name"] = self.image_name
 
     # def plot(self, x_min, x_max, y_min, y_max):
     #     """Quick visualisation of vesselness."""
@@ -122,6 +123,7 @@ class VesselnessR2():
         print(f"α => {self.α}")
         print(f"γ => {self.γ}")
         print(f"ε => {self.ε}")
+        print(f"image_name => {self.image_name}")
 
 
 def rc_vessel_enhancement(image, σ, α=0.2, γ=0.75, ε=0.2):
