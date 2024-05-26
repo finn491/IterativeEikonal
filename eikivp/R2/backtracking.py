@@ -3,20 +3,144 @@
     ============
 
     Provides methods to compute the geodesic, with respect to some distance map,
-    connecting two points in R^2. The primary method is:
+    connecting two points in R^2. In particular, provides the class
+    `GeodesicR2`, which can compute the geodesic and store it with its
+    parameters.
+    
+    The primary method is:
       1. `geodesic_back_tracking`: compute the geodesic using gradient descent.
       The gradient must be provided; it is computed along with the distance map
       by the methods in the distancemap module.
 """
 
 import numpy as np
+import h5py
 import taichi as ti
 from eikivp.R2.interpolate import vectorfield_bilinear_interpolate
 from eikivp.R2.utils import (
     coordinate_array_to_real,
     coordinate_real_to_array_ti
 )
+from eikivp.R2.distancemap import DistanceR2
+from eikivp.costfunction import CostR2
 
+class GeodesicR2():
+    """
+    Compute the geodesic of a distance map on R2.
+
+    Attributes:
+        `W`: np.ndarray of distance function data.
+        `grad_W`: np.ndarray of gradient of distance function data.
+        `scales`: iterable of standard deviations of Gaussian derivatives,
+          taking values greater than 0. 
+        `α`: anisotropy penalty, taking values between 0 and 1.
+        `γ`: variance sensitivity, taking values between 0 and 1.
+        `ε`: structure penalty, taking values between 0 and 1.
+        `image_name`: identifier of image used to generate vesselness.
+        `λ`: Vesselness prefactor, taking values greater than 0.
+        `p`: Vesselness exponent, taking values greater than 0.
+        `G`: np.ndarray(shape=(2,), dtype=[float]) of constants of the
+          diagonal metric tensor with respect to standard basis. Defaults to
+          standard Euclidean metric.
+        `source_point`: Tuple[int] describing index of source point.
+        `target_point`: Tuple[int] describing index of target point. Defaults to
+          `None`. If `target_point` is provided, the algorithm will terminate
+          when the Hamiltonian has converged at `target_point`; otherwise it
+          will terminate when the Hamiltonian has converged throughout the
+          domain.
+        `dt`: Step size, taking values greater than 0. Defaults to the minimum
+          of the cost function.
+    """
+
+    def __init__(self, W: DistanceR2, target_point=None, dt=None):
+        # Vesselness attributes
+        self.scales = W.scales
+        self.α = W.α
+        self.γ = W.γ
+        self.ε = W.ε
+        self.image_name = W.image_name
+        # Cost attributes
+        self.λ = W.λ
+        self.p = W.p
+        # Distance attributes
+        self.G = W.G
+        self.source_point = W.source_point
+        self.target_point = W.target_point
+        if target_point is not None:
+            self.target_point = target_point
+        # Geodesic attributes
+        self.dt = dt
+
+    def compute_γ_path(self, W: DistanceR2, C: CostR2, x_min, y_min, dxy=1., n_max=2000):
+        self.γ_path = geodesic_back_tracking(W.grad_W, self.source_point, self.target_point, C.C, x_min, y_min, dxy,
+                                             G_np=self.G, dt=self.dt, n_max=n_max)
+
+    def import_γ_path(self, folder):
+        """
+        Import the distance and its gradient matching the attributes `scales`, `α`, `γ`, `ε`, and
+        `image_name`.
+        """
+        geodesic_filename = f".\\{folder}\\R2_sigmas={[s for s in self.scales]}_alpha={self.α}_gamma={self.γ}_epsilon={self.ε}.hdf5"
+        with h5py.File(geodesic_filename, "r") as geodesic_file:
+            assert (
+                np.all(self.scales == geodesic_file.attrs["scales"]) and
+                self.α == geodesic_file.attrs["α"] and
+                self.γ == geodesic_file.attrs["γ"] and
+                self.ε == geodesic_file.attrs["ε"] and
+                self.λ == geodesic_file.attrs["λ"] and
+                self.p == geodesic_file.attrs["p"] and
+                self.G == geodesic_file.attrs["G"] and
+                self.source_point == geodesic_file.attrs["source_point"] and
+                self.target_point == geodesic_file.attrs["target_point"] and
+                (
+                    self.dt == geodesic_file.attrs["dt"] or
+                    geodesic_file.attrs["dt"] == "default"
+                )              
+            ), "There is a parameter mismatch!"
+            self.γ_path = geodesic_file["Geodesic"][()]
+            
+    def export_γ_path(self, folder):
+        """
+        Export the geodesic to hdf5 with attributes
+        `scales`, `α`, `γ`, `ε`, and `image_name` stored as metadata.
+        """
+        geodesic_filename = f".\\{folder}\\R2_sigmas={[s for s in self.scales]}_alpha={self.α}_gamma={self.γ}_epsilon={self.ε}_lambda={self.λ}_p={self.p}_G={self.G}.hdf5"
+        with h5py.File(geodesic_filename, "w") as geodesic_file:
+            geodesic_file.create_dataset("Geodesic", data=self.γ_path)
+            geodesic_file.attrs["scales"] = self.scales
+            geodesic_file.attrs["α"] = self.α
+            geodesic_file.attrs["γ"] = self.γ
+            geodesic_file.attrs["ε"] = self.ε
+            geodesic_file.attrs["λ"] = self.λ
+            geodesic_file.attrs["p"] = self.p
+            geodesic_file.attrs["G"] = self.G
+            geodesic_file.attrs["source_point"] = self.source_point
+            if self.target_point is None:
+                geodesic_file.attrs["target_point"] = "default"
+            else:
+                geodesic_file.attrs["target_point"] = self.target_point
+            if self.dt is None:
+                geodesic_file.attrs["dt"] = "default"
+            else:
+                geodesic_file.attrs["dt"] = self.dt
+
+    # def plot(self, x_min, x_max, y_min, y_max):
+    #     """Quick visualisation of distance map."""
+    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
+    #     fig.colorbar(cbar, ax=ax);
+
+    def print(self):
+        """Print attributes."""
+        print(f"scales => {self.scales}")
+        print(f"α => {self.α}")
+        print(f"γ => {self.γ}")
+        print(f"ε => {self.ε}")
+        print(f"λ => {self.λ}")
+        print(f"p => {self.p}")
+        print(f"G => {self.G}")
+        print(f"source_point => {self.source_point}")
+        print(f"target_point => {self.target_point}")
+        print(f"dt => {self.dt}")
 
 def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min, y_min, dxy, G_np=None, dt=None, β=0.,
                            n_max=10000):

@@ -2,7 +2,11 @@
     vesselness
     ==========
 
-    Provides tools compute vesselness scores on R^2. The available methods are:
+    Provides tools compute vesselness scores on R^2. In particular, provides the
+    class `VesselnessR2`, which can compute the vesselness and store it with its
+    parameters.
+    
+    The available methods are:
       1. `rc_vessel_enhancement`: compute the singlescale vesselness using a
       Frangi filter[1].
       2. `multiscale_frangi_filter`: compute the multiscale vesselness by
@@ -17,7 +21,107 @@
 """
 
 import numpy as np
+import scipy as sp
 import diplib as dip
+import h5py
+from eikivp.utils import image_rescale
+# from eikivp.visualisations import plot_image_array
+
+class VesselnessR2():
+    """
+    The vesselness of a retinal image in R2 computed using multiscale Frangi
+    filters[1].
+
+    Attributes:
+        `V`: np.ndarray of vesselness data.
+        `scales`: iterable of standard deviations of Gaussian derivatives,
+          taking values greater than 0. 
+        `α`: anisotropy penalty, taking values between 0 and 1.
+        `γ`: variance sensitivity, taking values between 0 and 1.
+        `ε`: structure penalty, taking values between 0 and 1.
+        `image_name`: identifier of image used to generate vesselness.
+
+    References:
+        [1]: A. F. Frangi, W. J. Niessen, K. L. Vincken, and M. A. Viergever.
+        "Multiscale vessel enhancement filtering". In: Medical Image Computing
+        and Computer-Assisted Intervention (1998), pp. 130--137.
+        DOI:10.1007/BFb0056195.
+    """
+
+    def __init__(self, scales, α, γ, ε, image_name):
+        # Vesselness attributes
+        self.scales = scales
+        self.α = α
+        self.γ = γ
+        self.ε = ε
+        self.image_name = image_name
+
+    def compute_V(self, retinal_array):
+        """
+        Compute Frangi filter[1] of vessels in `retinal_array` at scales in `σs`.
+        Implementation adapted from "Code A - Vesselness in SE(2)".
+
+        Args:
+            `retinal_array`: np.ndarray of a grayscale image, taking values
+              between 0 and 1.
+
+        Returns:
+            np.ndarray of the vesselness of `image`, taking values between 0 and
+            1.
+        
+        References:
+            [1]: A. F. Frangi, W. J. Niessen, K. L. Vincken, and M. A.
+              Viergever.
+              "Multiscale vessel enhancement filtering". In: Medical Image
+              Computing and Computer-Assisted Intervention (1998), pp. 130--137.
+              DOI:10.1007/BFb0056195.
+          """
+        V_unmasked = multiscale_frangi_filter(-retinal_array, self.scales, α=self.α, γ=self.γ, ε=self.ε)
+        mask = (retinal_array > 0) # Remove boundary
+        V_unnormalised = V_unmasked * sp.ndimage.binary_erosion(mask, iterations=int(np.ceil(self.scales.max() * 2)))
+        print(f"Before rescaling, vesselness is in [{V_unnormalised.min()}, {V_unnormalised.max()}].")
+        self.V = image_rescale(V_unnormalised)
+
+    def import_V(self, folder):
+        """
+        Import the vesselness matching the attributes `scales`, `α`, `γ`, `ε`,
+        and `image_name`.
+        """
+        vesselness_filename = f".\\{folder}\\R2_sigmas={[s for s in self.scales]}_alpha={self.α}_gamma={self.γ}_epsilon={self.ε}.hdf5"
+        with h5py.File(vesselness_filename, "r") as vesselness_file:
+            assert (
+                np.all(self.scales == vesselness_file.attrs["scales"]) and
+                self.α == vesselness_file.attrs["α"] and
+                self.γ == vesselness_file.attrs["γ"] and
+                self.ε == vesselness_file.attrs["ε"] and
+                self.image_name == vesselness_file.attrs["image_name"]
+            ), "There is a parameter mismatch!"
+            self.V = vesselness_file["Vesselness"][()]
+            
+    def export_V(self, folder):
+        """
+        Export the vesselness to hdf5 with attributes `scales`, `α`, `γ`, `ε`,
+        and `image_name` stored as metadata.
+        """
+        vesselness_filename = f".\\{folder}\\R2_sigmas={[s for s in self.scales]}_alpha={self.α}_gamma={self.γ}_epsilon={self.ε}.hdf5"
+        with h5py.File(vesselness_filename, "w") as vesselness_file:
+            vesselness_file.create_dataset("Vesselness", data=self.V)
+            vesselness_file.attrs["scales"] = self.scales
+            vesselness_file.attrs["α"] = self.α
+            vesselness_file.attrs["γ"] = self.γ
+            vesselness_file.attrs["ε"] = self.ε
+
+    # def plot(self, x_min, x_max, y_min, y_max):
+    #     """Quick visualisation of vesselness."""
+    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
+    #     fig.colorbar(cbar, ax=ax);
+
+    def print(self):
+        """Print attributes."""
+        print(f"scales => {self.scales}")
+        print(f"α => {self.α}")
+        print(f"γ => {self.γ}")
+        print(f"ε => {self.ε}")
 
 
 def rc_vessel_enhancement(image, σ, α=0.2, γ=0.75, ε=0.2):

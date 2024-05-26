@@ -4,6 +4,9 @@
 
     Compute the cost function from the R^2- or SE(2)-vesselness, and interpolate
     it on SO(3).
+    In particular, provides the following classes:
+      1. `CostR2`, which can compute the cost function from a vesselness on R^2
+      and store it with its parameters.
 """
 
 import numpy as np
@@ -13,6 +16,50 @@ from eikivp.SE2.utils import(
     scalar_trilinear_interpolate,
     coordinate_real_to_array_ti
 )
+from eikivp.R2.vesselness import VesselnessR2
+
+class CostR2():
+    """
+    Compute the cost function from the R2 vesselness.
+
+    Attributes:
+        `C`: np.ndarray of cost function data.
+        `scales`: iterable of standard deviations of Gaussian derivatives,
+          taking values greater than 0. 
+        `α`: anisotropy penalty, taking values between 0 and 1.
+        `γ`: variance sensitivity, taking values between 0 and 1.
+        `ε`: structure penalty, taking values between 0 and 1.
+        `image_name`: identifier of image used to generate vesselness.
+        `λ`: vesselness prefactor, taking values greater than 0.
+        `p`: vesselness exponent, taking values greater than 0.
+    """
+
+    def __init__(self, V: VesselnessR2, λ, p):
+        # Vesselness attributes
+        self.scales = V.scales
+        self.α = V.α
+        self.γ = V.γ
+        self.ε = V.ε
+        self.image_name = V.image_name
+        # Cost attributes
+        self.λ = λ
+        self.p = p
+
+        self.C = cost_function(V.V, λ, p)
+
+    # def plot(self, x_min, x_max, y_min, y_max):
+    #     """Quick visualisation of cost."""
+    #     fig, ax, cbar = plot_image_array(self.C, x_min, x_max, y_min, y_max)
+    #     fig.colorbar(cbar, ax=ax);
+
+    def print(self):
+        """Print attributes."""
+        print(f"scales => {self.scales}")
+        print(f"α => {self.α}")
+        print(f"γ => {self.γ}")
+        print(f"ε => {self.ε}")
+        print(f"λ => {self.λ}")
+        print(f"p => {self.p}")
 
 def cost_function(vesselness, λ, p):
     """
