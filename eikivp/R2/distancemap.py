@@ -40,7 +40,7 @@ from eikivp.utils import (
     get_padded_cost,
     unpad_array
 )
-from eikivp.costfunction import CostR2
+from eikivp.R2.costfunction import CostR2
 
 class DistanceR2():
     """
@@ -154,7 +154,7 @@ class DistanceR2():
         `α`, `γ`, `ε`, `image_name`, `λ`, `p`, `G`, `source_point`, and
         `target_point`.
         """
-        distance_filename = f".\\{folder}\\R2_sigmas={[s for s in self.scales]}_alpha={self.α}_gamma={self.γ}_epsilon={self.ε}.hdf5"
+        distance_filename = f".\\{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
         with h5py.File(distance_filename, "r") as distance_file:
             assert (
                 np.all(self.scales == distance_file.attrs["scales"]) and
@@ -164,10 +164,10 @@ class DistanceR2():
                 self.image_name == distance_file.attrs["image_name"] and
                 self.λ == distance_file.attrs["λ"] and
                 self.p == distance_file.attrs["p"] and
-                self.G == distance_file.attrs["G"] and
-                self.source_point == distance_file.attrs["source_point"] and
+                np.all(self.G == distance_file.attrs["G"]) and
+                np.all(self.source_point == distance_file.attrs["source_point"]) and
                 (
-                    self.target_point == distance_file.attrs["target_point"] or
+                    np.all(self.target_point == distance_file.attrs["target_point"]) or
                     distance_file.attrs["target_point"] == "default"
                 )
             ), "There is a parameter mismatch!"
@@ -180,7 +180,7 @@ class DistanceR2():
         `scales`, `α`, `γ`, `ε`, `image_name`, `λ`, `p`, `G`, `source_point`,
         and `target_point` stored as metadata.
         """
-        distance_filename = f".\\{folder}\\R2_sigmas={[s for s in self.scales]}_alpha={self.α}_gamma={self.γ}_epsilon={self.ε}_lambda={self.λ}_p={self.p}_G={self.G}.hdf5"
+        distance_filename = f".\\{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
         with h5py.File(distance_filename, "w") as distance_file:
             distance_file.create_dataset("Distance", data=self.W)
             distance_file.create_dataset("Gradient", data=self.grad_W)
@@ -188,6 +188,7 @@ class DistanceR2():
             distance_file.attrs["α"] = self.α
             distance_file.attrs["γ"] = self.γ
             distance_file.attrs["ε"] = self.ε
+            distance_file.attrs["image_name"] = self.image_name
             distance_file.attrs["λ"] = self.λ
             distance_file.attrs["p"] = self.p
             distance_file.attrs["G"] = self.G
@@ -208,6 +209,7 @@ class DistanceR2():
         print(f"α => {self.α}")
         print(f"γ => {self.γ}")
         print(f"ε => {self.ε}")
+        print(f"image_name => {self.image_name}")
         print(f"λ => {self.λ}")
         print(f"p => {self.p}")
         print(f"G => {self.G}")

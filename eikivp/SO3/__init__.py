@@ -18,6 +18,7 @@
 
 # Access entire backend
 import eikivp.SO3.derivatives
+import eikivp.SO3.costfunction
 import eikivp.SO3.utils
 import eikivp.SO3.Riemannian
 import eikivp.SO3.subRiemannian

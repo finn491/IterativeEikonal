@@ -58,6 +58,24 @@ def select_upwind_derivative(
     """
     return ti.math.max(-d_forward, d_backward, 0) * (-1.)**(-d_forward >= d_backward)
 
+# Cost
+
+def cost_function(vesselness, λ, p):
+    """
+    Compute the cost function corresponding to `vesselness`.
+
+    Args:
+        `vesselness`: np.ndarray of vesselness scores, taking values between 0 
+          and 1.
+        `λ`: Vesselness prefactor, taking values greater than 0.
+        `p`: Vesselness exponent, taking values greater than 0.
+
+    Returns:
+        np.ndarray of the cost function corresponding to `vesselness` with 
+        parameters `λ` and `p`, taking values between 0 and 1.
+    """
+    return 1 / (1 + λ * np.abs(vesselness)**p)
+
 # Padding
 
 def pad_array(u, pad_value=0., pad_shape=1):

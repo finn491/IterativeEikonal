@@ -28,4 +28,5 @@ import eikivp.R2.backtracking
 import eikivp.R2.derivatives
 import eikivp.R2.interpolate
 import eikivp.R2.vesselness
+import eikivp.R2.costfunction
 import eikivp.R2.metric

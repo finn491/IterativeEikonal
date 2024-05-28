@@ -122,7 +122,7 @@ class VesselnessSE2():
         Import the vesselness matching the attributes `σ_s_list`, `σ_o`,
         `σ_s_ext`, `σ_o_ext`, and `image_name`.
         """
-        vesselness_filename = f".\\{folder}\\SE2_sigmas_s={[s for s in self.σ_s_list]}_sigma_o={self.σ_o}_sigma_s_ext={self.σ_s_ext}_sigma_o_ext={self.σ_o_ext}.hdf5"
+        vesselness_filename = f".\\{folder}\\SE2_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}.hdf5"
         with h5py.File(vesselness_filename, "r") as vesselness_file:
             assert (
                 np.all(self.σ_s_list == vesselness_file.attrs["σ_s_list"]) and
@@ -138,7 +138,7 @@ class VesselnessSE2():
         Export the vesselness to hdf5 with attributes `σ_s_list`, `σ_o`,
         `σ_s_ext`, `σ_o_ext`, and `image_name` stored as metadata.
         """
-        vesselness_filename = f".\\{folder}\\SE2_sigmas_s={[s for s in self.σ_s_list]}_sigma_o={self.σ_o}_sigma_s_ext={self.σ_s_ext}_sigma_o_ext={self.σ_o_ext}.hdf5"
+        vesselness_filename = f".\\{folder}\\SE2_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}.hdf5"
         with h5py.File(vesselness_filename, "w") as vesselness_file:
             vesselness_file.create_dataset("Vesselness", data=self.V)
             vesselness_file.attrs["σ_s_list"] = self.σ_s_list

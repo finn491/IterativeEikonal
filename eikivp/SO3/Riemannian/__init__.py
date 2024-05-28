@@ -21,5 +21,5 @@
 # Access entire backend
 import eikivp.SO3.Riemannian.distancemap
 import eikivp.SO3.Riemannian.backtracking
-import eikivp.SE2.Riemannian.interpolate
+import eikivp.SO3.Riemannian.interpolate
 import eikivp.SO3.Riemannian.metric
