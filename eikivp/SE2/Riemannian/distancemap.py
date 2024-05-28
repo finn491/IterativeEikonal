@@ -166,7 +166,7 @@ class DistanceSE2Riemannian():
         `σ_o`, `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `G`,
         `source_point`, and `target_point`.
         """
-        distance_filename = f".\\{folder}\\SE2_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
+        distance_filename = f"{folder}\\SE2_R_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
         with h5py.File(distance_filename, "r") as distance_file:
             assert (
                 np.all(self.σ_s_list == distance_file.attrs["σ_s_list"]) and
@@ -192,7 +192,7 @@ class DistanceSE2Riemannian():
         `σ_o`, `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `G`,
         `source_point`, and `target_point` stored as metadata.
         """
-        distance_filename = f".\\{folder}\\SE2_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
+        distance_filename = f"{folder}\\SE2_R_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
         with h5py.File(distance_filename, "w") as distance_file:
             distance_file.create_dataset("Distance", data=self.W)
             distance_file.create_dataset("Gradient", data=self.grad_W)

@@ -11,6 +11,7 @@ import numpy as np
 import taichi as ti
 from eikivp.utils import cost_function
 from eikivp.SE2.vesselness import VesselnessSE2
+from eikivp.R2.vesselness import VesselnessR2
 
 class CostSE2():
     """
@@ -35,7 +36,7 @@ class CostSE2():
         `p`: vesselness exponent, taking values greater than 0.
     """
 
-    def __init__(self, V: VesselnessSE2, λ, p):
+    def __init__(self, V: VesselnessSE2 | VesselnessR2, λ, p, dim_K=32):
         # Vesselness attributes
         self.σ_s_list = V.σ_s_list
         self.σ_o = V.σ_o
@@ -45,8 +46,10 @@ class CostSE2():
         # Cost attributes
         self.λ = λ
         self.p = p
-
-        self.C = cost_function(V.V, λ, p)
+        C = cost_function(V.V, λ, p)
+        if isinstance(V, VesselnessR2):
+            C = np.transpose(np.array([C] * dim_K), axes=(1, 2, 0))
+        self.C = C
 
     # def plot(self, x_min, x_max, y_min, y_max):
     #     """Quick visualisation of cost."""

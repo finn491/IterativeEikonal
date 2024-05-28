@@ -87,7 +87,7 @@ class VesselnessR2():
         Import the vesselness matching the attributes `scales`, `α`, `γ`, `ε`,
         and `image_name`.
         """
-        vesselness_filename = f".\\{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}.hdf5"
+        vesselness_filename = f"{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}.hdf5"
         with h5py.File(vesselness_filename, "r") as vesselness_file:
             assert (
                 np.all(self.scales == vesselness_file.attrs["scales"]) and
@@ -103,7 +103,7 @@ class VesselnessR2():
         Export the vesselness to hdf5 with attributes `scales`, `α`, `γ`, `ε`,
         and `image_name` stored as metadata.
         """
-        vesselness_filename = f".\\{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}.hdf5"
+        vesselness_filename = f"{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}.hdf5"
         with h5py.File(vesselness_filename, "w") as vesselness_file:
             vesselness_file.create_dataset("Vesselness", data=self.V)
             vesselness_file.attrs["scales"] = self.scales

@@ -90,7 +90,7 @@ class GeodesicSE2Riemannian():
         `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `G`, `source_point`, and
         `target_point`.
         """
-        geodesic_filename = f"{folder}\\SE2_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_e={self.σ_s_ext}_s_o_e={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}_t={self.target_point}.hdf5"
+        geodesic_filename = f"{folder}\\SE2_R_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_e={self.σ_s_ext}_s_o_e={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}_t={self.target_point}.hdf5"
         with h5py.File(geodesic_filename, "r") as geodesic_file:
             assert (
                 np.all(self.σ_s_list == geodesic_filename.attrs["σ_s_list"]) and
@@ -110,12 +110,12 @@ class GeodesicSE2Riemannian():
             ), "There is a parameter mismatch!"
             self.γ_path = geodesic_file["Geodesic"][()]
             
-    def export_γ_path(self, folder, filename=None):
+    def export_γ_path(self, folder):
         """
         Export the geodesic to hdf5 with attributes `σ_s_list`, `σ_o`,
         `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `G`, `source_point`, and `target_point``.
         """
-        geodesic_filename = f"{folder}\\SE2_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_e={self.σ_s_ext}_s_o_e={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}_t={self.target_point}.hdf5"
+        geodesic_filename = f"{folder}\\SE2_R_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_e={self.σ_s_ext}_s_o_e={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}_t={self.target_point}.hdf5"
         with h5py.File(geodesic_filename, "w") as geodesic_file:
             geodesic_file.create_dataset("Geodesic", data=self.γ_path)
             geodesic_file.attrs["σ_s_list"] = self.σ_s_list

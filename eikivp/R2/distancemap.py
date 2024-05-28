@@ -154,7 +154,7 @@ class DistanceR2():
         `α`, `γ`, `ε`, `image_name`, `λ`, `p`, `G`, `source_point`, and
         `target_point`.
         """
-        distance_filename = f".\\{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
+        distance_filename = f"{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
         with h5py.File(distance_filename, "r") as distance_file:
             assert (
                 np.all(self.scales == distance_file.attrs["scales"]) and
@@ -180,7 +180,7 @@ class DistanceR2():
         `scales`, `α`, `γ`, `ε`, `image_name`, `λ`, `p`, `G`, `source_point`,
         and `target_point` stored as metadata.
         """
-        distance_filename = f".\\{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
+        distance_filename = f"{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
         with h5py.File(distance_filename, "w") as distance_file:
             distance_file.create_dataset("Distance", data=self.W)
             distance_file.create_dataset("Gradient", data=self.grad_W)
