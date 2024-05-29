@@ -9,6 +9,8 @@
       by the corresponding methods in the distancemap module.
 """
 
+import numpy as np
+import h5py
 import taichi as ti
 from eikivp.SO3.subRiemannian.interpolate import (
     vectorfield_trilinear_interpolate_LI,
@@ -21,6 +23,137 @@ from eikivp.SO3.utils import (
     vector_LI_to_static,
     distance_in_pixels
 )
+from eikivp.SO3.costfunction import CostSO3
+from eikivp.SO3.subRiemannian.distancemap import DistanceSO3SubRiemannian
+
+class GeodesicSO3SubRiemannian():
+    """
+    Compute the geodesic of a sub-Riemannian distance map on SO(3).
+
+    Attributes:
+        `W`: np.ndarray of distance function data.
+        `grad_W`: np.ndarray of gradient of distance function data.
+        `σ_s_list`: standard deviations in pixels of the internal regularisation
+          in the spatial directions before taking derivatives.
+        `σ_o`: standard deviation in pixels of the internal regularisation
+          in the orientational direction before taking derivatives.
+        `σ_s_ext`: standard deviation in pixels of the external regularisation
+          in the spatial direction after taking derivatives.
+          Notably, this regularisation is NOT truly external, because it
+          commutes with the derivatives.
+        `σ_o_ext`: standard deviation in pixels of the internal regularisation
+          in the orientational direction after taking derivatives.
+          Notably, this regularisation is NOT truly external, because it
+          commutes with the derivatives.
+        `image_name`: identifier of image used to generate vesselness.
+        `λ`: Vesselness prefactor, taking values greater than 0.
+        `p`: Vesselness exponent, taking values greater than 0.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
+        `source_point`: Tuple[int] describing index of source point.
+        `target_point`: Tuple[int] describing index of target point. Defaults to
+          `None`. If `target_point` is provided, the algorithm will terminate
+          when the Hamiltonian has converged at `target_point`; otherwise it
+          will terminate when the Hamiltonian has converged throughout the
+          domain.
+        `dt`: Step size, taking values greater than 0. Defaults to the minimum
+          of the cost function.
+    """
+
+    def __init__(self, W: DistanceSO3SubRiemannian, target_point=None, dt=None):
+        # Vesselness attributes
+        self.σ_s_list = W.σ_s_list
+        self.σ_o = W.σ_o
+        self.σ_s_ext = W.σ_s_ext
+        self.σ_o_ext = W.σ_o_ext
+        self.image_name = W.image_name
+        # Cost attributes
+        self.λ = W.λ
+        self.p = W.p
+        # Distance attributes
+        self.ξ = W.ξ
+        self.source_point = W.source_point
+        self.target_point = W.target_point
+        if target_point is not None:
+            self.target_point = target_point
+        # Geodesic attributes
+        self.dt = dt
+
+    def compute_γ_path(self, W: DistanceSO3SubRiemannian, C: CostSO3, α_min, β_min, φ_min, dα, dβ, dφ, αs_np, φs_np,
+                       n_max=2000):
+        self.γ_path = geodesic_back_tracking(W.grad_W, self.source_point, self.target_point, C.C, α_min, β_min, φ_min,
+                                             dα, dβ, dφ, αs_np, φs_np, self.ξ, dt=self.dt, n_max=n_max)
+
+    def import_γ_path(self, folder):
+        """
+        Import the geodesic matching the attributes `σ_s_list`, `σ_o`,
+        `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `ξ`, `source_point`, and
+        `target_point`.
+        """
+        geodesic_filename = f"{folder}\\SO3_sR_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_e={self.σ_s_ext}_s_o_e={self.σ_o_ext}_l={self.λ}_p={self.p}_x={self.ξ}_s={self.source_point}_t={self.target_point}.hdf5"
+        with h5py.File(geodesic_filename, "r") as geodesic_file:
+            assert (
+                np.all(self.σ_s_list == geodesic_filename.attrs["σ_s_list"]) and
+                self.σ_o == geodesic_filename.attrs["σ_o"] and
+                self.σ_s_ext == geodesic_filename.attrs["σ_s_ext"] and
+                self.σ_o_ext == geodesic_filename.attrs["σ_o_ext"] and
+                self.image_name == geodesic_file.attrs["image_name"] and
+                self.λ == geodesic_file.attrs["λ"] and
+                self.p == geodesic_file.attrs["p"] and
+                self.ξ == geodesic_file.attrs["ξ"] and
+                np.all(self.source_point == geodesic_file.attrs["source_point"]) and
+                np.all(self.target_point == geodesic_file.attrs["target_point"]) and
+                (
+                    self.dt == geodesic_file.attrs["dt"] or
+                    geodesic_file.attrs["dt"] == "default"
+                )              
+            ), "There is a parameter mismatch!"
+            self.γ_path = geodesic_file["Geodesic"][()]
+            
+    def export_γ_path(self, folder):
+        """
+        Export the geodesic to hdf5 with attributes `σ_s_list`, `σ_o`,
+        `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `ξ`, `source_point`, and `target_point``.
+        """
+        geodesic_filename = f"{folder}\\SO3_sR_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_e={self.σ_s_ext}_s_o_e={self.σ_o_ext}_l={self.λ}_p={self.p}_x={self.ξ}_s={self.source_point}_t={self.target_point}.hdf5"
+        with h5py.File(geodesic_filename, "w") as geodesic_file:
+            geodesic_file.create_dataset("Geodesic", data=self.γ_path)
+            geodesic_file.attrs["σ_s_list"] = self.σ_s_list
+            geodesic_file.attrs["σ_o"] = self.σ_o
+            geodesic_file.attrs["σ_s_ext"] = self.σ_s_ext
+            geodesic_file.attrs["σ_o_ext"] = self.σ_o_ext
+            geodesic_file.attrs["image_name"] = self.image_name
+            geodesic_file.attrs["λ"] = self.λ
+            geodesic_file.attrs["p"] = self.p
+            geodesic_file.attrs["ξ"] = self.ξ
+            geodesic_file.attrs["source_point"] = self.source_point
+            if self.target_point is None:
+                geodesic_file.attrs["target_point"] = "default"
+            else:
+                geodesic_file.attrs["target_point"] = self.target_point
+            if self.dt is None:
+                geodesic_file.attrs["dt"] = "default"
+            else:
+                geodesic_file.attrs["dt"] = self.dt
+
+    # def plot(self, x_min, x_max, y_min, y_max):
+    #     """Quick visualisation of distance map."""
+    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
+    #     fig.colorbar(cbar, ax=ax);
+
+    def print(self):
+        """Print attributes."""
+        print(f"σ_s_list => {self.σ_s_list}")
+        print(f"σ_o => {self.σ_o}")
+        print(f"σ_s_ext => {self.σ_s_ext}")
+        print(f"σ_o_ext => {self.σ_o_ext}")
+        print(f"image_name => {self.image_name}")
+        print(f"λ => {self.λ}")
+        print(f"p => {self.p}")
+        print(f"ξ => {self.ξ}")
+        print(f"source_point => {self.source_point}")
+        print(f"target_point => {self.target_point}")
+        print(f"dt => {self.dt}")
 
 # Sub-Riemannian backtracking
 
