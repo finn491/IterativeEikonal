@@ -162,7 +162,7 @@ def check_convergence(dW_dt, source_point, tol=1e-3, target_point=None):
     convergence at `target_point`; otherwise check throughout the domain.
     """
     if target_point is None:
-        dW_dt[source_point[0]+1, source_point[1]+1, source_point[2]+1] = 0. # Source is fixed.
+        dW_dt[source_point[0]+1, source_point[1]+1, source_point[2]] = 0. # Source is fixed.
         error = field_abs_max(dW_dt)
     else:
         error = ti.abs(dW_dt[target_point])

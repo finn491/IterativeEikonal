@@ -152,7 +152,7 @@ def field_abs_max(
     """
     value = ti.abs(scalar_field[0, 0, 0])
     for I in ti.grouped(scalar_field):
-        value = ti.atomic_max(value, ti.abs(scalar_field[I]))
+        ti.atomic_max(value, ti.abs(scalar_field[I]))
     return value
 
 def check_convergence(dW_dt, source_point, tol=1e-3, target_point=None):
@@ -162,7 +162,7 @@ def check_convergence(dW_dt, source_point, tol=1e-3, target_point=None):
     convergence at `target_point`; otherwise check throughout the domain.
     """
     if target_point is None:
-        dW_dt[source_point[0]+1, source_point[1]+1, source_point[2]+1] = 0. # Source is fixed.
+        dW_dt[source_point[0]+1, source_point[1]+1, source_point[2]] = 0. # Source is fixed.
         error = field_abs_max(dW_dt)
     else:
         error = ti.abs(dW_dt[target_point])
@@ -661,7 +661,7 @@ def align_to_standard_array_axis_vector_field(vector_field):
     return vector_field_aligned
 
 
-# Maps from SO(3) into SE(2)
+# Maps from SO(3) into SE(2).
 # Π_forward: SO(3) -> SE(2), (α, β, φ) |-> (x, y, θ)
 # To get the angle θ from φ, we consider what happens along geodesics:
 #   θ(t) = arg(dx_dt(t) + i dy_dt(t)).
@@ -728,28 +728,162 @@ def Π_forward(
     return ti.Vector([x, y, θ], dt=ti.f32)
 
 # For the backward map which we don't need for interpolation.
-# @ti.func
-# def p_overline(
-#     x: ti.f32,
-#     y: ti.f32,
-#     a: ti.f32,
-#     c: ti.f32
-# ) -> ti.f32:
-#     """"""
-#     return (
-#         a * (a + c) * ti.math.sqrt((x**2 + y**2) * (1 - a**2) + (a + c)**2) / 
-#         ((x**2 + y**2) + (a + c)**2)
-#     )
+@ti.func
+def Π_backward(
+    x: ti.f32,
+    y: ti.f32,
+    θ: ti.f32,
+    a: ti.f32,
+    c: ti.f32
+) -> ti.types.vector(3, ti.f32):
+    """
+    @taichi.func
+    
+    Map coordinates in SE(2) into SO(3), by projecting down from the sphere onto
+    a plane.
+    
+    Args:
+        `x`: x-coordinate.
+        `y`: y-coordinate.
+        `θ`: θ-coordinate.
+        `a`: Distance between nodal point of projection and centre of sphere.
+        `c`: Distance between projection plane and centre of sphere reflected
+          around nodal point.
+
+    Returns:
+        ti.types.vector(n=3, dtype=[float]) of coordinates in SO(3).
+    """
+    # π_forward: R2 -> S2
+    p1 = p_1(x, y, a, c)
+    poverline = p_overline(x, y, a, c)
+
+    α = ti.math.asin(x * poverline)
+    β = ti.math.atan2(y * poverline, p1)
+
+    # Partial derivatives, up to proportionality constant
+    # (a + c) / (a + cosα * cosβ)**2, which does not influence the angle
+    dπ_forward_x_dα = a * cosα + cosβ
+    dπ_forward_x_dβ = cosα * sinα * sinβ
+    dπ_forward_y_dα = -a * sinα * sinβ
+    dπ_forward_y_dβ = a * cosα * cosβ + cosα**2
+    
+    # Combine into Π_forward: SO(3) -> SE(2)
+    cosφ = ti.math.cos(φ)
+    sinφ = ti.math.sin(φ)
+
+    dα = cosφ
+    dβ = sinφ / cosα
+
+    θ = ti.math.atan2( # y, x
+        dπ_forward_y_dα * dα + dπ_forward_y_dβ * dβ,
+        dπ_forward_x_dα * dα + dπ_forward_x_dβ * dβ
+    )
+
+    return ti.Vector([x, y, θ], dt=ti.f32)
 
 # @ti.func
-# def p_1(
+# def π_backward(
 #     x: ti.f32,
 #     y: ti.f32,
 #     a: ti.f32,
 #     c: ti.f32
-# ) -> ti.f32:
-#     """"""
-#     return (
-#         ((a + c) * ti.math.sqrt((x**2 + y**2) * (1 - a**2) + (a + c)**2) - a * (x**2 + y**2)) /
-#         ((x**2 + y**2) + (a + c)**2)
-#     )
+# ) -> ti.types.vector(2, ti.f32):
+#     """
+#     @taichi.func
+    
+#     Map coordinates in R^2 into S^2.
+    
+#     Args:
+#         `x`: x-coordinate.
+#         `y`: y-coordinate.
+#         `a`: Distance between nodal point of projection and centre of sphere.
+#         `c`: Distance between projection plane and centre of sphere reflected
+#           around nodal point.
+
+#     Returns:
+#         ti.types.vector(n=2, dtype=[float]) of coordinates in S^2.
+#     """
+#     p1 = p_1(x, y, a, c)
+#     poverline = p_overline(x, y, a, c)
+
+#     α = ti.math.asin(x * poverline)
+#     β = ti.math.atan2(y * poverline, p1)
+
+#     return ti.Vector([α, β], dt=ti.f32)
+
+@ti.func
+def p_overline(
+    x: ti.f32,
+    y: ti.f32,
+    a: ti.f32,
+    c: ti.f32
+) -> ti.f32:
+    """"""
+    return (
+        a * (a + c) * ti.math.sqrt((x**2 + y**2) * (1 - a**2) + (a + c)**2) / 
+        ((x**2 + y**2) + (a + c)**2)
+    )
+
+@ti.func
+def p_1(
+    x: ti.f32,
+    y: ti.f32,
+    a: ti.f32,
+    c: ti.f32
+) -> ti.f32:
+    """"""
+    return (
+        ((a + c) * ti.math.sqrt((x**2 + y**2) * (1 - a**2) + (a + c)**2) - a * (x**2 + y**2)) /
+        ((x**2 + y**2) + (a + c)**2)
+    )
+
+# 😢
+@ti.func
+def dπ_backward1_dx(
+    x: ti.f32,
+    y: ti.f32,
+    a: ti.f32,
+    c: ti.f32
+) -> ti.f32:
+    """"""
+    t1 = 1 - a**2
+    t2 = a + c
+    t3 = x**2 + y**2
+    t4 = t2**2 + t3
+    t5 = ti.math.sqrt(t2**2 + t1 * t3)
+    return (
+        (
+            (t1 * x**2 * t4) / t5 +
+            (t4 - 2 * x**2) * (a * t2 + t5)
+        ) /
+        (
+            t4 * ti.math.sqrt(
+                t4**2 - x**2 * (a * t2 + t5)
+            )
+        )
+    )
+
+@ti.func
+def dπ_backward2_dx(
+    x: ti.f32,
+    y: ti.f32,
+    a: ti.f32,
+    c: ti.f32
+) -> ti.f32:
+    """"""
+    t1 = (1 - a**2)
+    t2 = a + c
+    t3 = x**2 + y**2
+    t4 = t2**2 + t3
+    t5 = ti.math.sqrt(t2 + t1 * t3)
+    return (
+        (
+            (t1 * x**2 * t4) / t5 +
+            (t4 - 2 * x**2) * (a * t2 + t5)
+        ) /
+        (
+            t4 * ti.math.sqrt(
+                t4**2 - x**2 * (a * t2 + t5)
+            )
+        )
+    )
