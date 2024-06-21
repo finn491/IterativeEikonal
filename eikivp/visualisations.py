@@ -87,8 +87,8 @@ def plot_image_array_SO3(image_array, α_min, α_max, β_min, β_max, cmap="gray
 
     image_array_aligned = align_to_standard_array_axis_scalar_field_SO3(np.expand_dims(image_array, axis=2)).squeeze(-1)
 
-    ax.imshow(image_array_aligned, cmap=cmap, extent=(β_max, β_min, α_min, α_max))
-    return fig, ax
+    cbar = ax.imshow(image_array_aligned, cmap=cmap, extent=(β_max, β_min, α_min, α_max))
+    return fig, ax, cbar
 
 def plot_contour(distance, xs, ys, levels=None, linestyles=None, figsize=(12, 10), fig=None, ax=None, x_min=None, 
                  x_max=None, y_min=None, y_max=None):

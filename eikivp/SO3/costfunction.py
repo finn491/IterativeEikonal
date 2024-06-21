@@ -9,6 +9,7 @@
       and store it with its parameters.
 """
 
+import numpy as np
 import taichi as ti
 from eikivp.SO3.utils import Π_forward
 from eikivp.SE2.utils import(
@@ -36,8 +37,12 @@ class CostSO3(CostSE2):
 
     def __init__(self, V, λ, p, αs, βs, φs, a, c, x_min, y_min, θ_min, dxy, dθ):
         super().__init__(V, λ, p)
-        # Interpolate SE(2) cost function
+        # Cost function on SE(2).
+        # CSE2_unaligned = self.C
+        # # Rotate to align A_1 at origin with B_1.
+        # CSE2 = np.flip(CSE2_unaligned, axis=0).swapaxes(1, 0)
         CSE2 = self.C
+        # Interpolate SE(2) cost function.
         shape = CSE2.shape
         CSE2_ti = ti.field(dtype=ti.f32, shape=shape)
         CSE2_ti.from_numpy(CSE2)

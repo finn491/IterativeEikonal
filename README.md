@@ -1,5 +1,5 @@
 # EikIVP
-Solve Eikonal PDEs on $`\mathbb{R}^2`$, $`SE(2)`$, and $`SO(3)`$ using the iterative method described in Bekkers et al. (2015) "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in $`SE(2)`$" [[1]](#1). 
+Solve Eikonal PDEs on $`\mathbb{R}^2`$, $`\mathbb{M}_2 \coloneqq \mathbb{R}^2 \times S^1`$, and $`\mathbb{W}_2 \coloneqq S^2 \times S^1`$ using the iterative method described in Bekkers et al. (2015) "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in $`SE(2)`$" [[1]](#1). 
 
 The viscosity solutions of the Eikonal equation is the geodesic distance map. We therefore can solve the Eikonal equation to determine the distance between two points, and find the geodesic connecting the two points (by gradient descent).
 
@@ -36,15 +36,15 @@ where $`g_i`$ are constants. Here $`\mathrm{dx}`$ is the dual of $`\partial_x`$ 
 
 The implementation for $`\mathbb{R}^2`$ can be found in `eikivp/R2`.
 
-### $`SE(2)`$
-We interpret $`SE(2)`$ as a smooth manifold.* We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`SE(2)`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
+### $`\mathbb{M}_2`$
+We can also solve the Eikonal PDE on the space of positions and orientations on the plane,  $`\mathbb{M}_2 \coloneqq \mathbb{R}^2 \times S^1`$. $`\mathbb{M}_2`$ is naturally acted on by the Lie group $`\mathrm{SE}(2)`$ of roto-translations of the plane.* $`\mathrm{SE}(2)`$ induces left invariant vector fields on $`\mathbb{M}_2`$, which allow for roto-translation equivariant processing. We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{M}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
 
-The implementation for $`SE(2)`$ can be found in `eikivp/SE2`.
+The implementation for $`\mathbb{M}_2`$ can be found in `eikivp/SE2`.
 
-*_We are in fact actually dealing with $`\mathbb{M}_2`$, the homogeneous space of two-dimensional positions and orientations, which is a smooth manifold, whereas $`SE(2)`$ is the Lie group of translations and rotations acting on $`\mathbb{M}_2`$. However, upon choosing a reference position and orientation in $`\mathbb{M}_2`$, these two are isomorphic as Lie groups; we therefore write $`SE(2)`$ for both._
+*_Indeed, $`\mathbb{M}_2`$ is the principal homogeneous space of $`\mathrm{SE}(2)`$. Upon choosing a reference position and orientation in $`\mathbb{M}_2`$, these two are isomorphic as Lie groups._
 
 #### Riemannian
-In this case, we see $`SE(2)`$ as a Riemannian manifold. The Eikonal PDE is then solved with respect to metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:
+In this case, we see $`\mathbb{M}_2`$ as a Riemannian manifold. The Eikonal PDE is then solved with respect to metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:
 ```math
 \begin{align*}\mathcal{G}^C|_{x, y, \theta} & = C^2(x, y, \theta) \mathcal{G}|_{x, y, \theta} = C^2(x, y, \theta) g_i \omega^i|_{x, y, \theta} \otimes \omega^i|_{x, y, \theta} \\
 & = C^2(x, y, \theta) (g_1 \omega^1|_{x, y, \theta} \otimes \omega^1|_{x, y, \theta} + g_2 \omega^2|_{x, y, \theta} \otimes \omega^2|_{x, y, \theta} + g_3 \omega^3|_{x, y, \theta} \otimes \omega^3|_{x, y, \theta}),\end{align*}
@@ -57,12 +57,12 @@ where $`g_i`$ are constants. Here $\omega^i$ is the dual of $`\mathcal{A}_i`$, w
 \end{align*}
 ```
 
-The implementation for $`SE(2)`$ equipped with a Riemannian metric can be found in `eikivp/SE2/Riemannian`.
+The implementation for $`\mathbb{M}_2`$ equipped with a Riemannian metric can be found in `eikivp/SE2/Riemannian`.
 
 *_Note that we use the convention that_ $`\mathcal{A}_3 = \partial_{\theta}`$, _whereas Bekkers et al. say_ $`\mathcal{A}_2 = \partial_{\theta}`$.
 
 #### Sub-Riemannian
-In this case, we see $`SE(2)`$ as a sub-Riemannian manifold. Specifically, we restrict the tangent spaces to be spanned by $`\mathcal{A}_1`$ and $`\mathcal{A}_3`$. This corresponds to the Reeds-Shepp car model [[2]](#2)[[3]](#3): the "car" is only allowed to move straight forward or backward, or turn the wheel.
+In this case, we see $`\mathbb{M}_2`$ as a sub-Riemannian manifold. Specifically, we restrict the tangent spaces to be spanned by $`\mathcal{A}_1`$ and $`\mathcal{A}_3`$. This corresponds to the Reeds-Shepp car model [[2]](#2)[[3]](#3): the "car" is only allowed to move straight forward or backward, or turn the wheel.
 
 The Eikonal PDE is then again solved with respect to a metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:
 ```math
@@ -71,10 +71,10 @@ The Eikonal PDE is then again solved with respect to a metric that is data-drive
 ```
 where $`g_i`$ are constants. We always set $`g_3 = 1`$, and allow $`g_1 =: \xi^2`$ to be provided by the user (you can simply rescale the problem to effectively change $`g_3`$).
 
-The implementation for $`SE(2)`$ equipped with a sub-Riemannian metric can be found in `eikivp/SE2/subRiemannian`.
+The implementation for $`\mathbb{M}_2`$ equipped with a sub-Riemannian metric can be found in `eikivp/SE2/subRiemannian`.
 
 #### Plus controller
-In this case, we see $`SE(2)`$ as a Finslerian manifold. We again restrict the tangent spaces to be spanned by $`\mathcal{A}_1`$ and $`\mathcal{A}_3`$. Now, the car additionally is not allowed to move backwards [[3]](#3): this means motion in the negative $`\mathcal{A}_1`$ direction is restricted. Since Finslerian manifolds need not have a metric tensor corresponding to the Finsler function, and therefore also typically do not have a gradient $`\nabla`$, we need to reformulate the Eikonal PDE as follows:
+In this case, we see $`\mathbb{M}_2`$ as a Finslerian manifold. We again restrict the tangent spaces to be spanned by $`\mathcal{A}_1`$ and $`\mathcal{A}_3`$. Now, the car additionally is not allowed to move backwards [[3]](#3): this means motion in the negative $`\mathcal{A}_1`$ direction is restricted. Since Finslerian manifolds need not have a metric tensor corresponding to the Finsler function, and therefore also typically do not have a gradient $`\nabla`$, we need to reformulate the Eikonal PDE as follows:
 ```math
 \begin{equation} \begin{dcases} (\mathcal{F}^C)^*(p, \mathrm{d}W(p)) = 1, & p \neq e, \\
 W(p) = 0, & p = e, \end{dcases} \end{equation}
@@ -87,19 +87,21 @@ The Eikonal PDE is now solved with respect to a Finsler function that is data-dr
 ```
 where $`g_i`$ are constants and $`(\cdot)_+`$ denotes taking the positive part. We always set $`g_3 = 1`$, and allow $`g_1 =: \xi^2`$ to be provided by the user (you can simply rescale the problem to effectively change $`g_3`$).
 
-The implementation for $`SE(2)`$ equipped with a Finsler function can be found in `eikivp/SE2/plus`.
+The implementation for $`\mathbb{M}_2`$ equipped with a Finsler function can be found in `eikivp/SE2/plus`.
 
-### $`SO(3)`$
-We interpret $`SO(3)`$ as a smooth manifold.* We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`SO(3)`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
+### $`\mathbb{W}_2`$
+We can also solve the Eikonal PDE on the space of positions and orientations on the sphere,  $`\mathbb{W}_2 \coloneqq \S^2 \times S^1`$. $`\mathbb{W}_2`$ is naturally acted on by the Lie group $`\mathrm{SO}(3)`$ of rotations of the three dimensional Euclidean space.* $`\mathrm{SO}(3)`$ induces left invariant vector fields on $`\mathbb{W}_2`$, which allow for roto-translation equivariant processing. We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{W}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
 
-The implementation for $`SO(3)`$ can be found in `eikivp/SO3`.
+We interpret $`\mathbb{W}_2`$ as a smooth manifold.* We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{W}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
 
-__Image of what SO(3) looks like with our choice of coordinates?__
+The implementation for $`\mathbb{W}_2`$ can be found in `eikivp/SO3`.
 
-*_As in the previous section, we are in fact actually dealing with the homogeneous space of $`SO(3)`$, i.e. the homogeneous space of two-dimensional positions and orientations on the sphere, which is a smooth manifold, whereas $`SO(3)`$ is the Lie group of translations and rotations acting thereon. Once again the Lie group and the homogeneous space become isomorphic upon choosing a reference position and orientation; we therefore write $`SO(3)`$ for both._
+*_Indeed, $`\mathbb{W}_2`$ is the principal homogeneous space of $`\mathrm{SO}(3)`$. Upon choosing a reference position and orientation in $`\mathbb{W}_2`$, these two are isomorphic as Lie groups._
+
+__Image of what $\mathbb{W}_2$ looks like with our choice of coordinates?__
 
 #### Riemannian
-In this case, we see $`SO(3)`$ as a Riemannian manifold. The Eikonal PDE is then solved with respect to metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:
+In this case, we see $`\mathbb{W}_2`$ as a Riemannian manifold. The Eikonal PDE is then solved with respect to metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:
 ```math
 \begin{align*}\mathcal{G}^C|_{\alpha, \beta, \phi} & = C^2(\alpha, \beta, \phi) \mathcal{G}|_{\alpha, \beta, \phi} = C^2(\alpha, \beta, \phi) g_i \nu^i|_{\alpha, \beta, \phi} \otimes \nu^i|_{\alpha, \beta, \phi} \\
 & = C^2(\alpha, \beta, \phi) (g_1 \nu^1|_{\alpha, \beta, \phi} \otimes \nu^1|_{\alpha, \beta, \phi} + g_2 \nu^2|_{\alpha, \beta, \phi} \otimes \nu^2|_{\alpha, \beta, \phi} + g_3 \nu^3|_{\alpha, \beta, \phi} \otimes \nu^3|_{\alpha, \beta, \phi}),\end{align*}
@@ -112,10 +114,10 @@ where $`g_i`$ are constants. Here $\nu^i$ is the dual of $`\mathcal{B}_i`$, wher
 \end{align*}
 ```
 
-The implementation for $`SO(3)`$ equipped with a Riemannian metric can be found in `eikivp/SO3/Riemannian`.
+The implementation for $`\mathbb{W}_2`$ equipped with a Riemannian metric can be found in `eikivp/SO3/Riemannian`.
 
 #### Sub-Riemannian
-In this case, we see $`SO(3)`$ as a sub-Riemannian manifold. Specifically, we restrict the tangent spaces to be spanned by $`\mathcal{B}_1`$ and $`\mathcal{B}_3`$. This corresponds to the Reeds-Shepp car model [[2]](#2)[[3]](#3): the "car" is only allowed to move straight forward or backward, or turn the wheel.
+In this case, we see $`\mathbb{W}_2`$ as a sub-Riemannian manifold. Specifically, we restrict the tangent spaces to be spanned by $`\mathcal{B}_1`$ and $`\mathcal{B}_3`$. This corresponds to the Reeds-Shepp car model [[2]](#2)[[3]](#3): the "car" is only allowed to move straight forward or backward, or turn the wheel.
 
 The Eikonal PDE is then again solved with respect to a metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:
 ```math
@@ -124,10 +126,10 @@ The Eikonal PDE is then again solved with respect to a metric that is data-drive
 ```
 where $`g_i`$ are constants. We always set $`g_3 = 1`$, and allow $`g_1 =: \xi^2`$ to be provided by the user (you can simply rescale the problem to effectively change $`g_3`$).
 
-The implementation for $`SO(3)`$ equipped with a sub-Riemannian metric can be found in `eikivp/SO3/subRiemannian`.
+The implementation for $`\mathbb{W}_2`$ equipped with a sub-Riemannian metric can be found in `eikivp/SO3/subRiemannian`.
 
 #### Plus controller
-In this case, we see $`SO(3)`$ as a Finslerian manifold. We again restrict the tangent spaces to be spanned by $`\mathcal{B}_1`$ and $`\mathcal{B}_3`$. Now, the car additionally is not allowed to move backwards [[3]](#3): this means motion in the negative $`\mathcal{B}_1`$ direction is restricted. Since Finslerian manifolds need not have a metric tensor corresponding to the Finsler function, and therefore also typically do not have a gradient $`\nabla`$, we need to reformulate the Eikonal PDE as follows:
+In this case, we see $`\mathbb{W}_2`$ as a Finslerian manifold. We again restrict the tangent spaces to be spanned by $`\mathcal{B}_1`$ and $`\mathcal{B}_3`$. Now, the car additionally is not allowed to move backwards [[3]](#3): this means motion in the negative $`\mathcal{B}_1`$ direction is restricted. Since Finslerian manifolds need not have a metric tensor corresponding to the Finsler function, and therefore also typically do not have a gradient $`\nabla`$, we need to reformulate the Eikonal PDE as follows:
 ```math
 \begin{equation} \begin{dcases} (\mathcal{F}^C)^*(p, \mathrm{d}W(p)) = 1, & p \neq e, \\
 W(p) = 0, & p = e, \end{dcases} \end{equation}
@@ -140,7 +142,7 @@ The Eikonal PDE is now solved with respect to a Finsler function that is data-dr
 ```
 where $`g_i`$ are constants and $`(\cdot)_+`$ denotes taking the positive part. We always set $`g_3 = 1`$, and allow $`g_1 =: \xi^2`$ to be provided by the user (you can simply rescale the problem to effectively change $`g_3`$).
 
-The implementation for $`SO(3)`$ equipped with a Finsler function can be found in `eikivp/SO3/plus`.
+The implementation for $`\mathbb{W}_2`$ equipped with a Finsler function can be found in `eikivp/SO3/plus`.
 
 ## References
 <a id="1">[1]</a> 

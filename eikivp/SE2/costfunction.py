@@ -38,23 +38,23 @@ class CostSE2():
 
     def __init__(self, V: VesselnessSE2 | VesselnessR2, λ, p, dim_K=32):
         # Vesselness attributes
-        if isinstance(V, VesselnessR2):
-            self.scales = V.scales
-            self.α = V.α
-            self.γ = V.γ
-            self.ε = V.ε
-        elif isinstance(V, VesselnessSE2):
-            self.σ_s_list = V.σ_s_list
-            self.σ_o = V.σ_o
-            self.σ_s_ext = V.σ_s_ext
-            self.σ_o_ext = V.σ_o_ext
+        # if isinstance(V, VesselnessR2):
+        #     self.scales = V.scales
+        #     self.α = V.α
+        #     self.γ = V.γ
+        #     self.ε = V.ε
+        # elif isinstance(V, VesselnessSE2):
+        self.σ_s_list = V.σ_s_list
+        self.σ_o = V.σ_o
+        self.σ_s_ext = V.σ_s_ext
+        self.σ_o_ext = V.σ_o_ext
         self.image_name = V.image_name
         # Cost attributes
         self.λ = λ
         self.p = p
         C = cost_function(V.V, λ, p)
-        if isinstance(V, VesselnessR2):
-            C = np.transpose(np.array([C] * dim_K), axes=(1, 2, 0))
+        # if isinstance(V, VesselnessR2):
+        #     C = np.transpose(np.array([C] * dim_K), axes=(1, 2, 0))
         self.C = C
 
     # def plot(self, x_min, x_max, y_min, y_max):
@@ -64,16 +64,16 @@ class CostSE2():
 
     def print(self):
         """Print attributes."""
-        if hasattr(self, "scales"): # Cost comes from R^2 vesselness
-            print(f"scales => {self.scales}")
-            print(f"α => {self.α}")
-            print(f"γ => {self.γ}")
-            print(f"ε => {self.ε}")
-        elif hasattr(self, "σ_s_list"): # Cost comes from SE(2) vesselness
-            print(f"σ_s_list => {self.σ_s_list}")
-            print(f"σ_o => {self.σ_o}")
-            print(f"σ_s_ext => {self.σ_s_ext}")
-            print(f"σ_o_ext => {self.σ_o_ext}")
+        # if hasattr(self, "scales"): # Cost comes from R^2 vesselness
+        #     print(f"scales => {self.scales}")
+        #     print(f"α => {self.α}")
+        #     print(f"γ => {self.γ}")
+        #     print(f"ε => {self.ε}")
+        # elif hasattr(self, "σ_s_list"): # Cost comes from SE(2) vesselness
+        print(f"σ_s_list => {self.σ_s_list}")
+        print(f"σ_o => {self.σ_o}")
+        print(f"σ_s_ext => {self.σ_s_ext}")
+        print(f"σ_o_ext => {self.σ_o_ext}")
         print(f"image_name => {self.image_name}")
         print(f"λ => {self.λ}")
         print(f"p => {self.p}")

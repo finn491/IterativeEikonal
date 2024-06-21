@@ -173,7 +173,7 @@ class DistanceSO3Riemannian():
         `σ_o`, `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `G`,
         `source_point`, and `target_point`.
         """
-        distance_filename = f"{folder}\\SO3_R_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}_l={self.λ}_p={self.p}_x={self.ξ}_s={self.source_point}.hdf5"
+        distance_filename = f"{folder}\\SO3_R_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
         with h5py.File(distance_filename, "r") as distance_file:
             assert (
                 np.all(self.σ_s_list == distance_file.attrs["σ_s_list"]) and
@@ -183,7 +183,7 @@ class DistanceSO3Riemannian():
                 self.image_name == distance_file.attrs["image_name"] and
                 self.λ == distance_file.attrs["λ"] and
                 self.p == distance_file.attrs["p"] and
-                self.ξ == distance_file.attrs["ξ"] and
+                np.all(self.G == distance_file.attrs["G"]) and
                 np.all(self.source_point == distance_file.attrs["source_point"]) and
                 (
                     np.all(self.target_point == distance_file.attrs["target_point"]) or
@@ -199,7 +199,7 @@ class DistanceSO3Riemannian():
         `σ_o`, `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `ξ`,
         `source_point`, and `target_point` stored as metadata.
         """
-        distance_filename = f"{folder}\\SO3_R_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}_l={self.λ}_p={self.p}_x={self.ξ}_s={self.source_point}.hdf5"
+        distance_filename = f"{folder}\\SO3_R_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}_s={self.source_point}.hdf5"
         with h5py.File(distance_filename, "w") as distance_file:
             distance_file.create_dataset("Distance", data=self.W)
             distance_file.create_dataset("Gradient", data=self.grad_W)
@@ -210,7 +210,7 @@ class DistanceSO3Riemannian():
             distance_file.attrs["image_name"] = self.image_name
             distance_file.attrs["λ"] = self.λ
             distance_file.attrs["p"] = self.p
-            distance_file.attrs["ξ"] = self.ξ
+            distance_file.attrs["G"] = self.G
             distance_file.attrs["source_point"] = self.source_point
             if self.target_point is None:
                 distance_file.attrs["target_point"] = "default"
@@ -344,7 +344,7 @@ def eikonal_solver(cost_np, source_point, G_np, dα, dβ, dφ, αs_np, φs_np, t
     is_converged = False
     for n in range(N_check):
         for _ in tqdm(range(int(n_check))):
-            step_W(W, cost, G_inv, dα, dβ, dφ, αs_np, φs_np, ε, B1_forward, B1_backward, B2_forward, B2_backward,
+            step_W(W, cost, G_inv, dα, dβ, dφ, αs, φs, ε, B1_forward, B1_backward, B2_forward, B2_backward,
                    B3_forward, B3_backward, B1_W, B2_W, B3_W, dW_dt)
             apply_boundary_conditions(W, boundarypoints, boundaryvalues)
         is_converged = check_convergence(dW_dt, source_point, tol=tol, target_point=target_point)

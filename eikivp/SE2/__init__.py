@@ -12,8 +12,8 @@
       3. plus.
 
     Moreover provides the following "top level" submodule:
-      1. TODO vesselness: compute the SE(2) vesselness of an image, which can be
-      put into a cost function and subsequently into a data-driven metric. 
+      1. vesselness: compute the SE(2) vesselness of an image, which can be put
+      into a cost function and subsequently into a data-driven metric. 
 
     Additionally, we have the following "internal" submodules:
       1. derivatives: compute various derivatives of functions on SE(2).
