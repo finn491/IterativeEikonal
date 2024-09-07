@@ -172,47 +172,10 @@ def cakewavelet_stack_fourier(N_spatial, dθ, spline_order, overlap_factor, infl
     dθ_overlapped = dθ / overlap_factor
     s = 2 * np.pi
     θs = np.arange(0, s, dθ_overlapped)
-    filters = np.zeros((θs.shape[0], N_spatial, N_spatial))
-    for i, θ in enumerate(θs):
-        x = mod_offset(angle_grid - θ - np.pi / 2, 2 * np.pi, -np.pi) / dθ
-        filters[i] = window * B_spline(spline_order, x)
+
+    xs = mod_offset(angle_grid[None, ...] - θs[..., None, None] - np.pi / 2, 2 * np.pi, -np.pi) / dθ
+    filters = window[None, ...] * B_spline(spline_order, xs)
     return filters
-
-# 😢
-# def cakewavelet_stack_fourier(N_spatial, dθ, spline_order, overlap_factor, inflection_point, mn_order):
-#     """
-#     Compute the cakewavelets in the Fourier domain.
-
-#     Args:
-#         `N_spatial`: number of pixels in each spatial direction. This notably
-#           means that the support of the wavelets will be a square.
-#         `dθ`: angular resolution in radians.
-#         `spline_order`: degree of the B-splines.
-#         `overlap_factor`: degree to which adjacent slices overlap in the
-#           angular direction. When `overlap_factor` is larger than 1, then
-#           multiple wavelets will cover the same angles.
-#         `inflection_point`: point at which the radial window M_N starts to
-#           decrease, taking values at most 1. By increasing this will improve the
-#           stability of the reconstruction, but the L^1 norm of the cakewavelets
-#           will also increase.
-#         `mn_order`: order at which the geometric sum in the radial window is
-#           truncated.
-#         `DC_σ`: standard deviation of the high pass filter used to remove the
-#           DC component, such that the cakewavelets can be constructed around
-#           the origin in the Fourier domain.
-#     """
-#     mn_window = radial_window(N_spatial, mn_order, inflection_point)
-#     window =  mn_window
-#     angle_grid = angular_grid(N_spatial)
-#     dθ_overlapped = dθ / overlap_factor
-#     s = 2 * np.pi
-#     θs = np.arange(0, s, dθ_overlapped)
-#     expanded_shape = (*θs.shape, *angle_grid.shape)
-#     angle_grid_expanded = angle_grid[None, ...] * np.ones(expanded_shape)
-#     θs_expanded = θs[..., None, None] * np.ones(expanded_shape)
-#     x = mod_offset(angle_grid_expanded - θs_expanded - np.pi / 2, 2 * np.pi, -np.pi) / dθ
-#     filters = window[None, ...] * B_spline(spline_order, x)
-#     return filters
 
 def cakewavelet_stack(N_spatial, Nθ, inflection_point=0.8, mn_order=8, spline_order=3, overlap_factor=1,
                       Gaussian_σ=None):
@@ -267,22 +230,24 @@ def cakewavelet_stack(N_spatial, Nθ, inflection_point=0.8, mn_order=8, spline_o
         slice = rotate_right(slice, rotation_amount)
         cake[i] = slice * window
     return cake
-   
-def wavelet_transform(f, kernels, shift=-1):
+
+def wavelet_transform(f, kernels):
     """Return the wavelet transform of image `f` under the `kernels`."""
     shape = f.shape
-    ost = np.zeros((kernels.shape[0], *shape), dtype=np.complex_)
-    if kernels.shape[1:] == shape: # Compute by Fourier Transform.
-        f_hat = np.fft.fftn(f)
-        rotation_amount = np.ceil(0.1 + np.array(shape) / 2).astype(int)
-        for i, ψ_θ in enumerate(kernels):
-            ψ_θ_hat = np.fft.fftn(np.flip(ψ_θ, axis=(0, 1)))
-            U_θ = np.fft.ifftn(ψ_θ_hat * f_hat)
-            U_θ = rotate_right(U_θ, rotation_amount)
-            ost[i] = U_θ
-    else: # Compute by direct correlation.
-        if kernels.shape[1] % 2 == 0:
-            kernels = np.roll(kernels, shift=shift, axis=(1, 2)) # Ew.
-        for i, ψ_θ in enumerate(kernels):
-            ost[i] = sp.signal.convolve(f, ψ_θ, mode="same", method="fft")
+    kernels_shape = kernels.shape
+    ost = np.zeros((kernels_shape[0], *shape), dtype=np.complex_)
+    if kernels_shape[1:] != shape: # Pad kernels so we can convolve by multiplication in Fourier domain.
+        pad_1_l = int(np.floor((shape[0] - kernels_shape[1]) / 2))
+        pad_1_r = int(np.ceil((shape[0] - kernels_shape[1]) / 2))
+        pad_2_l = int(np.floor((shape[1] - kernels_shape[2]) / 2))
+        pad_2_r = int(np.ceil((shape[1] - kernels_shape[2]) / 2))
+        kernels = np.pad(kernels, pad_width=((0, 0), (pad_1_l, pad_1_r), (pad_2_l, pad_2_r)), mode="edge")
+
+    f_hat = np.fft.fftn(f)
+    rotation_amount = np.ceil(0.1 + np.array(shape) / 2).astype(int)
+    for i, ψ_θ in enumerate(kernels):
+        ψ_θ_hat = np.fft.fftn(np.flip(ψ_θ, axis=(0, 1)))
+        U_θ = np.fft.ifftn(ψ_θ_hat * f_hat)
+        U_θ = rotate_right(U_θ, rotation_amount)
+        ost[i] = U_θ
     return ost
