@@ -663,14 +663,60 @@ def align_to_standard_array_axis_vector_field(vector_field):
 
 # Maps from SO(3) into SE(2).
 # Π_forward: SO(3) -> SE(2), (α, β, φ) |-> (x, y, θ)
-# To get the angle θ from φ, we consider what happens along geodesics:
+# To get the angle θ from φ, we consider what happens along horizontal curves:
 #   θ(t) = arg(dx_dt(t) + i dy_dt(t)).
 # We can now find that
 #   θ(t) = arg((dx_dα dα_dt(t) + dx_dβ dβ_dt(t)) + i (dy_dα dα_dt(t) + dy_dβ dβ_dt(t))).
-# On geodesics it holds that dα_dt = cos(φ) and dβ_dt = sin(φ) / cos(α);
+# On horizontal curves it holds that dα_dt = cos(φ) and dβ_dt = sin(φ) / cos(α);
 # to find the other derivatives we simply need to differentiate
 # π_forward: S2 -> R2, (α, β) |-> (x, y), which can be derived from relatively
 # straightforward geometric arguments.
+
+def Π_forward_np(α, β, φ, a, c):
+    """
+    Map coordinates in SO(3) into SE(2), by projecting down from the sphere onto
+    a plane.
+    
+    Args:
+        `α`: α-coordinate.
+        `β`: β-coordinate.
+        `φ`: φ-coordinate.
+        `a`: Distance between nodal point of projection and centre of sphere.
+        `c`: Distance between projection plane and centre of sphere reflected
+          around nodal point.
+
+    Returns:
+        np.ndarray(shape=(3,)) of coordinates in SE(2).
+    """
+    # π_forward: S2 -> R2
+    cosα = np.cos(α)
+    sinα = np.sin(α)
+    cosβ = np.cos(β)
+    sinβ = np.sin(β)
+
+    x = (a + c) * sinα / (a + cosα * cosβ)
+    y = (a + c) * cosα * sinβ / (a + cosα * cosβ)
+
+    # Partial derivatives, up to proportionality constant
+    # (a + c) / (a + cosα * cosβ)**2, which does not influence the angle
+    dπ_forward_x_dα = a * cosα + cosβ
+    dπ_forward_x_dβ = cosα * sinα * sinβ
+    dπ_forward_y_dα = -a * sinα * sinβ
+    dπ_forward_y_dβ = a * cosα * cosβ + cosα**2
+    
+    # Combine into Π_forward: SO(3) -> SE(2)
+    cosφ = np.cos(φ)
+    sinφ = np.sin(φ)
+
+    dα = cosφ
+    dβ = sinφ / cosα
+
+    θ = np.arctan2( # y, x
+        dπ_forward_y_dα * dα + dπ_forward_y_dβ * dβ,
+        dπ_forward_x_dα * dα + dπ_forward_x_dβ * dβ
+    )
+
+    return ti.Vector([x, y, θ], dt=ti.f32)
 
 @ti.func
 def Π_forward(
