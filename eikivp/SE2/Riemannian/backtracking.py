@@ -61,7 +61,7 @@ class GeodesicSE2Riemannian():
           of the cost function.
     """
 
-    def __init__(self, W: DistanceSE2Riemannian, target_point=None, dt=None):
+    def __init__(self, W: DistanceSE2Riemannian, target_point=None, dt=1.):
         # Vesselness attributes
         self.σ_s_list = W.σ_s_list
         self.σ_o = W.σ_o
@@ -156,7 +156,7 @@ class GeodesicSE2Riemannian():
         print(f"dt => {self.dt}")
 
 def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min, y_min, θ_min, dxy, dθ, θs_np, G_np,
-                           dt=None, β=0., n_max=10000):
+                           dt=1., β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described by Bekkers et al.[1]
@@ -197,9 +197,9 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
     # Set hyperparameters
     shape = grad_W_np.shape[0:-1]
     G = ti.Vector(G_np, ti.f32)
-    if dt is None:
-        # It would make sense to also include G somehow, but I am not sure how.
-        dt = cost_np[target_point] * min(dxy, dθ) # Step roughly 1 pixel at a time.
+    # if dt is None:
+    #     # It would make sense to also include G somehow, but I am not sure how.
+    #     dt = cost_np[target_point] * min(dxy, dθ) # Step roughly 1 pixel at a time.
 
     # Initialise Taichi objects
     grad_W = ti.Vector.field(n=3, dtype=ti.f32, shape=shape)
@@ -303,7 +303,7 @@ def geodesic_back_tracking_backend(
         gradient_at_point_next = vector_LI_to_static(gradient_at_point_LI, θ)
         # Take weighted average with previous gradients for momentum.
         gradient_at_point = β * gradient_at_point + (1 - β) * gradient_at_point_next
-        new_point = get_next_point(point, gradient_at_point, dt)
+        new_point = get_next_point(point, gradient_at_point, dxy, dθ, dt)
         γ[n] = new_point
         point = new_point
         # To get the gradient, we need the corresponding array indices.

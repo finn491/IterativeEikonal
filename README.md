@@ -90,15 +90,13 @@ where $`g_i`$ are constants and $`(\cdot)_+`$ denotes taking the positive part. 
 The implementation for $`\mathbb{M}_2`$ equipped with a Finsler function can be found in `eikivp/SE2/plus`.
 
 ### $`\mathbb{W}_2`$
-We can also solve the Eikonal PDE on the space of positions and orientations on the sphere,  $`\mathbb{W}_2 \coloneqq \S^2 \times S^1`$. $`\mathbb{W}_2`$ is naturally acted on by the Lie group $`\mathrm{SO}(3)`$ of rotations of the three dimensional Euclidean space.* $`\mathrm{SO}(3)`$ induces left invariant vector fields on $`\mathbb{W}_2`$, which allow for roto-translation equivariant processing. We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{W}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
+We can also solve the Eikonal PDE on the space of positions and orientations on the sphere,  $`\mathbb{W}_2 \coloneqq S^2 \times S^1`$. $`\mathbb{W}_2`$ is naturally acted on by the Lie group $`\mathrm{SO}(3)`$ of rotations of the three dimensional Euclidean space.* $`\mathrm{SO}(3)`$ induces left invariant vector fields on $`\mathbb{W}_2`$, which allow for roto-translation equivariant processing. We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{W}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
 
 We interpret $`\mathbb{W}_2`$ as a smooth manifold.* We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{W}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
 
 The implementation for $`\mathbb{W}_2`$ can be found in `eikivp/SO3`.
 
-*_Indeed, $`\mathbb{W}_2`$ is the principal homogeneous space of $`\mathrm{SO}(3)`$. Upon choosing a reference position and orientation in $`\mathbb{W}_2`$, these two are isomorphic as Lie groups._
-
-__Image of what $\mathbb{W}_2$ looks like with our choice of coordinates?__
+*_Indeed, $`\mathbb{W}_2`$ is the principal homogeneous space of $`\mathrm{SO}(3)`$. Upon choosing a reference position and orientation in $`\mathbb{W}_2`$, these two are isomorphic as Lie groups._*
 
 #### Riemannian
 In this case, we see $`\mathbb{W}_2`$ as a Riemannian manifold. The Eikonal PDE is then solved with respect to metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:
@@ -108,9 +106,9 @@ In this case, we see $`\mathbb{W}_2`$ as a Riemannian manifold. The Eikonal PDE 
 ```
 where $`g_i`$ are constants. Here $\nu^i$ is the dual of $`\mathcal{B}_i`$, where $`\{\mathcal{B}_i\}`$ is the standard left invariant basis, given by
 ```math
-\begin{align*} \mathcal{B}_1|_{\alpha, \beta, \phi} & = \cos(\phi) \partial_{\alpha}|_{\alpha, \beta, \phi} + \frac{\sin(\phi)}{\cos(\alpha)} \partial_{\beta}|_{\alpha, \beta, \phi} + \sin(\phi) \tan(\phi) \partial_{\phi}|_{\alpha, \beta, \phi}, \\
-\mathcal{B}_2|_{\alpha, \beta, \phi} & = -\sin(\phi) \partial_{\alpha}|_{\alpha, \beta, \phi} + \frac{\cos(\phi)}{\cos(\alpha)} \partial_{\beta}|_{\alpha, \beta, \phi} + \cos(\phi) \tan(\phi) \partial_{\phi}|_{\alpha, \beta, \phi}, \textrm{ and} \\
-\mathcal{B}_3|_{\alpha, \beta, \phi} & = -\sin(\alpha) \partial_{\beta}|_{\alpha, \beta, \phi} + \partial_{\phi}|_{\alpha, \beta, \phi}.
+\begin{align*} \mathcal{B}_1|_{\alpha, \beta, \phi} & = \cos(\phi) \partial_{\alpha}|_{\alpha, \beta, \phi} + \frac{\sin(\phi)}{\cos(\alpha)} \partial_{\beta}|_{\alpha, \beta, \phi} + \sin(\phi) \tan(\alpha) \partial_{\phi}|_{\alpha, \beta, \phi}, \\
+\mathcal{B}_2|_{\alpha, \beta, \phi} & = -\sin(\phi) \partial_{\alpha}|_{\alpha, \beta, \phi} + \frac{\cos(\phi)}{\cos(\alpha)} \partial_{\beta}|_{\alpha, \beta, \phi} + \cos(\phi) \tan(\alpha) \partial_{\phi}|_{\alpha, \beta, \phi}, \textrm{ and} \\
+\mathcal{B}_3|_{\alpha, \beta, \phi} & = \partial_{\phi}|_{\alpha, \beta, \phi}.
 \end{align*}
 ```
 

@@ -173,33 +173,6 @@ def check_convergence(dW_dt, source_point, tol=1e-3, target_point=None):
 
 # Backtracking
 
-# @ti.func
-# def get_next_point(
-#     point: ti.types.vector(n=3, dtype=ti.f32),
-#     gradient_at_point: ti.types.vector(n=3, dtype=ti.f32),
-#     dt: ti.f32
-# ) -> ti.types.vector(n=3, dtype=ti.f32):
-#     """
-#     @taichi.func
-
-#     Compute the next point in the gradient descent.
-
-#     Args:
-#         `point`: ti.types.vector(n=2, dtype=[float]) coordinates of current 
-#           point.
-#         `gradient_at_point`: ti.types.vector(n=2, dtype=[float]) value of 
-#           gradient at current point.
-#         `dt`: Gradient descent step size, taking values greater than 0.
-
-#     Returns:
-#         Next point in the gradient descent.
-#     """
-#     new_point = ti.Vector([0., 0., 0.], dt=ti.f32)
-#     new_point[0] = point[0] - dt * gradient_at_point[0]
-#     new_point[1] = point[1] - dt * gradient_at_point[1]
-#     new_point[2] = point[2] - dt * gradient_at_point[2]
-#     return new_point
-
 @ti.func
 def get_next_point(
     point: ti.types.vector(n=3, dtype=ti.f32),
