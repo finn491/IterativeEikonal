@@ -168,7 +168,7 @@ def plot_isosurface_SO3(verts, faces, α_min, α_max, β_min, β_max, φ_min, φ
         ax.set_xlabel("$β$")
         ax.set_ylabel("$α$")
         ax.set_zlabel("$φ$")
-    ax.plot_trisurf(β_min + verts[:, 0] * dβ, α_min + verts[:, 1] * dα, faces, φ_min + verts[:, 2] * dφ, alpha=alpha,
+    ax.plot_trisurf(β_max - verts[:, 0] * dβ, α_max - verts[:, 1] * dα, faces, φ_max - verts[:, 2] * dφ, alpha=alpha,
                     label=label)
     return fig, ax
 

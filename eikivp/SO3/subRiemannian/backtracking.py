@@ -60,7 +60,7 @@ class GeodesicSO3SubRiemannian():
           of the cost function.
     """
 
-    def __init__(self, W: DistanceSO3SubRiemannian, target_point=None, dt=None):
+    def __init__(self, W: DistanceSO3SubRiemannian, target_point=None, dt=1.):
         # Vesselness attributes
         self.σ_s_list = W.σ_s_list
         self.σ_o = W.σ_o
@@ -157,8 +157,8 @@ class GeodesicSO3SubRiemannian():
 
 # Sub-Riemannian backtracking
 
-def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, α_min, β_min, φ_min, dα, dβ, dφ, αs_np, φs_np, ξ, dt=None, β=0.,
-                           n_max=10000):
+def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, α_min, β_min, φ_min, dα, dβ, dφ, αs_np,
+                           φs_np, ξ, dt=1., β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described by Bekkers et al.[1]
@@ -202,9 +202,9 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, α_mi
     """
     # Set hyperparameters
     shape = grad_W_np.shape[0:-1]
-    if dt is None:
-        # It would make sense to also include G somehow, but I am not sure how.
-        dt = cost_np[target_point] * min(dα, dβ, dφ) # Step roughly 1 pixel at a time.
+    # if dt is None:
+    #     # It would make sense to also include G somehow, but I am not sure how.
+    #     dt = cost_np[target_point] * min(dα, dβ, dφ) # Step roughly 1 pixel at a time.
 
     # Initialise Taichi objects
     grad_W = ti.Vector.field(n=3, dtype=ti.f32, shape=shape)
@@ -317,7 +317,7 @@ def geodesic_back_tracking_backend(
         gradient_at_point_next = vector_LI_to_static(gradient_at_point_LI, α, φ)
         # Take weighted average with previous gradients for momentum.
         gradient_at_point = β * gradient_at_point + (1 - β) * gradient_at_point_next
-        new_point = get_next_point(point, gradient_at_point, dt)
+        new_point = get_next_point(point, gradient_at_point, dα, dβ, dφ, dt)
         γ[n] = new_point
         point = new_point
         # To get the gradient, we need the corresponding array indices.

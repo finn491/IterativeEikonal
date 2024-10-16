@@ -173,10 +173,40 @@ def check_convergence(dW_dt, source_point, tol=1e-3, target_point=None):
 
 # Backtracking
 
+# @ti.func
+# def get_next_point(
+#     point: ti.types.vector(n=3, dtype=ti.f32),
+#     gradient_at_point: ti.types.vector(n=3, dtype=ti.f32),
+#     dt: ti.f32
+# ) -> ti.types.vector(n=3, dtype=ti.f32):
+#     """
+#     @taichi.func
+
+#     Compute the next point in the gradient descent.
+
+#     Args:
+#         `point`: ti.types.vector(n=2, dtype=[float]) coordinates of current 
+#           point.
+#         `gradient_at_point`: ti.types.vector(n=2, dtype=[float]) value of 
+#           gradient at current point.
+#         `dt`: Gradient descent step size, taking values greater than 0.
+
+#     Returns:
+#         Next point in the gradient descent.
+#     """
+#     new_point = ti.Vector([0., 0., 0.], dt=ti.f32)
+#     new_point[0] = point[0] - dt * gradient_at_point[0]
+#     new_point[1] = point[1] - dt * gradient_at_point[1]
+#     new_point[2] = point[2] - dt * gradient_at_point[2]
+#     return new_point
+
 @ti.func
 def get_next_point(
     point: ti.types.vector(n=3, dtype=ti.f32),
     gradient_at_point: ti.types.vector(n=3, dtype=ti.f32),
+    dα: ti.f32,
+    dβ: ti.f32,
+    dφ: ti.f32,
     dt: ti.f32
 ) -> ti.types.vector(n=3, dtype=ti.f32):
     """
@@ -195,10 +225,35 @@ def get_next_point(
         Next point in the gradient descent.
     """
     new_point = ti.Vector([0., 0., 0.], dt=ti.f32)
-    new_point[0] = point[0] - dt * gradient_at_point[0]
-    new_point[1] = point[1] - dt * gradient_at_point[1]
-    new_point[2] = point[2] - dt * gradient_at_point[2]
+    gradient_norm_l2 = norm_l2(gradient_at_point, dα, dβ, dφ)
+    new_point[0] = point[0] - dt * gradient_at_point[0] / gradient_norm_l2
+    new_point[1] = point[1] - dt * gradient_at_point[1] / gradient_norm_l2
+    new_point[2] = point[2] - dt * gradient_at_point[2] / gradient_norm_l2
     return new_point
+
+@ti.func
+def norm_l2(
+    vec: ti.types.vector(3, ti.f32),
+    dα: ti.f32,
+    dβ: ti.f32,
+    dφ: ti.f32
+) -> ti.f32:
+    """
+    @taichi.func
+
+    Compute the Euclidean norm of `vec` represented in the left invariant frame.
+
+    Args:
+        `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
+
+    Returns:
+        Norm of `vec`.
+    """
+    return ti.math.sqrt(
+            (vec[0] / dα)**2 +
+            (vec[1] / dβ)**2 +
+            (vec[2] / dφ)**2
+    )
 
 @ti.func
 def distance_in_pixels(
@@ -225,8 +280,16 @@ def distance_in_pixels(
     return ti.math.sqrt(
         (distance[0] / dα)**2 + 
         (distance[1] / dβ)**2 + 
-        (ti.math.mod(ti.abs(distance[2]), 2 * ti.math.pi) / dφ)**2
+        (mod_offset(distance[2], 2 * ti.math.pi, -ti.math.pi) / dφ)**2
     )
+
+@ti.func
+def mod_offset(
+    x: ti.f32,
+    period: ti.f32,
+    offset: ti.f32,
+) -> ti.f32:
+    return x - (x - offset)//period * period
 
 # Coordinate Transforms
 
@@ -288,7 +351,7 @@ def vector_LI_to_static(
     # ν3 = [0,-sin(α),1]
 
     cosα = ti.math.cos(α)
-    tanα = ti.math.sin(α)
+    tanα = ti.math.tan(α)
     cosφ = ti.math.cos(φ)
     sinφ = ti.math.sin(φ)
 

@@ -559,7 +559,7 @@ def eikonal_solver_SO3_uniform(domain_shape, source_point, dα, dβ, dφ, αs_np
     return W, grad_W
 
 def geodesic_back_tracking_SO3(grad_W, source_point, target_point, cost, α_min, β_min, φ_min, dα, dβ, dφ, αs, φs,
-                               controller="sub-Riemannian", G=None, ξ=None, dt=None, β=0., n_max=10000):
+                               controller="sub-Riemannian", G=None, ξ=None, dt=1., β=0., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described by Bekkers et al.[1]
