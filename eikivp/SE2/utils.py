@@ -259,7 +259,7 @@ def mod_offset(
 ) -> ti.f32:
     return x - (x - offset)//period * period
 
-# Coordinate Transforms
+# Coordinate and Frame Transforms
 
 @ti.func
 def vectorfield_LI_to_static(
@@ -270,17 +270,17 @@ def vectorfield_LI_to_static(
     """
     @taichi.func
 
-    Change the coordinates of the vectorfield represented by `vectorfield_LI`
-    from the left invariant to the static frame.
+    Compute the components in the static frame of the vectorfield represented in
+    the left invariant frame by `vectorfield_LI`.
 
     Args:
       Static:
-        `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in LI
-          coordinates.
+        `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in the
+          left invariant frame.
         `θs`: angle coordinate at each grid point.
       Mutated:
         vectorfield_static`: ti.Vector.field(n=3, dtype=[float]) represented in
-          static coordinates.
+          the static frame.
     """
     for I in ti.grouped(vectorfield_LI):
         vectorfield_static[I] = vector_LI_to_static(vectorfield_LI[I], θs[I])
@@ -293,24 +293,32 @@ def vector_LI_to_static(
     """
     @taichi.func
 
-    Change the coordinates of the vector represented by `vector_LI` from the 
-    left invariant to the static frame, given that the angle coordinate of the 
-    point on the manifold corresponding to this vector is θ.
+    Compute the components in the static frame of the vector represented in
+    the left invariant frame by `vector_LI`, given that the angle coordinate of
+    the point on the manifold corresponding to this vector is θ.
 
     Args:
       Static:
-        `vector_LI`: ti.Vector(n=3, dtype=[float]) represented in LI
-          coordinates.
+        `vector_LI`: ti.Vector(n=3, dtype=[float]) represented in the left
+          invariant frame.
         `θ`: angle coordinate of corresponding point on the manifold.
+
+    Returns:
+        ti.Vector(n=3, dtype=[float]) represented in the static frame.
     """
-    
-    # A1 = [cos(θ),sin(θ),0]
-    # A2 = [-sin(θ),cos(θ),0]
-    # A3 = [0,0,1]
+    # A1 = [cos(θ),sin(θ),0],
+    # A2 = [-sin(θ),cos(θ),0],
+    # A3 = [0,0,1], whence
+    # ω1 = [cos(θ),-sin(θ),0],
+    # ω2 = [sin(θ),cos(θ),0],
+    # ω3 = [0,0,1].
+
+    cos = ti.math.cos(θ)
+    sin = ti.math.sin(θ)
 
     return ti.Vector([
-        ti.math.cos(θ) * vector_LI[0] - ti.math.sin(θ) * vector_LI[1],
-        ti.math.sin(θ) * vector_LI[0] + ti.math.cos(θ) * vector_LI[1],
+        cos * vector_LI[0] - sin * vector_LI[1],
+        sin * vector_LI[0] + cos * vector_LI[1],
         vector_LI[2]
     ], dt=ti.f32)
 
@@ -323,17 +331,17 @@ def vectorfield_static_to_LI(
     """
     @taichi.func
 
-    Change the coordinates of the vectorfield represented by 
-    `vectorfield_static` from the static to the left invariant frame.
+    Compute the components in the left invariant frame of the vectorfield
+    represented in the static frame by `vectorfield_LI`.
 
     Args:
       Static:
         `vectorfield_static`: ti.Vector.field(n=3, dtype=[float]) represented in
-          static coordinates.
+          the static frame.
         `θs`: angle coordinate at each grid point.
       Mutated:
-        vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in
-          LI coordinates.
+        vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in the
+          left invariant frame.
     """
     for I in ti.grouped(vectorfield_static):
         vectorfield_static[I] = vector_static_to_LI(vectorfield_LI[I], θs[I])
@@ -346,24 +354,30 @@ def vector_static_to_LI(
     """
     @taichi.func
 
-    Change the coordinates of the vector represented by `vector_static` from the 
-    left invariant to the static frame, given that the angle coordinate of the 
-    point on the manifold corresponding to this vector is θ.
+    Compute the components in the left invariant frame of the vector represented
+    in the static frame by `vector_static`, given that the angle coordinate of
+    the point on the manifold corresponding to this vector is θ.
 
     Args:
       Static:
-        `vector_static`: ti.Vector(n=3, dtype=[float]) represented in static
-        coordinates.
+        `vector_static`: ti.Vector(n=3, dtype=[float]) represented in the static
+        frame.
         `θ`: angle coordinate of corresponding point on the manifold.
-    """
 
-    # A1 = [cos(θ),sin(θ),0]
-    # A2 = [-sin(θ),cos(θ),0]
-    # A3 = [0,0,1]
+    Returns:
+        ti.Vector(n=3, dtype=[float]) vector represented in the left invariant
+        frame.
+    """
+    # A1 = [cos(θ),sin(θ),0],
+    # A2 = [-sin(θ),cos(θ),0],
+    # A3 = [0,0,1].
+
+    cos = ti.math.cos(θ)
+    sin = ti.math.sin(θ)
 
     return ti.Vector([
-        ti.math.cos(θ) * vector_static[0] + ti.math.sin(θ) * vector_static[1],
-        -ti.math.sin(θ) * vector_static[0] + ti.math.cos(θ) * vector_static[1],
+        cos * vector_static[0] + sin * vector_static[1],
+        -sin * vector_static[0] + cos * vector_static[1],
         vector_static[2]
     ], dt=ti.f32)
 

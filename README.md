@@ -1,5 +1,5 @@
 # EikIVP
-Solve Eikonal PDEs on $`\mathbb{R}^2`$, $`\mathbb{M}_2 \coloneqq \mathbb{R}^2 \times S^1`$, and $`\mathbb{W}_2 \coloneqq S^2 \times S^1`$ using the iterative method described in Bekkers et al. (2015) "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in $`SE(2)`$" [[1]](#1). 
+Solve Eikonal PDEs on $`\mathbb{R}^2`$, $`\mathbb{M}_2 \coloneqq \mathbb{R}^2 \times S^1`$, and $`\mathbb{W}_2 \coloneqq S^2 \times S^1`$ using the iterative method described in Bekkers et al. (2015) "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in $`\operatorname{SE}(2)`$" [[1]](#1). 
 
 The viscosity solutions of the Eikonal equation is the geodesic distance map. We therefore can solve the Eikonal equation to determine the distance between two points, and find the geodesic connecting the two points (by gradient descent).
 
@@ -37,11 +37,11 @@ where $`g_i`$ are constants. Here $`\mathrm{dx}`$ is the dual of $`\partial_x`$ 
 The implementation for $`\mathbb{R}^2`$ can be found in `eikivp/R2`.
 
 ### $`\mathbb{M}_2`$
-We can also solve the Eikonal PDE on the space of positions and orientations on the plane,  $`\mathbb{M}_2 \coloneqq \mathbb{R}^2 \times S^1`$. $`\mathbb{M}_2`$ is naturally acted on by the Lie group $`\mathrm{SE}(2)`$ of roto-translations of the plane.* $`\mathrm{SE}(2)`$ induces left invariant vector fields on $`\mathbb{M}_2`$, which allow for roto-translation equivariant processing. We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{M}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
+We can also solve the Eikonal PDE on the space of positions and orientations on the plane,  $`\mathbb{M}_2 \coloneqq \mathbb{R}^2 \times S^1`$. $`\mathbb{M}_2`$ is naturally acted on by the Lie group $`\operatorname{SE}(2)`$ of roto-translations of the plane.* $`\operatorname{SE}(2)`$ induces left invariant vector fields on $`\mathbb{M}_2`$, which allow for roto-translation equivariant processing. We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{M}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
 
 The implementation for $`\mathbb{M}_2`$ can be found in `eikivp/SE2`.
 
-*_Indeed, $`\mathbb{M}_2`$ is the principal homogeneous space of $`\mathrm{SE}(2)`$. Upon choosing a reference position and orientation in $`\mathbb{M}_2`$, these two are isomorphic as Lie groups._
+*_Indeed, $`\mathbb{M}_2`$ is the principal homogeneous space of $`\operatorname{SE}(2)`$. Upon choosing a reference position and orientation in $`\mathbb{M}_2`$, these two are isomorphic as smooth manifolds._
 
 #### Riemannian
 In this case, we see $`\mathbb{M}_2`$ as a Riemannian manifold. The Eikonal PDE is then solved with respect to metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:
@@ -90,13 +90,13 @@ where $`g_i`$ are constants and $`(\cdot)_+`$ denotes taking the positive part. 
 The implementation for $`\mathbb{M}_2`$ equipped with a Finsler function can be found in `eikivp/SE2/plus`.
 
 ### $`\mathbb{W}_2`$
-We can also solve the Eikonal PDE on the space of positions and orientations on the sphere,  $`\mathbb{W}_2 \coloneqq S^2 \times S^1`$. $`\mathbb{W}_2`$ is naturally acted on by the Lie group $`\mathrm{SO}(3)`$ of rotations of the three dimensional Euclidean space.* $`\mathrm{SO}(3)`$ induces left invariant vector fields on $`\mathbb{W}_2`$, which allow for roto-translation equivariant processing. We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{W}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
+We can also solve the Eikonal PDE on the space of positions and orientations on the sphere,  $`\mathbb{W}_2 \coloneqq S^2 \times S^1`$. $`\mathbb{W}_2`$ is naturally acted on by the Lie group $`\operatorname{SO}(3)`$ of rotations of the three dimensional Euclidean space.* $`\operatorname{SO}(3)`$ induces left invariant vector fields on $`\mathbb{W}_2`$, which allow for roto-translation equivariant processing. We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{W}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
 
 We interpret $`\mathbb{W}_2`$ as a smooth manifold.* We need to equip this smooth manifold with a notion of norms on tangent spaces before we can even consider the Eikonal equation. In this package, $`\mathbb{W}_2`$ can be equipped with three different types of norms: Riemannian, sub-Riemannian, and plus controller.
 
 The implementation for $`\mathbb{W}_2`$ can be found in `eikivp/SO3`.
 
-*_Indeed, $`\mathbb{W}_2`$ is the principal homogeneous space of $`\mathrm{SO}(3)`$. Upon choosing a reference position and orientation in $`\mathbb{W}_2`$, these two are isomorphic as Lie groups._*
+*_Indeed, $`\mathbb{W}_2`$ is the principal homogeneous space of $`\operatorname{SO}(3)`$. Upon choosing a reference position and orientation in $`\mathbb{W}_2`$, these two are isomorphic as smooth manifolds._*
 
 #### Riemannian
 In this case, we see $`\mathbb{W}_2`$ as a Riemannian manifold. The Eikonal PDE is then solved with respect to metric that is data-driven left invariant under translations and rotations, which means that translating and rotating the input data will translate and rotate the output data correspondingly. The permitted data-driven metrics can be written as the product of a diagonal metric that is left invariant under translations with some cost function:

@@ -7,8 +7,6 @@
     function from a vesselness on SE(2) and store it with its parameters.
 """
 
-import numpy as np
-import taichi as ti
 from eikivp.utils import cost_function
 from eikivp.SE2.vesselness import VesselnessSE2
 from eikivp.R2.vesselness import VesselnessR2
@@ -57,11 +55,6 @@ class CostSE2():
         #     C = np.transpose(np.array([C] * dim_K), axes=(1, 2, 0))
         self.C = C
 
-    # def plot(self, x_min, x_max, y_min, y_max):
-    #     """Quick visualisation of cost."""
-    #     fig, ax, cbar = plot_image_array(self.C, x_min, x_max, y_min, y_max)
-    #     fig.colorbar(cbar, ax=ax);
-
     def print(self):
         """Print attributes."""
         # if hasattr(self, "scales"): # Cost comes from R^2 vesselness
@@ -77,19 +70,3 @@ class CostSE2():
         print(f"image_name => {self.image_name}")
         print(f"λ => {self.λ}")
         print(f"p => {self.p}")
-
-def cost_function(vesselness, λ, p):
-    """
-    Compute the cost function corresponding to `vesselness`.
-
-    Args:
-        `vesselness`: np.ndarray of vesselness scores, taking values between 0 
-          and 1.
-        `λ`: Vesselness prefactor, taking values greater than 0.
-        `p`: Vesselness exponent, taking values greater than 0.
-
-    Returns:
-        np.ndarray of the cost function corresponding to `vesselness` with 
-        parameters `λ` and `p`, taking values between 0 and 1.
-    """
-    return 1 / (1 + λ * np.abs(vesselness)**p)

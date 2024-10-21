@@ -3,7 +3,11 @@
     ============
 
     Provides methods to compute the geodesic, with respect to some distance map,
-    connecting two points in SE(2). The primary methods are:
+    connecting two points in SE(2). In particular, provides the class
+    `GeodesicSE2Plus`, which can compute the geodesic and store it with its
+    parameters.
+    
+    The primary methods are:
       1. `geodesic_back_tracking`: compute the geodesic using gradient descent.
       The gradient must be provided; it is computed along with the distance map
       by the corresponding methods in the distancemap module.
@@ -31,8 +35,7 @@ class GeodesicSE2Plus():
     Compute the geodesic of a plus controller distance map on SE(2).
 
     Attributes:
-        `W`: np.ndarray of distance function data.
-        `grad_W`: np.ndarray of gradient of distance function data.
+        `γ_path`: np.ndarray of path of geodesic.
         `σ_s_list`: standard deviations in pixels of the internal regularisation
           in the spatial directions before taking derivatives.
         `σ_o`: standard deviation in pixels of the internal regularisation
@@ -112,7 +115,8 @@ class GeodesicSE2Plus():
     def export_γ_path(self, folder):
         """
         Export the geodesic to hdf5 with attributes `σ_s_list`, `σ_o`,
-        `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `ξ`, `source_point`, and `target_point``.
+        `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `ξ`, `source_point`, and
+        `target_point``.
         """
         geodesic_filename = f"{folder}\\SE2_p_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_e={self.σ_s_ext}_s_o_e={self.σ_o_ext}_l={self.λ}_p={self.p}_x={self.ξ}_s={self.source_point}_t={self.target_point}.hdf5"
         with h5py.File(geodesic_filename, "w") as geodesic_file:
@@ -134,11 +138,6 @@ class GeodesicSE2Plus():
                 geodesic_file.attrs["dt"] = "default"
             else:
                 geodesic_file.attrs["dt"] = self.dt
-
-    # def plot(self, x_min, x_max, y_min, y_max):
-    #     """Quick visualisation of distance map."""
-    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
-    #     fig.colorbar(cbar, ax=ax);
 
     def print(self):
         """Print attributes."""
@@ -197,9 +196,6 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
     """
     # Set hyperparameters
     shape = grad_W_np.shape[0:-1]
-    # if dt is None:
-    #     # It would make sense to also include ξ somehow, but I am not sure how.
-    #     dt = cost_np[target_point] * min(dxy, dθ) # Step roughly 1 pixel at a time.
 
     # Initialise Taichi objects
     grad_W = ti.Vector.field(n=3, dtype=ti.f32, shape=shape)

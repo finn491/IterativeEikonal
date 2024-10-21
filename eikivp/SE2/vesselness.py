@@ -29,8 +29,6 @@
     kernel looks like a Gaussian if the amount of diffusion is sufficiently
     small.
 
-    TODO: maybe add in correct kernel for θ-direction?
-
     References:
       [1]: J. Hannink, R. Duits, and E. Bekkers.
       "Crossing-Preserving Multi-scale Vesselness". In: Medical Image Computing
@@ -146,11 +144,6 @@ class VesselnessSE2():
             vesselness_file.attrs["σ_s_ext"] = self.σ_s_ext
             vesselness_file.attrs["σ_o_ext"] = self.σ_o_ext
             vesselness_file.attrs["image_name"] = self.image_name
-
-    # def plot(self, x_min, x_max, y_min, y_max):
-    #     """Quick visualisation of vesselness."""
-    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
-    #     fig.colorbar(cbar, ax=ax);
 
     def print(self):
         """Print attributes."""
@@ -329,8 +322,6 @@ def single_scale_vesselness_backend(
 
     # Combine components.
     for I in ti.grouped(V):
-        # Adapted from "SE2-Vesselness-LI-Simple.nb", found in
-        # S:\Lieanalysis\VICI\researchers\FinnSherry\Mathematica\Vascular Tracking OS\CodeA-SE2-Vesselness\Relevant-Sub-Routines-in-A\SE2-Vesselness
         λ1 = A11_U_ext[I]
         c = A22_U_ext[I]
         Q[I] = c # Convexity criterion.

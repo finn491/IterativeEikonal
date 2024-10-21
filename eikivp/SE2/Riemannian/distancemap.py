@@ -5,7 +5,11 @@
     Provides methods to compute the distance map on SE(2) with respect to a
     data-driven left invariant Riemannian metric, by solving the Eikonal PDE
     using the iterative Initial Value Problem (IVP) technique described by
-    Bekkers et al.[1] The primary methods are:
+    Bekkers et al.[1] In particular, provides the class `DistanceSE2Riemannian`,
+    which can compute the distance map and its gradient, and store them with
+    their parameters.
+    
+    The primary methods are:
       1. `eikonal_solver`: solve the Eikonal PDE with respect to some 
       data-driven left invariant Riemannian metric, defined by the diagonal
       components of the underlying left invariant metric, with respect to the
@@ -210,11 +214,6 @@ class DistanceSE2Riemannian():
             else:
                 distance_file.attrs["target_point"] = self.target_point
 
-    # def plot(self, x_min, x_max, y_min, y_max):
-    #     """Quick visualisation of distance map."""
-    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
-    #     fig.colorbar(cbar, ax=ax);
-
     def print(self):
         """Print attributes."""
         print(f"σ_s_list => {self.σ_s_list}")
@@ -409,7 +408,7 @@ def step_W(
             G_inv[1] * A2_W[I]**2 +
             G_inv[2] * A3_W[I]**2
         ) / cost[I])) * cost[I]
-        W[I] += dW_dt[I] * ε # ti.math.max(dW_dt[I] * ε, -W[I]) # 🤢
+        W[I] += dW_dt[I] * ε
 
 @ti.kernel
 def distance_gradient_field(

@@ -29,8 +29,7 @@ class GeodesicR2():
     Compute the geodesic of a distance map on R2.
 
     Attributes:
-        `W`: np.ndarray of distance function data.
-        `grad_W`: np.ndarray of gradient of distance function data.
+        `γ_path`: np.ndarray of path of geodesic.
         `scales`: iterable of standard deviations of Gaussian derivatives,
           taking values greater than 0. 
         `α`: anisotropy penalty, taking values between 0 and 1.
@@ -52,7 +51,7 @@ class GeodesicR2():
           of the cost function.
     """
 
-    def __init__(self, W: DistanceR2, target_point=None, dt=None):
+    def __init__(self, W: DistanceR2, target_point=None, dt=1.):
         # Vesselness attributes
         self.scales = W.scales
         self.α = W.α
@@ -182,10 +181,6 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
     if G_np is None:
         G_np = np.ones(2)
     G = ti.Vector(G_np, ti.f32)
-    if dt is None:
-        # It would make sense to also include G somehow, but I am not sure how.
-        # dt = cost_np.min() * dxy # Step roughly 1 pixel at a time.
-        dt = cost_np[target_point] * dxy # Step roughly 1 pixel at a time.
 
     # Initialise Taichi objects
     grad_W = ti.Vector.field(n=2, dtype=ti.f32, shape=shape)

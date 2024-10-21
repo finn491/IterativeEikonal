@@ -29,8 +29,8 @@ def normalise_LI(
     """
     @taichi.func
 
-    Normalise `vec`, represented in left invariant coordinates, to 1 with 
-    respect to the left invariant sub-Riemannian metric tensor defined by `ξ`.
+    Normalise `vec`, represented in the left invariant frame, to 1 with respect
+    to the left invariant sub-Riemannian metric tensor defined by `ξ`.
 
     Args:
         `vec`: ti.types.vector(n=3, dtype=[float]) which we want to normalise.
@@ -52,7 +52,7 @@ def norm_LI(
     """
     @taichi.func
 
-    Compute the norm of `vec` represented in left invariant coordinates with
+    Compute the norm of `vec` represented in the left invariant frame with
     respect to the left invariant sub-Riemannian metric tensor defined by `ξ`.
 
     Args:
@@ -79,7 +79,7 @@ def normalise_static(
     """
     @taichi.func
 
-    Normalise `vec`, represented in static coordinates, to 1 with respect to the 
+    Normalise `vec`, represented in the static frame, to 1 with respect to the 
     left invariant sub-Riemannian metric tensor defined by `ξ`.
 
     Args:
@@ -104,7 +104,7 @@ def norm_static(
     """
     @taichi.func
 
-    Compute the norm of `vec` represented in static coordinates with respect to 
+    Compute the norm of `vec` represented in the static frame with respect to 
     the left invariant sub-Riemannian metric tensor defined by `ξ`.
 
     Args:
