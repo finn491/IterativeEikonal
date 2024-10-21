@@ -28,8 +28,8 @@ def linear_interpolate(
     Args:
         `v*`: values at points between which we want to interpolate, taking real 
           values.
-        `r`: distance to the points between which we to interpolate, taking real
-          values.
+        `r`: distance to the points between which we want to interpolate, taking
+          real values.
 
     Returns:
         Interpolated value.

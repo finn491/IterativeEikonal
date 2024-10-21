@@ -33,7 +33,7 @@ def bilinear_interpolate(
         `v**`: values at points between which we want to interpolate, taking 
           real values.
         `r`: ti.types.vector(n=2, dtype=[float]) defining the distance to the
-          points between which we to interpolate.
+          points between which we want to interpolate.
 
     Returns:
         Value of `input` interpolated at `index`.

@@ -221,7 +221,7 @@ class DistanceR2():
 def eikonal_solver(cost_np, source_point, target_point=None, G_np=None, dxy=1., n_max=1e5, n_max_initialisation=1e4,
                    n_check=None, n_check_initialisation=None, tol=1e-3, dε=1., initial_condition=100.):
     """
-    Solve the Eikonal PDE on R2, with source at `source_point` and datadriven
+    Solve the Eikonal PDE on R^2, with source at `source_point` and datadriven
     left invariant metric defined by `G_np` and `cost_np`, using the iterative 
     method described by Bekkers et al.[1]
 
@@ -433,9 +433,9 @@ def distance_gradient_field(
 def eikonal_solver_uniform(domain_shape, source_point, target_point=None, G_np=None, dxy=1., n_max=1e5, n_check=None,
                            tol=1e-3, dε=1., initial_condition=100.):
     """
-    Solve the Eikonal PDE on R2, with source at `source_point` and datadriven
-    left invariant metric defined by `G_np` and `cost_np`, using the iterative 
-    method described by Bekkers et al.[1]
+    Solve the Eikonal PDE on R2, with source at `source_point` and left
+    invariant metric defined by `G_np`, using the iterative method described by
+    Bekkers et al.[1]
 
     Args:
         `domain_shape`: Tuple[int] describing the shape of the domain, namely

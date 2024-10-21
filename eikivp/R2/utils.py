@@ -59,7 +59,7 @@ def field_abs_max(
     Find the largest absolute value in `scalar_field`.
 
     Args:
-        static: ti.field(dtype=[float], shape=shape) of 2D scalar field.
+        `scalar_field`: ti.field(dtype=[float], shape=shape) of 2D scalar field.
 
     Returns:
         Largest absolute value in `scalar_field`.

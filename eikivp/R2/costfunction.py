@@ -39,11 +39,6 @@ class CostR2():
 
         self.C = cost_function(V.V, λ, p)
 
-    # def plot(self, x_min, x_max, y_min, y_max):
-    #     """Quick visualisation of cost."""
-    #     fig, ax, cbar = plot_image_array(self.C, x_min, x_max, y_min, y_max)
-    #     fig.colorbar(cbar, ax=ax);
-
     def print(self):
         """Print attributes."""
         print(f"scales => {self.scales}")

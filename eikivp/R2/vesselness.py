@@ -25,7 +25,6 @@ import scipy as sp
 import diplib as dip
 import h5py
 from eikivp.utils import image_rescale
-# from eikivp.visualisations import plot_image_array
 
 class VesselnessR2():
     """
@@ -112,11 +111,6 @@ class VesselnessR2():
             vesselness_file.attrs["ε"] = self.ε
             vesselness_file.attrs["image_name"] = self.image_name
 
-    # def plot(self, x_min, x_max, y_min, y_max):
-    #     """Quick visualisation of vesselness."""
-    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
-    #     fig.colorbar(cbar, ax=ax);
-
     def print(self):
         """Print attributes."""
         print(f"scales => {self.scales}")
@@ -129,7 +123,6 @@ class VesselnessR2():
 def rc_vessel_enhancement(image, σ, α=0.2, γ=0.75, ε=0.2):
     """
     Compute Frangi filter[1] of vessels in `image` at a single scale `σ`.
-    Implementation adapted from "Code A - Vesselness in SE(2)".
 
     Args:
         `image`: np.ndarray of a grayscale image, taking values between 0 and 1,

@@ -126,11 +126,6 @@ class GeodesicR2():
             else:
                 geodesic_file.attrs["dt"] = self.dt
 
-    # def plot(self, x_min, x_max, y_min, y_max):
-    #     """Quick visualisation of distance map."""
-    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
-    #     fig.colorbar(cbar, ax=ax);
-
     def print(self):
         """Print attributes."""
         print(f"scales => {self.scales}")
@@ -145,7 +140,7 @@ class GeodesicR2():
         print(f"target_point => {self.target_point}")
         print(f"dt => {self.dt}")
 
-def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min, y_min, dxy, G_np=None, dt=None, β=0.,
+def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min, y_min, dxy, G_np=None, dt=1., β=0.,
                            n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
@@ -281,7 +276,7 @@ def geodesic_back_tracking_backend(
         gradient_at_point_next = vectorfield_bilinear_interpolate(grad_W, point_array, G, cost)
         # Take weighted average with previous gradients for momentum.
         gradient_at_point = β * gradient_at_point + (1 - β) * gradient_at_point_next
-        new_point = get_next_point(point, gradient_at_point, dt)
+        new_point = get_next_point(point, gradient_at_point, dxy, dt)
         γ[n] = new_point
         point = new_point
         # To get the gradient, we need the corresponding array indices.
@@ -294,6 +289,7 @@ def geodesic_back_tracking_backend(
 def get_next_point(
     point: ti.types.vector(n=2, dtype=ti.f32),
     gradient_at_point: ti.types.vector(n=2, dtype=ti.f32),
+    dxy: ti.f32,
     dt: ti.f32
 ) -> ti.types.vector(n=2, dtype=ti.f32):
     """
@@ -312,9 +308,28 @@ def get_next_point(
         Next point in the gradient descent.
     """
     new_point = ti.Vector([0., 0.], dt=ti.f32)
-    new_point[0] = point[0] - dt * gradient_at_point[0]
-    new_point[1] = point[1] - dt * gradient_at_point[1]
+    gradient_norm_l2 = norm_l2(gradient_at_point, dxy)
+    new_point[0] = point[0] - dt * gradient_at_point[0] / gradient_norm_l2
+    new_point[1] = point[1] - dt * gradient_at_point[1] / gradient_norm_l2
     return new_point
+
+@ti.func
+def norm_l2(
+    vec: ti.types.vector(2, ti.f32),
+    dxy: ti.f32
+) -> ti.f32:
+    """
+    @taichi.func
+
+    Compute the Euclidean norm of `vec` represented in the standard basis.
+
+    Args:
+        `vec`: ti.types.vector(n=2, dtype=[float]) which we want to normalise.
+
+    Returns:
+        Norm of `vec`.
+    """
+    return ti.math.sqrt(vec[0]**2 + vec[1]**2) / dxy
 
 @ti.func
 def distance_in_pixels(

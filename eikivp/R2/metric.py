@@ -21,10 +21,9 @@ def invert_metric(G):
 
     Args:
         `G`: np.ndarray(shape=(2,), dtype=[float]) of constants of the diagonal
-          metric tensor with respect to standard basis. Defaults to standard
-          Euclidean metric.
+          metric tensor with respect to standard basis.
     """
-    G_inv = 1 / G
+    G_inv = 1. / G
     return G_inv
 
 # Normalisation
@@ -73,8 +72,7 @@ def norm(
     Returns:
         Norm of `vec`.
     """
-    c_1, c_2 = vec[0], vec[1]
     return ti.math.sqrt(
-            G[0] * c_1**2 +
-            G[1] * c_2**2
+            G[0] * vec[0]**2 +
+            G[1] * vec[1]**2
     ) * cost
