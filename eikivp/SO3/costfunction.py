@@ -3,10 +3,8 @@
     ============
 
     Compute the cost function on SO(3) by interpolating the cost function on
-    SE(2).
-    In particular, provides the following classes:
-      1. `CostR2`, which can compute the cost function from a vesselness on R^2
-      and store it with its parameters.
+    SE(2). In particular, provides the `CostSO3` class, which can compute the
+    cost function from a cost function on SE(2) and store it with its parameters.
 """
 
 import numpy as np
@@ -38,9 +36,6 @@ class CostSO3(CostSE2):
     def __init__(self, V, λ, p, αs, βs, φs, a, c, x_min, y_min, θ_min, dxy, dθ):
         super().__init__(V, λ, p)
         # Cost function on SE(2).
-        # CSE2_unaligned = self.C
-        # # Rotate to align A_1 at origin with B_1.
-        # CSE2 = np.flip(CSE2_unaligned, axis=0).swapaxes(1, 0)
         CSE2 = self.C
         # Interpolate SE(2) cost function.
         shape = CSE2.shape

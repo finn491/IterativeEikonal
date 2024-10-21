@@ -36,8 +36,8 @@ def vectorfield_trilinear_interpolate_LI(
     @taichi.func
 
     Interpolate vector field, normalised to 1 and given in the left invariant
-    frame, `vectorfield` at continuous `index` trilinearly, via repeated 
-    linear interpolation (x, y, θ).
+    frame, `vectorfield` at continuous `index` trilinearly, via repeated linear
+    interpolation (x, y, θ).
 
     Args:
         `vectorfield`: ti.Vector.field(n=3, dtype=[float]) in which we want to 

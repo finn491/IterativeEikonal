@@ -276,15 +276,15 @@ def vectorfield_LI_to_static(
     """
     @taichi.func
 
-    Change the coordinates of the vectorfield represented by `vectorfield_LI`
-    from the left invariant to the static frame.
+    Compute the components in the static frame of the vectorfield represented in
+    the left invariant frame by `vectorfield_LI`.
 
     Args:
       Static:
         `vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in LI
           coordinates.
         `αs`: α-coordinate at each grid point.
-        `φs`: angle coordinate at each grid point.
+        `φs`: φ-coordinate at each grid point.
       Mutated:
         vectorfield_static`: ti.Vector.field(n=3, dtype=[float]) represented in
           static coordinates.
@@ -302,26 +302,22 @@ def vector_LI_to_static(
     @taichi.func
 
     Change the coordinates of the vector represented by `vector_LI` from the 
-    left invariant to the static frame, given that the angle coordinate of the 
-    point on the manifold corresponding to this vector is φ.
+    left invariant to the static frame, given that the coordinates of the 
+    point on the manifold corresponding to this vector are (α, ., φ).
 
     Args:
       Static:
         `vector_LI`: ti.Vector(n=3, dtype=[float]) represented in LI
         coordinates.
         `α`: α-coordinate of corresponding point on the manifold.
-        `φ`: angle coordinate of corresponding point on the manifold.
+        `φ`: φ-coordinate of corresponding point on the manifold.
     """
-    # Find coordinates w.r.t. static frame by plugging vector into corresponding
-    # dual basis vectors.
-
-    # B1 = [cos(φ),sin(φ)/cos(α),sin(φ)tan(α)]
-    # B2 = [-sin(φ),cos(φ)/cos(α),cos(φ)tan(α)]
-    # B3 = [0,0,1]
-
-    # ν1 = [cos(φ),sin(φ)cos(α),0]
-    # ν2 = [-sin(φ),cos(φ)cos(α),0]
-    # ν3 = [0,-sin(α),1]
+    # B1 = [cos(φ),sin(φ)/cos(α),sin(φ)tan(α)],
+    # B2 = [-sin(φ),cos(φ)/cos(α),cos(φ)tan(α)],
+    # B3 = [0,0,1], whence
+    # ν1 = [cos(φ),sin(φ)cos(α),0],
+    # ν2 = [-sin(φ),cos(φ)cos(α),0],
+    # ν3 = [0,-sin(α),1].
 
     cosα = ti.math.cos(α)
     tanα = ti.math.tan(α)
@@ -344,15 +340,15 @@ def vectorfield_static_to_LI(
     """
     @taichi.func
 
-    Change the coordinates of the vectorfield represented by 
-    `vectorfield_static` from the static to the left invariant frame.
+    Compute the components in the left invariant frame of the vectorfield
+    represented in the static frame by `vectorfield_LI`.
 
     Args:
       Static:
         `vectorfield_static`: ti.Vector.field(n=3, dtype=[float]) represented in
           static coordinates.
         `αs`: α-coordinate at each grid point.
-        `φs`: angle coordinate at each grid point.
+        `φs`: φ-coordinate at each grid point.
       Mutated:
         vectorfield_LI`: ti.Vector.field(n=3, dtype=[float]) represented in
           LI coordinates.
@@ -369,27 +365,20 @@ def vector_static_to_LI(
     """
     @taichi.func
 
-    Change the coordinates of the vector represented by `vector_static` from the 
-    left invariant to the static frame, given that the angle coordinate of the 
-    point on the manifold corresponding to this vector is θ.
+    Compute the components in the left invariant frame of the vector represented
+    in the static frame by `vector_static`, given that the coordinates of the 
+    point on the manifold corresponding to this vector are (α, ., φ).
 
     Args:
       Static:
         `vector_static`: ti.Vector(n=3, dtype=[float]) represented in static
         coordinates.
         `α`: α-coordinate of corresponding point on the manifold.
-        `φ`: angle coordinate of corresponding point on the manifold.
+        `φ`: φ-coordinate of corresponding point on the manifold.
     """
-    # Find coordinates w.r.t. left invariant frame by plugging vector into
-    # corresponding dual basis vectors.
-
-    # B1 = [cos(φ),sin(φ)/cos(α),sin(φ)tan(α)]
-    # B2 = [-sin(φ),cos(φ)/cos(α),cos(φ)tan(α)]
-    # B3 = [0,0,1]
-
-    # ν1 = [cos(φ),sin(φ)cos(α),0]
-    # ν2 = [-sin(φ),cos(φ)cos(α),0]
-    # ν3 = [0,-sin(α),1]
+    # B1 = [cos(φ),sin(φ)/cos(α),sin(φ)tan(α)],
+    # B2 = [-sin(φ),cos(φ)/cos(α),cos(φ)tan(α)],
+    # B3 = [0,0,1].
 
     cosα = ti.math.cos(α)
     sinα = ti.math.sin(α)
@@ -808,164 +797,3 @@ def Π_forward(
     )
 
     return ti.Vector([x, y, θ], dt=ti.f32)
-
-# For the backward map which we don't need for interpolation.
-@ti.func
-def Π_backward(
-    x: ti.f32,
-    y: ti.f32,
-    θ: ti.f32,
-    a: ti.f32,
-    c: ti.f32
-) -> ti.types.vector(3, ti.f32):
-    """
-    @taichi.func
-    
-    Map coordinates in SE(2) into SO(3), by projecting down from the sphere onto
-    a plane.
-    
-    Args:
-        `x`: x-coordinate.
-        `y`: y-coordinate.
-        `θ`: θ-coordinate.
-        `a`: Distance between nodal point of projection and centre of sphere.
-        `c`: Distance between projection plane and centre of sphere reflected
-          around nodal point.
-
-    Returns:
-        ti.types.vector(n=3, dtype=[float]) of coordinates in SO(3).
-    """
-    # π_forward: R2 -> S2
-    p1 = p_1(x, y, a, c)
-    poverline = p_overline(x, y, a, c)
-
-    α = ti.math.asin(x * poverline)
-    β = ti.math.atan2(y * poverline, p1)
-
-    # Partial derivatives, up to proportionality constant
-    # (a + c) / (a + cosα * cosβ)**2, which does not influence the angle
-    dπ_forward_x_dα = a * cosα + cosβ
-    dπ_forward_x_dβ = cosα * sinα * sinβ
-    dπ_forward_y_dα = -a * sinα * sinβ
-    dπ_forward_y_dβ = a * cosα * cosβ + cosα**2
-    
-    # Combine into Π_forward: SO(3) -> SE(2)
-    cosφ = ti.math.cos(φ)
-    sinφ = ti.math.sin(φ)
-
-    dα = cosφ
-    dβ = sinφ / cosα
-
-    θ = ti.math.atan2( # y, x
-        dπ_forward_y_dα * dα + dπ_forward_y_dβ * dβ,
-        dπ_forward_x_dα * dα + dπ_forward_x_dβ * dβ
-    )
-
-    return ti.Vector([x, y, θ], dt=ti.f32)
-
-# @ti.func
-# def π_backward(
-#     x: ti.f32,
-#     y: ti.f32,
-#     a: ti.f32,
-#     c: ti.f32
-# ) -> ti.types.vector(2, ti.f32):
-#     """
-#     @taichi.func
-    
-#     Map coordinates in R^2 into S^2.
-    
-#     Args:
-#         `x`: x-coordinate.
-#         `y`: y-coordinate.
-#         `a`: Distance between nodal point of projection and centre of sphere.
-#         `c`: Distance between projection plane and centre of sphere reflected
-#           around nodal point.
-
-#     Returns:
-#         ti.types.vector(n=2, dtype=[float]) of coordinates in S^2.
-#     """
-#     p1 = p_1(x, y, a, c)
-#     poverline = p_overline(x, y, a, c)
-
-#     α = ti.math.asin(x * poverline)
-#     β = ti.math.atan2(y * poverline, p1)
-
-#     return ti.Vector([α, β], dt=ti.f32)
-
-@ti.func
-def p_overline(
-    x: ti.f32,
-    y: ti.f32,
-    a: ti.f32,
-    c: ti.f32
-) -> ti.f32:
-    """"""
-    return (
-        a * (a + c) * ti.math.sqrt((x**2 + y**2) * (1 - a**2) + (a + c)**2) / 
-        ((x**2 + y**2) + (a + c)**2)
-    )
-
-@ti.func
-def p_1(
-    x: ti.f32,
-    y: ti.f32,
-    a: ti.f32,
-    c: ti.f32
-) -> ti.f32:
-    """"""
-    return (
-        ((a + c) * ti.math.sqrt((x**2 + y**2) * (1 - a**2) + (a + c)**2) - a * (x**2 + y**2)) /
-        ((x**2 + y**2) + (a + c)**2)
-    )
-
-# 😢
-@ti.func
-def dπ_backward1_dx(
-    x: ti.f32,
-    y: ti.f32,
-    a: ti.f32,
-    c: ti.f32
-) -> ti.f32:
-    """"""
-    t1 = 1 - a**2
-    t2 = a + c
-    t3 = x**2 + y**2
-    t4 = t2**2 + t3
-    t5 = ti.math.sqrt(t2**2 + t1 * t3)
-    return (
-        (
-            (t1 * x**2 * t4) / t5 +
-            (t4 - 2 * x**2) * (a * t2 + t5)
-        ) /
-        (
-            t4 * ti.math.sqrt(
-                t4**2 - x**2 * (a * t2 + t5)
-            )
-        )
-    )
-
-@ti.func
-def dπ_backward2_dx(
-    x: ti.f32,
-    y: ti.f32,
-    a: ti.f32,
-    c: ti.f32
-) -> ti.f32:
-    """"""
-    t1 = (1 - a**2)
-    t2 = a + c
-    t3 = x**2 + y**2
-    t4 = t2**2 + t3
-    t5 = ti.math.sqrt(t2 + t1 * t3)
-    return (
-        (
-            (t1 * x**2 * t4) / t5 +
-            (t4 - 2 * x**2) * (a * t2 + t5)
-        ) /
-        (
-            t4 * ti.math.sqrt(
-                t4**2 - x**2 * (a * t2 + t5)
-            )
-        )
-    )

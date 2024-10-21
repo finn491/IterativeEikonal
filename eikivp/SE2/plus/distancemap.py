@@ -5,7 +5,7 @@
     Provides methods to compute the distance map on SE(2) with respect to
     various metrics, by solving the Eikonal PDE using the iterative Initial
     Value Problem (IVP) technique described by Bekkers et al.[1] In particular,
-    provides the class `GeodesicSE2Plus`, which can compute the distance map and
+    provides the class `DistanceSE2Plus`, which can compute the distance map and
     its gradient, and store them with their parameters.
     
     The primary methods

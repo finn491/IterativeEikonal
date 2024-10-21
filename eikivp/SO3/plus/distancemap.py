@@ -4,7 +4,11 @@
 
     Provides methods to compute the distance map on SO(3) with respect to various
     metrics, by solving the Eikonal PDE using the iterative Initial Value 
-    Problem (IVP) technique described by Bekkers et al.[1] The primary methods
+    Problem (IVP) technique described by Bekkers et al.[1] In particular,
+    provides the class `DistanceSO3Plus`, which can compute the distance map and
+    its gradient, and store them with their parameters.
+    
+    The primary methods
     are:
       1. `eikonal_solver`: solve the Eikonal PDE with respect to some
       data-driven left invariant plus controller, defined by a stiffness 
@@ -232,11 +236,6 @@ class DistanceSO3Plus():
                 distance_file.attrs["target_point"] = "default"
             else:
                 distance_file.attrs["target_point"] = self.target_point
-
-    # def plot(self, x_min, x_max, y_min, y_max):
-    #     """Quick visualisation of distance map."""
-    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
-    #     fig.colorbar(cbar, ax=ax);
 
     def print(self):
         """Print attributes."""

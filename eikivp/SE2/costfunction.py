@@ -2,9 +2,9 @@
     costfunction
     ============
 
-    Compute the cost function from the SE(2)-vesselness.
-    In particular, provides the `CostSE2` class, which can compute the cost
-    function from a vesselness on SE(2) and store it with its parameters.
+    Compute the cost function from the SE(2)-vesselness. In particular, provides
+    the `CostSE2` class, which can compute the cost function from a vesselness
+    on SE(2) and store it with its parameters.
 """
 
 from eikivp.utils import cost_function

@@ -5,7 +5,11 @@
     Provides methods to compute the distance map on SO(3) with respect to a
     data-driven left invariant Riemannian metric, by solving the Eikonal PDE
     using the iterative Initial Value Problem (IVP) technique described by
-    Bekkers et al.[1] The primary methods are:
+    Bekkers et al.[1] In particular, provides the class `DistanceSO3Riemannian`,
+    which can compute the distance map and its gradient, and store them with
+    their parameters.
+    
+    The primary methods are:
       1. `eikonal_solver`: solve the Eikonal PDE with respect to some 
       data-driven left invariant Riemannian metric, defined by the diagonal
       components of the underlying left invariant metric, with respect to the
@@ -216,11 +220,6 @@ class DistanceSO3Riemannian():
                 distance_file.attrs["target_point"] = "default"
             else:
                 distance_file.attrs["target_point"] = self.target_point
-
-    # def plot(self, x_min, x_max, y_min, y_max):
-    #     """Quick visualisation of distance map."""
-    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
-    #     fig.colorbar(cbar, ax=ax);
 
     def print(self):
         """Print attributes."""

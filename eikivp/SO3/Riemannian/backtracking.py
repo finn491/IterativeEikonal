@@ -3,7 +3,11 @@
     ============
 
     Provides methods to compute the geodesic, with respect to some distance map,
-    connecting two points in SO(3). The primary method is:
+    connecting two points in SO(3). In particular, provides the class
+    `GeodesicSO3Riemannian`, which can compute the geodesic and store it with
+    its parameters.
+    
+    The primary method is:
       1. `geodesic_back_tracking`: compute the geodesic using gradient descent.
       The gradient must be provided; it is computed along with the distance map
       by the corresponding methods in the distancemap module.
@@ -31,8 +35,7 @@ class GeodesicSO3Riemannian():
     Compute the geodesic of a Riemannian distance map on SO(3).
 
     Attributes:
-        `W`: np.ndarray of distance function data.
-        `grad_W`: np.ndarray of gradient of distance function data.
+        `γ_path`: np.ndarray of path of geodesic.
         `σ_s_list`: standard deviations in pixels of the internal regularisation
           in the spatial directions before taking derivatives.
         `σ_o`: standard deviation in pixels of the internal regularisation
@@ -137,11 +140,6 @@ class GeodesicSO3Riemannian():
             else:
                 geodesic_file.attrs["dt"] = self.dt
 
-    # def plot(self, x_min, x_max, y_min, y_max):
-    #     """Quick visualisation of distance map."""
-    #     fig, ax, cbar = plot_image_array(-self.V, x_min, x_max, y_min, y_max)
-    #     fig.colorbar(cbar, ax=ax);
-
     def print(self):
         """Print attributes."""
         print(f"σ_s_list => {self.σ_s_list}")
@@ -202,9 +200,6 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, α_mi
     # Set hyperparameters
     shape = grad_W_np.shape[0:-1]
     G = ti.Vector(G_np, ti.f32)
-    # if dt is None:
-    #     # It would make sense to also include G somehow, but I am not sure how.
-    #     dt = cost_np[target_point] * min(dα, dβ, dφ) # Step roughly 1 pixel at a time.
 
     # Initialise Taichi objects
     grad_W = ti.Vector.field(n=3, dtype=ti.f32, shape=shape)
