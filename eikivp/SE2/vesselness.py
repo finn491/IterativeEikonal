@@ -19,10 +19,8 @@
       the y-direction.
       3. `convolve_with_kernel_θ_dir`: convolve a field with a 1D kernel along
       the θ-direction.
-      4. `gaussian_derivative_kernel`: computes 1D Gaussian derivative kernels
-      of order 0 and 1, using an algorithm that improves the accuracy of higher
-      order derivative kernels with small widths, based on the DIPlib[2]
-      algorithm MakeHalfGaussian: https://github.com/DIPlib/diplib/blob/a6f825a69109ae388c5f0c14e76cdb2505da4594/src/linear/gauss.cpp#L95.
+      4. `gaussian_kernel`: computes 1D Gaussian kernels using an algorithm
+      based on the DIPlib[2] algorithm MakeHalfGaussian: https://github.com/DIPlib/diplib/blob/a6f825a69109ae388c5f0c14e76cdb2505da4594/src/linear/gauss.cpp#L95.
     We use that the spatially isotropic diffusion equation on SE(2) can be
     solved by convolving in the x-, y-, and θ-direction with some 1D kernel. For
     the x- and y-directions, this kernel is a Gaussian; for the θ-direction the
