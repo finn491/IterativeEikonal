@@ -135,6 +135,20 @@ def get_boundary_conditions(source_point):
     boundaryvalues.from_numpy(boundaryvalues_np)
     return boundarypoints, boundaryvalues
 
+def get_boundary_conditions_multi_source(source_points):
+    """
+    Determine the boundary conditions from `source_points`, giving the boundary
+    points and boundary values as TaiChi objects.
+    """
+    N_points = len(source_points)
+    boundarypoints_np = np.array([[i_0 + 1, j_0 + 1, k_0] for (i_0, j_0, k_0) in source_points], dtype=int) # Account for padding.
+    boundaryvalues_np = np.array([0.] * N_points, dtype=float)
+    boundarypoints = ti.Vector.field(n=3, dtype=ti.i32, shape=N_points)
+    boundarypoints.from_numpy(boundarypoints_np)
+    boundaryvalues = ti.field(shape=N_points, dtype=ti.f32)
+    boundaryvalues.from_numpy(boundaryvalues_np)
+    return boundarypoints, boundaryvalues
+
 @ti.kernel
 def field_abs_max(
     scalar_field: ti.template()
@@ -170,6 +184,21 @@ def check_convergence(dW_dt, source_point, tol=1e-3, target_point=None):
     is_converged = error < tol
     return is_converged
 
+def check_convergence_multi_source(dW_dt, source_points, tol=1e-3, target_point=None):
+    """
+    Check whether the IVP method has converged by comparing the Hamiltonian
+    `dW_dt` to tolerance `tol`. If `target_point` is provided, only check
+    convergence at `target_point`; otherwise check throughout the domain.
+    """
+    if target_point is None:
+        for i_0, j_0, k_0 in source_points:
+            dW_dt[i_0+1, j_0+1, k_0] = 0. # Source is fixed.
+        error = field_abs_max(dW_dt)
+    else:
+        error = ti.abs(dW_dt[target_point])
+    print(error)
+    is_converged = error < tol
+    return is_converged
 
 # Backtracking
 
