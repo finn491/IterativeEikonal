@@ -36,14 +36,20 @@ from eikivp.R2.backtracking import geodesic_back_tracking as geodesic_back_track
 ### Riemannian
 from eikivp.SE2.Riemannian.distancemap import eikonal_solver as eikonal_solver_SE2_Riemannian
 from eikivp.SE2.Riemannian.distancemap import eikonal_solver_uniform as eikonal_solver_SE2_Riemannian_uniform
+from eikivp.SE2.Riemannian.distancemap import eikonal_solver_multi_source as eikonal_solver_multi_source_SE2_Riemannian
+from eikivp.SE2.Riemannian.distancemap import eikonal_solver_multi_source_uniform as eikonal_solver_multi_source_SE2_Riemannian_uniform
 from eikivp.SE2.Riemannian.backtracking import geodesic_back_tracking as geodesic_back_tracking_SE2_Riemannian
 ### Sub-Riemannian
 from eikivp.SE2.subRiemannian.distancemap import eikonal_solver as eikonal_solver_SE2_sub_Riemannian
 from eikivp.SE2.subRiemannian.distancemap import eikonal_solver_uniform as eikonal_solver_SE2_sub_Riemannian_uniform
+from eikivp.SE2.subRiemannian.distancemap import eikonal_solver_multi_source as eikonal_solver_multi_source_SE2_sub_Riemannian
+from eikivp.SE2.subRiemannian.distancemap import eikonal_solver_multi_source_uniform as eikonal_solver_multi_source_SE2_sub_Riemannian_uniform
 from eikivp.SE2.subRiemannian.backtracking import geodesic_back_tracking as geodesic_back_tracking_SE2_sub_Riemannian
 ### Plus controller
 from eikivp.SE2.plus.distancemap import eikonal_solver as eikonal_solver_SE2_plus
 from eikivp.SE2.plus.distancemap import eikonal_solver_uniform as eikonal_solver_SE2_plus_uniform
+from eikivp.SE2.plus.distancemap import eikonal_solver_multi_source as eikonal_solver_multi_source_SE2_plus
+from eikivp.SE2.plus.distancemap import eikonal_solver_multi_source_uniform as eikonal_solver_multi_source_SE2_plus_uniform
 from eikivp.SE2.plus.backtracking import geodesic_back_tracking as geodesic_back_tracking_SE2_plus
 ### Single top level function to select any controller
 def eikonal_solver_SE2(cost, source_point, dxy, dθ, θs, controller="sub-Riemannian", G=None, ξ=None, plus_softness=0.,
