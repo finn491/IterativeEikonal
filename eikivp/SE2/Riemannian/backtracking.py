@@ -436,8 +436,8 @@ def geodesic_back_tracking_multi_source(grad_W_np, source_points, target_point, 
 @ti.kernel
 def geodesic_back_tracking_step(
     grad_W: ti.template(),
-    point: ti.types.vector(3, ti.f32),
     θs: ti.template(),
+    point: ti.types.vector(3, ti.f32),
     G: ti.types.vector(3, ti.f32),
     cost: ti.template(),
     x_min: ti.f32,

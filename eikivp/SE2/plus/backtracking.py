@@ -87,8 +87,8 @@ class GeodesicSE2Plus():
         self.dt = dt
 
     def compute_γ_path(self, W: DistanceSE2Plus, C: CostSE2, x_min, y_min, θ_min, dxy, dθ, θs_np, n_max=2000):
-        self.γ_path = geodesic_back_tracking_multi_source(W.grad_W, self.source_point, self.target_point, C.C, x_min,
-                                                          y_min, θ_min, dxy, dθ, θs_np, self.ξ, dt=self.dt, n_max=n_max)
+        self.γ_path = geodesic_back_tracking(W.grad_W, self.source_point, self.target_point, C.C, x_min, y_min, θ_min,
+                                             dxy, dθ, θs_np, self.ξ, dt=self.dt, n_max=n_max)
 
     def import_γ_path(self, folder):
         """
@@ -210,8 +210,8 @@ class GeodesicMultiSourceSE2Plus():
         self.dt = dt
 
     def compute_γ_path(self, W: DistanceMultiSourceSE2Plus, C: CostSE2, x_min, y_min, θ_min, dxy, dθ, θs_np, n_max=2000):
-        self.γ_path = geodesic_back_tracking(W.grad_W, self.source_points, self.target_point, C.C, x_min, y_min, θ_min,
-                                             dxy, dθ, θs_np, self.ξ, dt=self.dt, n_max=n_max)
+        self.γ_path = geodesic_back_tracking_multi_source(W.grad_W, self.source_points, self.target_point, C.C, x_min,
+                                                          y_min, θ_min, dxy, dθ, θs_np, self.ξ, dt=self.dt, n_max=n_max)
 
     def import_γ_path(self, folder):
         """
