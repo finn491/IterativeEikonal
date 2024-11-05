@@ -25,7 +25,8 @@ from eikivp.SO3.utils import (
     coordinate_array_to_real,
     coordinate_real_to_array_ti,
     vector_LI_to_static,
-    distance_in_pixels
+    distance_in_pixels,
+    distance_in_pixels_multi_source
 )
 from eikivp.SO3.costfunction import CostSO3
 from eikivp.SO3.subRiemannian.distancemap import DistanceSO3SubRiemannian
@@ -230,6 +231,89 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, α_mi
     print(f"Geodesic consists of {γ_len} points.")
     γ_np = γ.to_numpy()[:γ_len]
     γ_np[-1] = source_point
+    return γ_np
+
+def geodesic_back_tracking_multi_source(grad_W_np, source_points, target_point, cost_np, α_min, β_min, φ_min, dα, dβ,
+                                        dφ, αs_np, φs_np, ξ, dt=1., n_max=10000):
+    """
+    Find the geodesic connecting `target_point` to `source_point`, using 
+    gradient descent back tracking, as described by Bekkers et al.[1]
+
+    Args:
+        `grad_W_np`: np.ndarray of upwind gradient with respect to some cost of 
+          the approximate distance map, with shape [Nα, Nβ, Nφ, 3].
+        `source_points`: Tuple[Tuple[int]] describing index of source point in
+          `W_np`.
+        `target_point`: Tuple[int] describing index of target point in `W_np`.
+        `cost_np`: np.ndarray of cost function throughout domain, taking values
+          between 0 and 1, with shape [Nα, Nβ, Nφ].
+        `α_min`: minimum value of α-coordinates in rectangular domain.
+        `β_min`: minimum value of β-coordinates in rectangular domain.
+        `φ_min`: minimum value of φ-coordinates in rectangular domain.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
+        `dφ`: orientational resolution, taking values greater than 0.
+        `αs_np`: α-coordinate at every point in the grid on which `cost_np` is
+          sampled.
+        `φs_np`: Orientation coordinate at every point in the grid on which
+          `cost_np` is sampled.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
+      Optional:
+        `dt`: Step size, taking values greater than 0. Defaults to 1.
+        `n_max`: Maximum number of points in geodesic, taking positive integral
+          values. Defaults to 10000.
+
+    Returns:
+        np.ndarray of geodesic connecting `target_point` to `source_point`.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
+    """
+    # Set hyperparameters
+    shape = grad_W_np.shape[0:-1]
+
+    # Initialise Taichi objects
+    grad_W = ti.Vector.field(n=3, dtype=ti.f32, shape=shape)
+    grad_W.from_numpy(grad_W_np)
+    cost = ti.field(dtype=ti.f32, shape=shape)
+    cost.from_numpy(cost_np)
+    # We perform backtracking in real coordinates instead of in array indices.
+    source_points_np = np.array(tuple(coordinate_array_to_real(*p, α_min, β_min, φ_min, dα, dβ, dφ) for p in source_points))
+    N_source_points = len(source_points)
+    source_points = ti.Vector.field(n=3, shape=(N_source_points,), dtype=ti.f32)
+    source_points.from_numpy(source_points_np)
+    target_point = coordinate_array_to_real(*target_point, α_min, β_min, φ_min, dα, dβ, dφ)
+    target_point = ti.Vector(target_point, dt=ti.f32)
+    αs = ti.field(dtype=ti.f32, shape=αs_np.shape)
+    αs.from_numpy(αs_np)
+    φs = ti.field(dtype=ti.f32, shape=φs_np.shape)
+    φs.from_numpy(φs_np)
+
+    # Perform backtracking
+    γ = ti.Vector.field(n=3, dtype=ti.f32, shape=n_max)
+    distances = ti.field(dtype=ti.f32, shape=(N_source_points,))
+
+    point = target_point
+    γ[0] = point
+    tol = 2. # Stop if we are within two pixels of the source.
+    n = 1
+    min_distance = ti.math.inf
+    while (min_distance >= tol) and (n < n_max - 1):
+        point = geodesic_back_tracking_step(grad_W, point, αs, φs, ξ, cost, α_min, β_min, φ_min, dα, dβ, dφ, dt)
+        min_distance = distance_in_pixels_multi_source(point, source_points, dα, dβ, dφ)
+        γ[n] = point
+        n += 1
+    γ_len = n
+    print(f"Geodesic consists of {γ_len} points.")
+    γ_np = γ.to_numpy()[:γ_len]
+    distances = distances.to_numpy()
+    γ_np[-1] = source_points_np[np.argmin(distances)]
     return γ_np
 
 @ti.kernel
