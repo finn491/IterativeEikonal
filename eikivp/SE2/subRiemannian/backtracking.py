@@ -231,7 +231,7 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
 def geodesic_back_tracking_step(
     grad_W: ti.template(),
     θs: ti.template(),
-    point: ti.types.vector(2, ti.f32),
+    point: ti.types.vector(3, ti.f32),
     ξ: ti.f32,
     cost: ti.template(),
     x_min: ti.f32,
@@ -240,7 +240,7 @@ def geodesic_back_tracking_step(
     dxy: ti.f32,
     dθ: ti.f32,
     dt: ti.f32
-) -> ti.i32:
+) -> ti.types.vector(3, ti.f32):
     """
     @taichi.kernel
 

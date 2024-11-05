@@ -410,7 +410,7 @@ def distance_in_pixels_multi_source(
     dxy: ti.f32
 ) -> ti.f32:
     """
-    @taichi.func
+    @taichi.kernel
 
     Compute the distance in pixels given the difference in coordinates and the
     pixel size.

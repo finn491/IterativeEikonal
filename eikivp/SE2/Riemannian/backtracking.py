@@ -239,7 +239,7 @@ def geodesic_back_tracking_step(
     dxy: ti.f32,
     dθ: ti.f32,
     dt: ti.f32
-) -> ti.i32:
+) -> ti.types.vector(3, ti.f32):
     """
     @taichi.kernel
 
