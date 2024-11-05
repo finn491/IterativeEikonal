@@ -156,7 +156,7 @@ class GeodesicSE2SubRiemannian():
 # Sub-Riemannian backtracking
 
 def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min, y_min, θ_min, dxy, dθ, θs_np, ξ,
-                           dt=1., β=0., n_max=10000):
+                           dt=1., n_max=10000):
     """
     Find the geodesic connecting `target_point` to `source_point`, using 
     gradient descent back tracking, as described by Bekkers et al.[1]
@@ -180,8 +180,6 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
           direction, taking values greater than 0.
       Optional:
         `dt`: Step size, taking values greater than 0. Defaults to 1.
-        `β`: Momentum parameter in gradient descent, taking values between 0 and 
-          1. Defaults to 0.
         `n_max`: Maximum number of points in geodesic, taking positive integral
           values. Defaults to 10000.
 
@@ -213,7 +211,8 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
     # Perform backtracking
     γ = ti.Vector.field(n=3, dtype=ti.f32, shape=n_max)
 
-    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, θs, ξ, cost, x_min, y_min, θ_min, dxy, dθ, dt, n_max, β, γ)
+    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, θs, ξ, cost, x_min, y_min, θ_min, dxy,
+                                           dθ, dt, n_max, γ)
     print(f"Geodesic consists of {γ_len} points.")
     γ_np = γ.to_numpy()[:γ_len]
     return γ_np
@@ -233,7 +232,6 @@ def geodesic_back_tracking_backend(
     dθ: ti.f32,
     dt: ti.f32,
     n_max: ti.i32,
-    β: ti.f32,
     γ: ti.template()
 ) -> ti.i32:
     """
@@ -264,8 +262,6 @@ def geodesic_back_tracking_backend(
         `dt`: Gradient descent step size, taking values greater than 0.
         `n_max`: Maximum number of points in geodesic, taking positive integral
           values. Defaults to 10000.
-        `β`: *Currently not used* Momentum parameter in gradient descent, taking 
-          values between 0 and 1. Defaults to 0. 
         `*_target`: Indices of the target point.
       Mutated:
         `γ`: ti.Vector.field(n=2, dtype=[float]) of coordinates of points on the
@@ -282,23 +278,14 @@ def geodesic_back_tracking_backend(
     """
     point = target_point
     γ[0] = point
-    # To get the gradient, we need the corresponding array indices.
-    point_array = coordinate_real_to_array_ti(point, x_min, y_min, θ_min, dxy, dθ)
     tol = 2. # Stop if we are within two pixels of the source.
     n = 1
-    # Get gradient using componentwise trilinear interpolation.
-    gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point_array, ξ, cost)
-    θ = scalar_trilinear_interpolate(θs, point_array)
-    # Get gradient with respect to static frame.
-    gradient_at_point = vector_LI_to_static(gradient_at_point_LI, θ)
     while (distance_in_pixels(point - source_point, dxy, dθ) >= tol) and (n < n_max - 1):
         # Get gradient using componentwise trilinear interpolation.
         gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point_array, ξ, cost)
         θ = scalar_trilinear_interpolate(θs, point_array)
         # Get gradient with respect to static frame.
-        gradient_at_point_next = vector_LI_to_static(gradient_at_point_LI, θ)
-        # Take weighted average with previous gradients for momentum.
-        gradient_at_point = β * gradient_at_point + (1 - β) * gradient_at_point_next
+        gradient_at_point = vector_LI_to_static(gradient_at_point_LI, θ)
         new_point = get_next_point(point, gradient_at_point, dxy, dθ, dt)
         γ[n] = new_point
         point = new_point
