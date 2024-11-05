@@ -236,6 +236,189 @@ class DistanceSO3Riemannian():
         print(f"source_point => {self.source_point}")
         print(f"target_point => {self.target_point}")
 
+class DistanceMultiSourceSO3Riemannian():
+    """
+    Solve the Eikonal PDE on SO(3) equipped with a datadriven left invariant
+    Riemannian metric tensor field defined by `G_np` and `cost_np`, with source
+    at `source_points`, using the iterative method described by Bekkers et al.[1]
+
+    Attributes:
+        `W`: np.ndarray of distance function data.
+        `grad_W`: np.ndarray of gradient of distance function data.
+        `σ_s_list`: standard deviations in pixels of the internal regularisation
+          in the spatial directions before taking derivatives.
+        `σ_o`: standard deviation in pixels of the internal regularisation
+          in the orientational direction before taking derivatives.
+        `σ_s_ext`: standard deviation in pixels of the external regularisation
+          in the spatial direction after taking derivatives.
+          Notably, this regularisation is NOT truly external, because it
+          commutes with the derivatives.
+        `σ_o_ext`: standard deviation in pixels of the internal regularisation
+          in the orientational direction after taking derivatives.
+          Notably, this regularisation is NOT truly external, because it
+          commutes with the derivatives.
+        `image_name`: identifier of image used to generate vesselness.
+        `λ`: Vesselness prefactor, taking values greater than 0.
+        `p`: Vesselness exponent, taking values greater than 0.
+        `G`: np.ndarray(shape=(2,), dtype=[float]) of constants of the
+          diagonal metric tensor with respect to standard basis. Defaults to
+          standard Euclidean metric.
+        `source_points`: Tuple[Tuple[int]] describing index of source points.
+        `target_point`: Tuple[int] describing index of target point. Defaults to
+          `None`. If `target_point` is provided, the algorithm will terminate
+          when the Hamiltonian has converged at `target_point`; otherwise it
+          will terminate when the Hamiltonian has converged throughout the
+          domain.
+    
+    References:
+        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+          DOI:10.1137/15M1018460.
+    """
+
+    def __init__(self, C: CostSO3, G, source_points, target_point):
+        # Vesselness attributes
+        self.σ_s_list = C.σ_s_list
+        self.σ_o = C.σ_o
+        self.σ_s_ext = C.σ_s_ext
+        self.σ_o_ext = C.σ_o_ext
+        self.image_name = C.image_name
+        # Cost attributes
+        self.λ = C.λ
+        self.p = C.p
+        # Distance attributes
+        self.G = G
+        self.source_points = source_points
+        self.target_point = target_point
+
+    def compute_W(self, C: CostSO3, dα, dβ, dφ, αs_np, φs_np, n_max=1e5, n_max_initialisation=1e4, n_check=None,
+                  n_check_initialisation=None, tol=1e-3, dε=1., initial_condition=100.):
+        """
+        Solve the Eikonal PDE on SO(3) equipped with a datadriven left invariant
+        Riemannian metric tensor field defined by `G_np` and `cost_np`, with source
+        at `source_points`, using the iterative method described by Bekkers et al.[1]
+
+        Args:
+            `cost_np`: np.ndarray of cost function throughout domain, taking values
+              between 0 and 1, with shape [Nα, Nβ, Nφ].
+            `dα`: spatial resolution in the α-direction, taking values greater than
+              0.
+            `dβ`: spatial resolution in the β-direction, taking values greater than
+              0.
+            `dφ`: step size in orientational direction, taking values greater than
+              0.
+            `αs_np`: α-coordinate at every point in the grid on which `cost_np` is
+              sampled.
+            `φs_np`: Orientation coordinate at every point in the grid on which
+              `cost_np` is sampled.
+          Optional:
+            `target_point`: Tuple[int] describing index of target point in
+              `cost_np`. Defaults to `None`. If `target_point` is provided, the
+              algorithm will terminate when the Hamiltonian has converged at
+              `target_point`; otherwise it will terminate when the Hamiltonian has
+              converged throughout the domain. 
+            `n_max`: Maximum number of iterations, taking positive values. Defaults 
+              to 1e5.
+            `n_max_initialisation`: Maximum number of iterations for the
+              initialisation, taking positive values. Defaults to 1e4.
+            `n_check`: Number of iterations between each convergence check, taking
+              positive values. Should be at most `n_max`. Defaults to `None`; if no
+              `n_check` is passed, convergence is only checked at `n_max`.
+            `n_check_initialisation`: Number of iterations between each convergence
+              check in the initialisation, taking positive values. Should be at most
+              `n_max_initialisation`. Defaults to `None`; if no
+              `n_check_initialisation` is passed, convergence is only checked at
+              `n_max_initialisation`.
+            `tol`: Tolerance for determining convergence of the Hamiltonian, taking
+              positive values. Defaults to 1e-3.
+            `dε`: Multiplier for varying the "time" step size, taking positive
+              values. Defaults to 1.
+            `initial_condition`: Initial value of the approximate distance map.
+              Defaults to 100.
+
+        Returns:
+            np.ndarray of (approximate) distance map with respect to the datadriven
+              left invariant metric tensor field described by `G_np` and `cost_np`.
+            np.ndarray of upwind gradient field of (approximate) distance map.
+        
+        References:
+            [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
+              "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
+              In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
+              DOI:10.1137/15M1018460.
+        """
+        W, grad_W = eikonal_solver_multi_source(C.C, self.source_points, self.G, dα, dβ, dφ, αs_np, φs_np,
+                                                target_point=self.target_point, n_max=n_max,
+                                                n_max_initialisation=n_max_initialisation, n_check=n_check,
+                                                n_check_initialisation=n_check_initialisation, tol=tol, dε=dε,
+                                                initial_condition=initial_condition)
+        self.W = W
+        self.grad_W = grad_W
+
+    def import_W(self, folder):
+        """
+        Import the distance and its gradient matching the attributes `σ_s_list`,
+        `σ_o`, `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `G`,
+        `source_points`, and `target_point`.
+        """
+        distance_filename = f"{folder}\\SO3_R_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}.hdf5"
+        with h5py.File(distance_filename, "r") as distance_file:
+            assert (
+                np.all(self.σ_s_list == distance_file.attrs["σ_s_list"]) and
+                self.σ_o == distance_file.attrs["σ_o"] and
+                self.σ_s_ext == distance_file.attrs["σ_s_ext"] and
+                self.σ_o_ext == distance_file.attrs["σ_o_ext"] and
+                self.image_name == distance_file.attrs["image_name"] and
+                self.λ == distance_file.attrs["λ"] and
+                self.p == distance_file.attrs["p"] and
+                np.all(self.G == distance_file.attrs["G"]) and
+                np.all(self.source_points == distance_file.attrs["source_points"]) and
+                (
+                    np.all(self.target_point == distance_file.attrs["target_point"]) or
+                    distance_file.attrs["target_point"] == "default"
+                )
+            ), "There is a parameter mismatch!"
+            self.W = distance_file["Distance"][()]
+            self.grad_W = distance_file["Gradient"][()]
+            
+    def export_W(self, folder):
+        """
+        Export the distance and its gradient to hdf5 with attributes `σ_s_list`,
+        `σ_o`, `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `ξ`,
+        `source_points`, and `target_point` stored as metadata.
+        """
+        distance_filename = f"{folder}\\SO3_R_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_ext={self.σ_s_ext}_s_o_ext={self.σ_o_ext}_l={self.λ}_p={self.p}_G={[g for g in self.G]}.hdf5"
+        with h5py.File(distance_filename, "w") as distance_file:
+            distance_file.create_dataset("Distance", data=self.W)
+            distance_file.create_dataset("Gradient", data=self.grad_W)
+            distance_file.attrs["σ_s_list"] = self.σ_s_list
+            distance_file.attrs["σ_o"] = self.σ_o
+            distance_file.attrs["σ_s_ext"] = self.σ_s_ext
+            distance_file.attrs["σ_o_ext"] = self.σ_o_ext
+            distance_file.attrs["image_name"] = self.image_name
+            distance_file.attrs["λ"] = self.λ
+            distance_file.attrs["p"] = self.p
+            distance_file.attrs["G"] = self.G
+            distance_file.attrs["source_points"] = self.source_points
+            if self.target_point is None:
+                distance_file.attrs["target_point"] = "default"
+            else:
+                distance_file.attrs["target_point"] = self.target_point
+
+    def print(self):
+        """Print attributes."""
+        print(f"σ_s_list => {self.σ_s_list}")
+        print(f"σ_o => {self.σ_o}")
+        print(f"σ_s_ext => {self.σ_s_ext}")
+        print(f"σ_o_ext => {self.σ_o_ext}")
+        print(f"image_name => {self.image_name}")
+        print(f"λ => {self.λ}")
+        print(f"p => {self.p}")
+        print(f"ξ => {self.ξ}")
+        print(f"source points => {self.source_points}")
+        print(f"target point => {self.target_point}")
+
 # Data-driven left invariant
 
 def eikonal_solver(cost_np, source_point, G_np, dα, dβ, dφ, αs_np, φs_np, target_point=None, n_max=1e5,

@@ -29,7 +29,10 @@ from eikivp.SE2.utils import (
     distance_in_pixels_multi_source
 )
 from eikivp.SE2.costfunction import CostSE2
-from eikivp.SE2.plus.distancemap import DistanceSE2Plus
+from eikivp.SE2.plus.distancemap import (
+    DistanceSE2Plus,
+    DistanceMultiSourceSE2Plus
+)
 
 class GeodesicSE2Plus():
     """
@@ -84,8 +87,8 @@ class GeodesicSE2Plus():
         self.dt = dt
 
     def compute_γ_path(self, W: DistanceSE2Plus, C: CostSE2, x_min, y_min, θ_min, dxy, dθ, θs_np, n_max=2000):
-        self.γ_path = geodesic_back_tracking(W.grad_W, self.source_point, self.target_point, C.C, x_min, y_min, θ_min,
-                                             dxy, dθ, θs_np, self.ξ, dt=self.dt, n_max=n_max)
+        self.γ_path = geodesic_back_tracking_multi_source(W.grad_W, self.source_point, self.target_point, C.C, x_min,
+                                                          y_min, θ_min, dxy, dθ, θs_np, self.ξ, dt=self.dt, n_max=n_max)
 
     def import_γ_path(self, folder):
         """
@@ -152,6 +155,129 @@ class GeodesicSE2Plus():
         print(f"ξ => {self.ξ}")
         print(f"source_point => {self.source_point}")
         print(f"target_point => {self.target_point}")
+        print(f"dt => {self.dt}")
+
+class GeodesicMultiSourceSE2Plus():
+    """
+    Compute the geodesic of a plus controller distance map on SE(2).
+
+    Attributes:
+        `γ_path`: np.ndarray of path of geodesic.
+        `σ_s_list`: standard deviations in pixels of the internal regularisation
+          in the spatial directions before taking derivatives.
+        `σ_o`: standard deviation in pixels of the internal regularisation
+          in the orientational direction before taking derivatives.
+        `σ_s_ext`: standard deviation in pixels of the external regularisation
+          in the spatial direction after taking derivatives.
+          Notably, this regularisation is NOT truly external, because it
+          commutes with the derivatives.
+        `σ_o_ext`: standard deviation in pixels of the internal regularisation
+          in the orientational direction after taking derivatives.
+          Notably, this regularisation is NOT truly external, because it
+          commutes with the derivatives.
+        `image_name`: identifier of image used to generate vesselness.
+        `λ`: Vesselness prefactor, taking values greater than 0.
+        `p`: Vesselness exponent, taking values greater than 0.
+        `ξ`: Stiffness of moving in the A1 direction compared to the A3
+          direction, taking values greater than 0.
+        `source_points`: Tuple[Tuple[int]] describing index of source points.
+        `target_point`: Tuple[int] describing index of target point. Defaults to
+          `None`. If `target_point` is provided, the algorithm will terminate
+          when the Hamiltonian has converged at `target_point`; otherwise it
+          will terminate when the Hamiltonian has converged throughout the
+          domain.
+        `dt`: Step size, taking values greater than 0. Defaults to the minimum
+          of the cost function.
+    """
+
+    def __init__(self, W: DistanceMultiSourceSE2Plus, target_point=None, dt=1.):
+        # Vesselness attributes
+        self.σ_s_list = W.σ_s_list
+        self.σ_o = W.σ_o
+        self.σ_s_ext = W.σ_s_ext
+        self.σ_o_ext = W.σ_o_ext
+        self.image_name = W.image_name
+        # Cost attributes
+        self.λ = W.λ
+        self.p = W.p
+        # Distance attributes
+        self.ξ = W.ξ
+        self.source_points = W.source_points
+        self.target_point = W.target_point
+        if target_point is not None:
+            self.target_point = target_point
+        # Geodesic attributes
+        self.dt = dt
+
+    def compute_γ_path(self, W: DistanceMultiSourceSE2Plus, C: CostSE2, x_min, y_min, θ_min, dxy, dθ, θs_np, n_max=2000):
+        self.γ_path = geodesic_back_tracking(W.grad_W, self.source_points, self.target_point, C.C, x_min, y_min, θ_min,
+                                             dxy, dθ, θs_np, self.ξ, dt=self.dt, n_max=n_max)
+
+    def import_γ_path(self, folder):
+        """
+        Import the geodesic matching the attributes `σ_s_list`, `σ_o`,
+        `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `ξ`, `source_points`, and
+        `target_point`.
+        """
+        geodesic_filename = f"{folder}\\SE2_p_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_e={self.σ_s_ext}_s_o_e={self.σ_o_ext}_l={self.λ}_p={self.p}_x={self.ξ}_t={self.target_point}.hdf5"
+        with h5py.File(geodesic_filename, "r") as geodesic_file:
+            assert (
+                np.all(self.σ_s_list == geodesic_filename.attrs["σ_s_list"]) and
+                self.σ_o == geodesic_filename.attrs["σ_o"] and
+                self.σ_s_ext == geodesic_filename.attrs["σ_s_ext"] and
+                self.σ_o_ext == geodesic_filename.attrs["σ_o_ext"] and
+                self.image_name == geodesic_file.attrs["image_name"] and
+                self.λ == geodesic_file.attrs["λ"] and
+                self.p == geodesic_file.attrs["p"] and
+                self.ξ == geodesic_file.attrs["ξ"] and
+                np.all(self.source_points == geodesic_file.attrs["source_points"]) and
+                np.all(self.target_point == geodesic_file.attrs["target_point"]) and
+                (
+                    self.dt == geodesic_file.attrs["dt"] or
+                    geodesic_file.attrs["dt"] == "default"
+                )              
+            ), "There is a parameter mismatch!"
+            self.γ_path = geodesic_file["Geodesic"][()]
+            
+    def export_γ_path(self, folder):
+        """
+        Export the geodesic to hdf5 with attributes `σ_s_list`, `σ_o`,
+        `σ_s_ext`, `σ_o_ext`, `image_name`, `λ`, `p`, `ξ`, `source_points`, and
+        `target_point``.
+        """
+        geodesic_filename = f"{folder}\\SE2_p_ss_s={[s for s in self.σ_s_list]}_s_o={self.σ_o}_s_s_e={self.σ_s_ext}_s_o_e={self.σ_o_ext}_l={self.λ}_p={self.p}_x={self.ξ}_t={self.target_point}.hdf5"
+        with h5py.File(geodesic_filename, "w") as geodesic_file:
+            geodesic_file.create_dataset("Geodesic", data=self.γ_path)
+            geodesic_file.attrs["σ_s_list"] = self.σ_s_list
+            geodesic_file.attrs["σ_o"] = self.σ_o
+            geodesic_file.attrs["σ_s_ext"] = self.σ_s_ext
+            geodesic_file.attrs["σ_o_ext"] = self.σ_o_ext
+            geodesic_file.attrs["image_name"] = self.image_name
+            geodesic_file.attrs["λ"] = self.λ
+            geodesic_file.attrs["p"] = self.p
+            geodesic_file.attrs["ξ"] = self.ξ
+            geodesic_file.attrs["source_points"] = self.source_points
+            if self.target_point is None:
+                geodesic_file.attrs["target_point"] = "default"
+            else:
+                geodesic_file.attrs["target_point"] = self.target_point
+            if self.dt is None:
+                geodesic_file.attrs["dt"] = "default"
+            else:
+                geodesic_file.attrs["dt"] = self.dt
+
+    def print(self):
+        """Print attributes."""
+        print(f"σ_s_list => {self.σ_s_list}")
+        print(f"σ_o => {self.σ_o}")
+        print(f"σ_s_ext => {self.σ_s_ext}")
+        print(f"σ_o_ext => {self.σ_o_ext}")
+        print(f"image_name => {self.image_name}")
+        print(f"λ => {self.λ}")
+        print(f"p => {self.p}")
+        print(f"ξ => {self.ξ}")
+        print(f"source points => {self.source_points}")
+        print(f"target point => {self.target_point}")
         print(f"dt => {self.dt}")
 
 def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min, y_min, θ_min, dxy, dθ, θs_np, ξ,
