@@ -257,7 +257,7 @@ def norm_l2(
             (vec[2] / dφ)**2
     )
 
-@ti.func
+@ti.kernel
 def distance_in_pixels(
     point: ti.types.vector(3, ti.f32),
     source_point: ti.types.vector(3, ti.f32),
@@ -266,7 +266,7 @@ def distance_in_pixels(
     dφ: ti.f32
 ) -> ti.f32:
     """
-    @taichi.func
+    @taichi.kernel
 
     Compute the distance in pixels given the difference in coordinates and the
     pixel size.
@@ -298,7 +298,7 @@ def distance_in_pixels_multi_source(
     dφ: ti.f32
 ) -> ti.f32:
     """
-    @taichi.func
+    @taichi.kernel
 
     Compute the distance in pixels given the difference in coordinates and the
     pixel size.
