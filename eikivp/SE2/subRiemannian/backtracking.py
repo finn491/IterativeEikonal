@@ -211,18 +211,27 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
     # Perform backtracking
     γ = ti.Vector.field(n=3, dtype=ti.f32, shape=n_max)
 
-    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, θs, ξ, cost, x_min, y_min, θ_min, dxy,
-                                           dθ, dt, n_max, γ)
+    point = target_point
+    γ[0] = point
+    tol = 2. # Stop if we are within two pixels of the source.
+    n = 1
+    distance = ti.math.inf
+    while (distance >= tol) and (n < n_max - 1):
+        point = geodesic_back_tracking_step(grad_W, θs, point, ξ, cost, x_min, y_min, θ_min, dxy, dθ, dt)
+        distance = distance_in_pixels(point, source_point, dxy, dθ)
+        γ[n] = point
+        n += 1
+    γ_len = n
     print(f"Geodesic consists of {γ_len} points.")
     γ_np = γ.to_numpy()[:γ_len]
+    γ_np[-1] = source_point
     return γ_np
 
 @ti.kernel
-def geodesic_back_tracking_backend(
+def geodesic_back_tracking_step(
     grad_W: ti.template(),
-    source_point: ti.types.vector(3, ti.f32),
-    target_point: ti.types.vector(3, ti.f32),
     θs: ti.template(),
+    point: ti.types.vector(2, ti.f32),
     ξ: ti.f32,
     cost: ti.template(),
     x_min: ti.f32,
@@ -230,9 +239,7 @@ def geodesic_back_tracking_backend(
     θ_min: ti.f32,
     dxy: ti.f32,
     dθ: ti.f32,
-    dt: ti.f32,
-    n_max: ti.i32,
-    γ: ti.template()
+    dt: ti.f32
 ) -> ti.i32:
     """
     @taichi.kernel
@@ -244,11 +251,8 @@ def geodesic_back_tracking_backend(
       Static:
         `grad_W`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ, 3]) of upwind
           gradient with respect to some cost of the approximate distance map.
-        `source_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
-          source point in `W_np`.
-        `target_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
-          target point in `W_np`.
         `θs`: angle coordinate at each grid point.
+        `point`: ti.types.vector(n=3, dtype=[float]) current point.
         `ξ`: Stiffness of moving in the A1 direction compared to the A3
           direction, taking values greater than 0.
         `cost`: ti.field(dtype=[float], shape=[Nx, Ny, Nθ]) of cost function,
@@ -260,15 +264,9 @@ def geodesic_back_tracking_backend(
           taking values greater than 0.
         `dθ`: orientational resolution, taking values greater than 0.
         `dt`: Gradient descent step size, taking values greater than 0.
-        `n_max`: Maximum number of points in geodesic, taking positive integral
-          values. Defaults to 10000.
-        `*_target`: Indices of the target point.
-      Mutated:
-        `γ`: ti.Vector.field(n=2, dtype=[float]) of coordinates of points on the
-          geodesic.
 
     Returns:
-        Number of points in the geodesic.
+        Next point.
     
     References:
         [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
@@ -276,21 +274,12 @@ def geodesic_back_tracking_backend(
           In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
           DOI:10.1137/15M1018460.
     """
-    point = target_point
-    γ[0] = point
-    tol = 2. # Stop if we are within two pixels of the source.
-    n = 1
-    while (distance_in_pixels(point - source_point, dxy, dθ) >= tol) and (n < n_max - 1):
-        # Get gradient using componentwise trilinear interpolation.
-        gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point_array, ξ, cost)
-        θ = scalar_trilinear_interpolate(θs, point_array)
-        # Get gradient with respect to static frame.
-        gradient_at_point = vector_LI_to_static(gradient_at_point_LI, θ)
-        new_point = get_next_point(point, gradient_at_point, dxy, dθ, dt)
-        γ[n] = new_point
-        point = new_point
-        # To get the gradient, we need the corresponding array indices.
-        point_array = coordinate_real_to_array_ti(point, x_min, y_min, θ_min, dxy, dθ)
-        n += 1
-    γ[n] = source_point
-    return n + 1
+    # To get the gradient, we need the corresponding array indices.
+    point_array = coordinate_real_to_array_ti(point, x_min, y_min, θ_min, dxy, dθ)
+    # Get gradient using componentwise trilinear interpolation.
+    gradient_at_point_LI = vectorfield_trilinear_interpolate_LI(grad_W, point_array, ξ, cost)
+    θ = scalar_trilinear_interpolate(θs, point_array)
+    # Get gradient with respect to static frame.
+    gradient_at_point = vector_LI_to_static(gradient_at_point_LI, θ)
+    new_point = get_next_point(point, gradient_at_point, dxy, dθ, dt)
+    return new_point

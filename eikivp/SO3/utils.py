@@ -259,7 +259,8 @@ def norm_l2(
 
 @ti.func
 def distance_in_pixels(
-    distance: ti.types.vector(3, ti.f32),
+    point: ti.types.vector(3, ti.f32),
+    source_point: ti.types.vector(3, ti.f32),
     dα: ti.f32,
     dβ: ti.f32,
     dφ: ti.f32
@@ -271,19 +272,63 @@ def distance_in_pixels(
     pixel size.
 
     Args:
-        `distance`: ti.types.vector(n=3, dtype=[float]) difference in
-          coordinates.
+        `point`: ti.types.vector(n=3, dtype=[float]) current point.
+        `source_point`: ti.types.vector(n=3, dtype=[float]) describing index of 
+          source point in `W_np`.
         `dα`: spatial resolution in the α-direction, taking values greater than
           0.
         `dβ`: spatial resolution in the β-direction, taking values greater than
           0.
         `dφ`: orientational resolution, taking values greater than 0.
     """
+    distance_vec = point - source_point
     return ti.math.sqrt(
-        (distance[0] / dα)**2 + 
-        (distance[1] / dβ)**2 + 
-        (mod_offset(distance[2], 2 * ti.math.pi, -ti.math.pi) / dφ)**2
+        (distance_vec[0] / dα)**2 + 
+        (distance_vec[1] / dβ)**2 + 
+        (mod_offset(distance_vec[2], 2 * ti.math.pi, -ti.math.pi) / dφ)**2
     )
+
+@ti.kernel
+def distance_in_pixels_multi_source(
+    point: ti.types.vector(3, ti.f32),
+    source_points: ti.template(),
+    distances: ti.template(),
+    dα: ti.f32,
+    dβ: ti.f32,
+    dφ: ti.f32
+) -> ti.f32:
+    """
+    @taichi.func
+
+    Compute the distance in pixels given the difference in coordinates and the
+    pixel size.
+
+    Args:
+        `point`: ti.types.vector(n=3, dtype=[float]) current point.
+        `source_points`: ti.Vector.field(n=3, dtype=[float]) describing index of 
+          source points in `W_np`.
+        `distances`: ti.Vector.field(n=3, dtype=[float]) distances to source
+          points.
+        `dα`: spatial resolution in the α-direction, taking values greater than
+          0.
+        `dβ`: spatial resolution in the β-direction, taking values greater than
+          0.
+        `dφ`: orientational resolution, taking values greater than 0.
+
+    Returns:
+        Minimum distance.
+    """
+    min_distance = ti.math.inf
+    for I in ti.grouped(distances):
+        distance_vec = point - source_points[I]
+        distance = ti.math.sqrt(
+            (distance_vec[0] / dα)**2 + 
+            (distance_vec[1] / dβ)**2 + 
+            (mod_offset(distance_vec[2], 2 * ti.math.pi, -ti.math.pi) / dφ)**2
+        )
+        distances[I] = distance
+        ti.atomic_min(min_distance, distance)
+    return min_distance
 
 @ti.func
 def mod_offset(

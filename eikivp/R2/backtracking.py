@@ -194,79 +194,21 @@ def geodesic_back_tracking(grad_W_np, source_point, target_point, cost_np, x_min
     # Perform backtracking
     γ = ti.Vector.field(n=2, dtype=ti.f32, shape=n_max)
 
-    γ_len = geodesic_back_tracking_backend(grad_W, source_point, target_point, G, cost, x_min, y_min, dxy, dt, n_max, γ)
-    print(f"Geodesic consists of {γ_len} points.")
-    γ_np = γ.to_numpy()[:γ_len]
-    return γ_np
-
-@ti.kernel
-def geodesic_back_tracking_backend(
-    grad_W: ti.template(),
-    source_point: ti.types.vector(2, ti.f32),
-    target_point: ti.types.vector(2, ti.f32),
-    G: ti.types.vector(2, ti.f32),
-    cost: ti.template(),
-    x_min: ti.f32,
-    y_min: ti.f32,
-    dxy: ti.f32,
-    dt: ti.f32,
-    n_max: ti.i32,
-    γ: ti.template()
-) -> ti.i32:
-    """
-    @taichi.kernel
-
-    Find the geodesic connecting `target_point` to `source_point`, using
-    gradient descent backtracking, as described in Bekkers et al.[1]
-
-    Args:
-      Static:
-        `grad_W`: ti.field(dtype=[float], shape=[Nx, Ny, 2]) of upwind gradient
-          with respect to some cost of the approximate distance map.
-        `source_point`: ti.types.vector(n=2, dtype=[float]) describing index of 
-          source point in `W_np`.
-        `target_point`: ti.types.vector(n=2, dtype=[float]) describing index of 
-          target point in `W_np`.
-        `G`: ti.types.vector(n=2, dtype=[float]) of constants of the diagonal
-          metric tensor with respect to standard basis.
-        `cost`: ti.field(dtype=[float], shape=[Nx, Ny]) of cost function, taking
-          values between 0 and 1.
-        `x_min`: minimum value of x-coordinates in rectangular domain.
-        `y_min`: minimum value of y-coordinates in rectangular domain.
-        `dxy`: spatial resolution, which is equal in the x- and y-directions,
-          taking values greater than 0.
-        `dt`: Gradient descent step size, taking values greater than 0.
-        `n_max`: Maximum number of points in geodesic, taking positive integral
-          values. Defaults to 10000.
-        `*_target`: Indices of the target point.
-      Mutated:
-        `γ`: ti.Vector.field(n=2, dtype=[float]) of coordinates of points on the
-          geodesic.
-
-    Returns:
-        Number of points in the geodesic.
-    
-    References:
-        [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
-          "A PDE Approach to Data-Driven Sub-Riemannian Geodesics in SE(2)".
-          In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
-          DOI:10.1137/15M1018460.
-    """
     point = target_point
     γ[0] = point
     tol = 2. # Stop if we are within two pixels of the source.
     n = 1
-    while (distance_in_pixels(point - source_point, dxy) >= tol) and (n < n_max - 1):
-        # Get gradient using componentwise bilinear interpolation.
-        gradient_at_point = vectorfield_bilinear_interpolate(grad_W, point_array, G, cost)
-        new_point = get_next_point(point, gradient_at_point, dxy, dt)
-        γ[n] = new_point
-        point = new_point
-        # To get the gradient, we need the corresponding array indices.
-        point_array = coordinate_real_to_array_ti(point, x_min, y_min, dxy)
+    distance = ti.math.inf
+    while (distance >= tol) and (n < n_max - 1):
+        point = geodesic_back_tracking_step(grad_W, point, G, cost, x_min, y_min, dxy, dt)
+        distance = distance_in_pixels(point, source_point, dxy)
+        γ[n] = point
         n += 1
-    γ[n] = source_point
-    return n + 1
+    γ_len = n
+    print(f"Geodesic consists of {γ_len} points.")
+    γ_np = γ.to_numpy()[:γ_len]
+    γ_np[-1] = source_point
+    return γ_np
 
 def geodesic_back_tracking_multi_source(grad_W_np, source_points, target_point, cost_np, x_min, y_min, dxy, G_np=None,
                                         dt=1., n_max=10000):
@@ -333,7 +275,7 @@ def geodesic_back_tracking_multi_source(grad_W_np, source_points, target_point, 
     n = 1
     min_distance = ti.math.inf
     while (min_distance >= tol) and (n < n_max - 1):
-        point = geodesic_back_tracking_multi_source_step(grad_W, point, G, cost, x_min, y_min, dxy, dt)
+        point = geodesic_back_tracking_step(grad_W, point, G, cost, x_min, y_min, dxy, dt)
         min_distance = distance_in_pixels_multi_source(point, source_points, distances, dxy)
         γ[n] = point
         n += 1
@@ -345,7 +287,7 @@ def geodesic_back_tracking_multi_source(grad_W_np, source_points, target_point, 
     return γ_np
 
 @ti.kernel
-def geodesic_back_tracking_multi_source_step(
+def geodesic_back_tracking_step(
     grad_W: ti.template(),
     point: ti.types.vector(2, ti.f32),
     G: ti.types.vector(2, ti.f32),
@@ -365,10 +307,7 @@ def geodesic_back_tracking_multi_source_step(
       Static:
         `grad_W`: ti.field(dtype=[float], shape=[Nx, Ny, 2]) of upwind gradient
           with respect to some cost of the approximate distance map.
-        `source_points`: ti.Vector.field(n=2, dtype=[float]) describing index of 
-          source points in `W_np`.
-        `target_point`: ti.types.vector(n=2, dtype=[float]) describing index of 
-          target point in `W_np`.
+        `point`: ti.types.vector(n=2, dtype=[float]) current point.
         `G`: ti.types.vector(n=2, dtype=[float]) of constants of the diagonal
           metric tensor with respect to standard basis.
         `cost`: ti.field(dtype=[float], shape=[Nx, Ny]) of cost function, taking
@@ -378,17 +317,9 @@ def geodesic_back_tracking_multi_source_step(
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
           taking values greater than 0.
         `dt`: Gradient descent step size, taking values greater than 0.
-        `n_max`: Maximum number of points in geodesic, taking positive integral
-          values. Defaults to 10000.
-        `*_target`: Indices of the target point.
-      Mutated:
-        `γ`: ti.Vector.field(n=2, dtype=[float]) of coordinates of points on the
-          geodesic.
-        `distances`: ti.Vector.field(n=2, dtype=[float]) distances to source
-          points.
 
     Returns:
-        Number of points in the geodesic.
+        Next point.
     
     References:
         [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
@@ -449,9 +380,10 @@ def norm_l2(
     """
     return ti.math.sqrt(vec[0]**2 + vec[1]**2) / dxy
 
-@ti.func
+@ti.kernel
 def distance_in_pixels(
-    distance: ti.types.vector(2, ti.f32),
+    point: ti.types.vector(2, ti.f32),
+    source_point: ti.types.vector(2, ti.f32),
     dxy: ti.f32
 ) -> ti.f32:
     """
@@ -461,12 +393,14 @@ def distance_in_pixels(
     pixel size.
 
     Args:
-        `distance`: ti.types.vector(n=2, dtype=[float]) difference in
-          coordinates.
+        `point`: ti.types.vector(n=2, dtype=[float]) current point.
+        `source_points`: ti.types.vector(n=2, dtype=[float]) describing index of 
+          source point in `W_np`.
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
           taking values greater than 0.
     """
-    return ti.math.sqrt((distance[0] / dxy)**2 + (distance[1] / dxy)**2)
+    distance_vec = point - source_point
+    return ti.math.sqrt((distance_vec[0] / dxy)**2 + (distance_vec[1] / dxy)**2)
 
 @ti.kernel
 def distance_in_pixels_multi_source(
