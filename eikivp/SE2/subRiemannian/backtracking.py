@@ -421,7 +421,7 @@ def geodesic_back_tracking_multi_source(grad_W_np, source_points, target_point, 
     min_distance = ti.math.inf
     while (min_distance >= tol) and (n < n_max - 1):
         point = geodesic_back_tracking_step(grad_W, θs, point, ξ, cost, x_min, y_min, θ_min, dxy, dθ, dt)
-        min_distance = distance_in_pixels_multi_source(point, source_points, dxy, dθ)
+        min_distance = distance_in_pixels_multi_source(point, source_points, distances, dxy, dθ)
         γ[n] = point
         n += 1
     γ_len = n
