@@ -84,7 +84,7 @@ class VesselnessSE2():
         self.σ_o_ext = σ_o_ext
         self.image_name = image_name
 
-    def compute_V(self, U_np, mask_np, θs_np, dxy, dθ):
+    def compute_V(self, U_np, mask_np, θs_np, dxy, dθ, bifurcations=None):
         """
         Compute the multiscale vesselness of the orientation score of an image
         `U_np` by combining crossing-preserving vesselnesses[1] at various
@@ -96,9 +96,12 @@ class VesselnessSE2():
               deal with boundary effects of the image, with shape [Nx, Ny, Nθ].
             `θs_np`: orientation coordinate at every point in the grid on which
               `cost` is sampled, with shape [Nx, Ny, Nθ].
-            `dxy`: spatial resolution, which is equal in the x- and y-directions,
-              taking values greater than 0.
+            `dxy`: spatial resolution, which is equal in the x- and
+              y-directions, taking values greater than 0.
             `dθ`: orientational resolution, taking values greater than 0.
+          Optional:
+            `bifurcations`: spatial location of bifurcations in array
+              coordinates.
 
         Returns:
             np.ndarray of multi scale vesselness of orientation score of retinal
@@ -112,6 +115,9 @@ class VesselnessSE2():
         """
         self.V = multi_scale_vesselness(U_np, mask_np, θs_np, self.σ_s_list, self.σ_o, self.σ_s_ext, self.σ_o_ext, dxy,
                                         dθ)
+        if bifurcations is not None:
+            for p in bifurcations:
+                self.V[p] = 1.
 
     def import_V(self, folder):
         """
