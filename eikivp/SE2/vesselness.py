@@ -114,10 +114,7 @@ class VesselnessSE2():
             DOI:10.1007/978-3-319-10470-6_75
         """
         self.V = multi_scale_vesselness(U_np, mask_np, θs_np, self.σ_s_list, self.σ_o, self.σ_s_ext, self.σ_o_ext, dxy,
-                                        dθ)
-        if bifurcations is not None:
-            for p in bifurcations:
-                self.V[p] = 1.
+                                        dθ, bifurcations=bifurcations)
 
     def import_V(self, folder):
         """
@@ -345,7 +342,7 @@ def single_scale_vesselness_backend(
         is_convex = Q[I] > 0.
         V[I] = lineness * mask[I] * is_convex
 
-def multi_scale_vesselness(U, mask, θs, σ_s_list, σ_o, σ_s_ext, σ_o_ext, dxy, dθ):
+def multi_scale_vesselness(U, mask, θs, σ_s_list, σ_o, σ_s_ext, σ_o_ext, dxy, dθ, bifurcations=None):
     """
     Compute the multiscale vesselness of the orientation score of an image
     `U_np` by combining crossing-preserving vesselnesses[1] at various scales
@@ -372,6 +369,9 @@ def multi_scale_vesselness(U, mask, θs, σ_s_list, σ_o, σ_s_ext, σ_o_ext, dx
         `dxy`: spatial resolution, which is equal in the x- and y-directions,
           taking values greater than 0.
         `dθ`: orientational resolution, taking values greater than 0.
+      Optional:
+        `bifurcations`: spatial location of bifurcations in array
+          coordinates.
 
     Returns:
         np.ndarray of multi scale vesselness of orientation score of retinal
@@ -389,6 +389,11 @@ def multi_scale_vesselness(U, mask, θs, σ_s_list, σ_o, σ_s_ext, σ_o_ext, dx
         Vs[i] = single_scale_vesselness(U, mask, θs, σ_s, σ_o, σ_s_ext, σ_o_ext, dxy, dθ)
     V_unnormalised = Vs.max(0) # Vs.sum(0) ?
     V = (V_unnormalised - V_unnormalised.min()) / (V_unnormalised.max() - V_unnormalised.min())
+
+    # Add lifts at bifurcations.
+    if bifurcations is not None:
+        for p in bifurcations:
+            V[p] = 1.
     return V
 
 # Regularisers

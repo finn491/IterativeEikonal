@@ -233,11 +233,6 @@ class DistanceMultiSourceR2():
           diagonal metric tensor with respect to standard basis. Defaults to
           standard Euclidean metric.
         `source_points`: Tuple[Tuple[int]] describing index of source points.
-        `target_point`: Tuple[int] describing index of target point. Defaults to
-          `None`. If `target_point` is provided, the algorithm will terminate
-          when the Hamiltonian has converged at `target_point`; otherwise it
-          will terminate when the Hamiltonian has converged throughout the
-          domain.
     
     References:
         [1]: E. J. Bekkers, R. Duits, A. Mashtakov, and G. R. Sanguinetti.
@@ -246,7 +241,7 @@ class DistanceMultiSourceR2():
           DOI:10.1137/15M1018460.
     """
 
-    def __init__(self, C: CostR2, G, source_points, target_point):
+    def __init__(self, C: CostR2, G, source_points):
         # Vesselness attributes
         self.scales = C.scales
         self.α = C.α
@@ -259,7 +254,6 @@ class DistanceMultiSourceR2():
         # Distance attributes
         self.G = G
         self.source_points = source_points
-        self.target_point = target_point
 
     def compute_W(self, C: CostR2, dxy=1., n_max=1e5, n_max_initialisation=1e4, n_check=None,
                   n_check_initialisation=None, tol=1e-3, dε=1., initial_condition=100.):
@@ -310,8 +304,8 @@ class DistanceMultiSourceR2():
               In: SIAM Journal on Imaging Sciences 8.4 (2015), pp. 2740--2770.
               DOI:10.1137/15M1018460.
         """
-        W, grad_W = eikonal_solver_multi_source(C.C, self.source_points, target_point=self.target_point, dxy=dxy,
-                                                n_max=n_max, n_max_initialisation=n_max_initialisation, n_check=n_check,
+        W, grad_W = eikonal_solver_multi_source(C.C, self.source_points, dxy=dxy, n_max=n_max,
+                                                n_max_initialisation=n_max_initialisation, n_check=n_check,
                                                 n_check_initialisation=n_check_initialisation, tol=tol, dε=dε,
                                                 initial_condition=initial_condition)
         self.W = W
@@ -320,8 +314,7 @@ class DistanceMultiSourceR2():
     def import_W(self, folder):
         """
         Import the distance and its gradient matching the attributes `scales`,
-        `α`, `γ`, `ε`, `image_name`, `λ`, `p`, `G`, `source_points`, and
-        `target_point`.
+        `α`, `γ`, `ε`, `image_name`, `λ`, `p`, `G`, and `source_points`.
         """
         distance_filename = f"{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}_l={self.λ}_p={self.p}_G={[g for g in self.G]}.hdf5"
         with h5py.File(distance_filename, "r") as distance_file:
@@ -334,11 +327,7 @@ class DistanceMultiSourceR2():
                 self.λ == distance_file.attrs["λ"] and
                 self.p == distance_file.attrs["p"] and
                 np.all(self.G == distance_file.attrs["G"]) and
-                np.all(self.source_points == distance_file.attrs["source_points"]) and
-                (
-                    np.all(self.target_point == distance_file.attrs["target_point"]) or
-                    distance_file.attrs["target_point"] == "default"
-                )
+                np.all(self.source_points == distance_file.attrs["source_points"])
             ), "There is a parameter mismatch!"
             self.W = distance_file["Distance"][()]
             self.grad_W = distance_file["Gradient"][()]
@@ -346,8 +335,8 @@ class DistanceMultiSourceR2():
     def export_W(self, folder):
         """
         Export the distance and its gradient to hdf5 with attributes
-        `scales`, `α`, `γ`, `ε`, `image_name`, `λ`, `p`, `G`, `source_points`,
-        and `target_point` stored as metadata.
+        `scales`, `α`, `γ`, `ε`, `image_name`, `λ`, `p`, `G`, and
+        `source_points`, stored as metadata.
         """
         distance_filename = f"{folder}\\R2_ss={[s for s in self.scales]}_a={self.α}_g={self.γ}_e={self.ε}_l={self.λ}_p={self.p}_G={[g for g in self.G]}.hdf5"
         with h5py.File(distance_filename, "w") as distance_file:
@@ -362,10 +351,6 @@ class DistanceMultiSourceR2():
             distance_file.attrs["p"] = self.p
             distance_file.attrs["G"] = self.G
             distance_file.attrs["source_points"] = self.source_points
-            if self.target_point is None:
-                distance_file.attrs["target_point"] = "default"
-            else:
-                distance_file.attrs["target_point"] = self.target_point
 
     def print(self):
         """Print attributes."""
@@ -378,7 +363,6 @@ class DistanceMultiSourceR2():
         print(f"p => {self.p}")
         print(f"G => {self.G}")
         print(f"source_points => {self.source_points}")
-        print(f"target point => {self.target_point}")
 
 # Data-driven left invariant
 
