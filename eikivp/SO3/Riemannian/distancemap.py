@@ -507,8 +507,10 @@ def eikonal_solver(cost_np, source_point, G_np, dα, dβ, dφ, αs_np, φs_np, t
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
+    αs_np = np.pad(αs_np, ((1,), (1,), (0,)), mode="edge")
     αs = ti.field(dtype=ti.f32, shape=αs_np.shape)
     αs.from_numpy(αs_np)
+    φs_np = np.pad(φs_np, ((1,), (1,), (0,)), mode="edge")
     φs = ti.field(dtype=ti.f32, shape=φs_np.shape)
     φs.from_numpy(φs_np)
 
@@ -634,8 +636,10 @@ def eikonal_solver_multi_source(cost_np, source_points, G_np, dα, dβ, dφ, αs
     boundarypoints, boundaryvalues = get_boundary_conditions_multi_source(source_points)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
+    αs_np = np.pad(αs_np, ((1,), (1,), (0,)), mode="edge")
     αs = ti.field(dtype=ti.f32, shape=αs_np.shape)
     αs.from_numpy(αs_np)
+    φs_np = np.pad(φs_np, ((1,), (1,), (0,)), mode="edge")
     φs = ti.field(dtype=ti.f32, shape=φs_np.shape)
     φs.from_numpy(φs_np)
 
@@ -871,8 +875,10 @@ def eikonal_solver_uniform(domain_shape, source_point, G_np, dα, dβ, dφ, αs_
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
+    αs_np = np.pad(αs_np, ((1,), (1,), (0,)), mode="edge")
     αs = ti.field(dtype=ti.f32, shape=αs_np.shape)
     αs.from_numpy(αs_np)
+    φs_np = np.pad(φs_np, ((1,), (1,), (0,)), mode="edge")
     φs = ti.field(dtype=ti.f32, shape=φs_np.shape)
     φs.from_numpy(φs_np)
 
@@ -981,8 +987,10 @@ def eikonal_solver_multi_source_uniform(domain_shape, source_points, G_np, dα, 
     boundarypoints, boundaryvalues = get_boundary_conditions_multi_source(source_points)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
+    αs_np = np.pad(αs_np, ((1,), (1,), (0,)), mode="edge")
     αs = ti.field(dtype=ti.f32, shape=αs_np.shape)
     αs.from_numpy(αs_np)
+    φs_np = np.pad(φs_np, ((1,), (1,), (0,)), mode="edge")
     φs = ti.field(dtype=ti.f32, shape=φs_np.shape)
     φs.from_numpy(φs_np)
 

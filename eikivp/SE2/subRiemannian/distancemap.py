@@ -504,6 +504,7 @@ def eikonal_solver(cost_np, source_point, ξ, dxy, dθ, θs_np, target_point=Non
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
+    θs_np = np.pad(θs_np, ((1,), (1,), (0,)), mode="edge")
     θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
     θs.from_numpy(θs_np)
 
@@ -624,6 +625,7 @@ def eikonal_solver_multi_source(cost_np, source_points, ξ, dxy, dθ, θs_np, ta
     boundarypoints, boundaryvalues = get_boundary_conditions_multi_source(source_points)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
+    θs_np = np.pad(θs_np, ((1,), (1,), (0,)), mode="edge")
     θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
     θs.from_numpy(θs_np)
 
@@ -839,6 +841,7 @@ def eikonal_solver_uniform(domain_shape, source_point, ξ, dxy, dθ, θs_np, tar
     boundarypoints, boundaryvalues = get_boundary_conditions(source_point)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
+    θs_np = np.pad(θs_np, ((1,), (1,), (0,)), mode="edge")
     θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
     θs.from_numpy(θs_np)
 
@@ -942,6 +945,7 @@ def eikonal_solver_multi_source_uniform(domain_shape, source_points, ξ, dxy, d�
     boundarypoints, boundaryvalues = get_boundary_conditions_multi_source(source_points)
     apply_boundary_conditions(W, boundarypoints, boundaryvalues)
 
+    θs_np = np.pad(θs_np, ((1,), (1,), (0,)), mode="edge")
     θs = ti.field(dtype=ti.f32, shape=θs_np.shape)
     θs.from_numpy(θs_np)
 
